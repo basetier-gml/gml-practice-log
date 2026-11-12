@@ -1,0 +1,4313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gml代码练习记录</title>
+<meta name="description" content="GML 代码练习打卡记录：记录练习题要求、提示、API 与用到的代码载体。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%234a90e2'/%3E%3Ctext x='32' y='46' font-size='40' font-family='sans-serif' font-weight='700' fill='%23fff' text-anchor='middle'%3EG%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 平台注入的悬浮球会挡住页面右下角（点按钮被它拦截），隐藏掉 */
+#minimax-floating-ball{display:none !important;}
+
+/* ============================================================
+   Gml代码练习记录 —— GameMaker 配色（#4a90e2 / #27518A）
+   ============================================================ */
+:root{
+  --bg:#222222;             /* GMS2 应用底 */
+  --card:#2b2b2b;           /* GMS2 面板底 */
+  --panel:#2f2f2f;         /* 输入 / 按钮面 */
+  --ink:#f0f0f0;           /* GMS2 主文字 */
+  --ink-2:#c6c6c6;
+  --ink-3:#8f8f8f;
+  --line:#3f3f3f;
+  --line-soft:#343434;
+
+  --gm:#4a90e2;            /* GMS2 accent 蓝 */
+  --gm-deep:#7ab4f0;       /* 深色底上的蓝字 */
+  --gm-soft:rgba(74,144,226,.16);
+  --gm-soft-2:rgba(74,144,226,.08);
+
+  --radius:14px;
+  --radius-sm:9px;
+  --shadow:0 4px 18px -4px rgba(0,0,0,.40);
+  --shadow-lg:0 14px 40px -12px rgba(0,0,0,.55);
+  --sans:"Outfit","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Noto Sans SC",sans-serif;
+  --mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  padding:0 16px calc(48px + env(safe-area-inset-bottom));
+}
+button{font-family:inherit}
+.wrap{max-width:560px;margin:0 auto}
+
+/* ---------- 顶栏 ---------- */
+.topbar{
+  position:sticky;top:0;z-index:20;
+  background:var(--bg);
+  border-bottom:1px solid var(--line);
+  padding:calc(16px + env(safe-area-inset-top)) 0 14px;
+}
+.bar-inner{
+  max-width:560px;margin:0 auto;padding:0 2px;
+  display:flex;align-items:center;gap:13px;
+}
+.avatar{
+  width:54px;height:54px;flex:0 0 54px;border-radius:50%;
+  background:var(--gm);border:1px solid #5aa0ec;
+  color:#fff;font-size:26px;font-weight:700;letter-spacing:.01em;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 12px -4px rgba(74,144,226,.55);
+  user-select:none;
+}
+.who{flex:1;min-width:0}
+.nick-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nick{
+  font-size:19px;font-weight:700;letter-spacing:-.01em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px;
+}
+.edit-btn{
+  border:1px solid #4a4a4a;background:#2f2f2f;color:var(--gm-deep);
+  font-size:12px;font-weight:600;padding:4px 11px;border-radius:999px;cursor:pointer;
+  line-height:1.5;transition:background .15s ease,border-color .15s ease;
+}
+.edit-btn:hover{background:var(--gm-soft);border-color:#5f88c0}
+.who .sub{margin:3px 0 0;font-size:12.5px;color:var(--ink-3)}
+.nick-edit{display:flex;gap:8px;margin-top:9px}
+.nick-edit input{
+  flex:1;min-width:0;border:1px solid #4f4f4f;border-radius:8px;padding:9px 11px;
+  font-family:inherit;font-size:16px;color:var(--ink);background:#2f2f2f;outline:none;
+}
+.nick-edit input:focus{border-color:var(--gm);box-shadow:0 0 0 3px rgba(74,144,226,.22)}
+
+.top-action{
+  flex:0 0 auto;border:1px solid #4a4a4a;background:#2f2f2f;color:var(--gm-deep);
+  font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:999px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;transition:background .15s ease;
+}
+.top-action:hover{background:var(--gm-soft)}
+.top-action.icon-only{
+  width:34px;height:34px;padding:0;border-radius:50%;justify-content:center;
+}
+
+/* ---------- 卡片 ---------- */
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:18px;margin-bottom:16px;
+}
+.card-head{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+.card-head h2{margin:0;font-size:16px;font-weight:700;letter-spacing:-.01em}
+.card-head .hint{margin-left:auto;font-size:12px;color:var(--ink-3);text-align:right}
+/* 历史记录按钮：放在「练习记录」卡片右上角 */
+.hist-btn{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;
+  border:1px solid #4a4a4a;background:#2f2f2f;color:var(--gm-deep);
+  font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;cursor:pointer;
+  transition:background .15s, border-color .15s;
+}
+.hist-btn:active{background:rgba(74,144,226,.14);border-color:#5f88c0}
+@media (max-width:380px){
+  .card-head .hint{display:none}
+}
+/* 历史记录视图（在「练习记录」卡片内切换，不是弹窗） */
+/* 日期卡片：横向滑动浏览，只列出打过卡的日期 */
+.hist-dates{
+  display:flex;gap:9px;overflow-x:auto;padding:2px 2px 10px;
+  scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+}
+.hist-dates::-webkit-scrollbar{height:5px}
+.hist-dates::-webkit-scrollbar-thumb{background:#4a4a4a;border-radius:9px}
+.date-card{
+  flex:0 0 auto;scroll-snap-align:start;min-width:104px;
+  border:1px solid #3f3f3f;background:#2f2f2f;border-radius:9px;
+  padding:8px 12px;text-align:left;cursor:pointer;font:inherit;
+  transition:border-color .15s, background .15s;
+}
+.date-card .dc-d{display:block;font-size:13.5px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.date-card .dc-m{display:block;font-size:11px;color:var(--ink-3);margin-top:2px;white-space:nowrap}
+.date-card.active{border-color:var(--gm);background:rgba(74,144,226,.14);box-shadow:0 2px 8px rgba(74,144,226,.22)}
+.date-card.active .dc-d{color:var(--gm-deep)}
+.date-card.all .dc-d{font-size:13px}
+.hist-search{
+  display:flex;align-items:center;gap:8px;background:#333333;
+  border:1px solid #3f3f3f;border-radius:8px;padding:0 6px 0 12px;margin-bottom:12px;
+}
+.hist-search input{
+  flex:1 1 auto;min-width:0;border:0;background:none;outline:none;
+  font:inherit;font-size:14px;color:var(--ink);padding:11px 0;
+}
+.hist-search input::-webkit-search-cancel-button{cursor:pointer}
+.hist-search .btn{flex:0 0 auto;padding:7px 14px;font-size:13px;border-radius:9px}
+.lh-tip{font-size:11px;color:var(--ink-3);margin-left:8px}
+.hist-sub{font-size:12.5px;color:var(--ink-3);margin:-2px 0 12px}
+.hist-day{margin-bottom:16px}
+.hist-day:last-child{margin-bottom:2px}
+.hist-day-head{display:flex;align-items:center;gap:8px;padding:0 2px 7px}
+.hist-day-date{font-size:13.5px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;cursor:pointer}
+.hist-day-date:hover{color:var(--gm-deep);text-decoration:underline}
+.hist-day-tag{
+  font-size:10.5px;font-weight:700;color:var(--gm-deep);background:rgba(74,144,226,.14);
+  border-radius:999px;padding:1.5px 8px;letter-spacing:.02em;
+}
+.hist-day-n{font-size:11.5px;color:var(--ink-3);margin-left:auto;font-variant-numeric:tabular-nums}
+.hist-item{
+  display:flex;align-items:flex-start;gap:8px;padding:9px 11px;
+  border:1px solid #3a3a3a;border-radius:9px;background:#2f2f2f;margin-bottom:7px;
+}
+.hist-item:hover{border-color:#4a4a4a;background:#303030}
+.hist-item-main{
+  flex:1 1 auto;min-width:0;text-align:left;background:none;border:0;padding:0;cursor:pointer;
+  display:block;color:inherit;font:inherit;
+}
+.hist-time{display:block;font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.hist-name{
+  display:block;font-size:13.5px;font-weight:600;color:var(--ink);margin:1px 0 5px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.hist-meta{display:flex;flex-wrap:wrap;gap:5px}
+.hist-item .del{margin-top:0;flex:0 0 24px;width:24px;height:24px;font-size:16px}
+/* 分页 */
+.pager{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px;padding-top:12px}
+.pager button{
+  border:1px solid #454545;background:#2f2f2f;color:var(--ink-2);font:inherit;font-size:13px;
+  padding:7px 14px;border-radius:999px;cursor:pointer;
+}
+.pager button:disabled{color:#6b6b6b;background:#333333;cursor:not-allowed}
+.pager button:not(:disabled):active{background:rgba(74,144,226,.14);border-color:#6a9fe0}
+.pager .pg-now{font-size:12.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;padding:0 2px}
+.shot-btn{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;
+  border:1px solid #4a4a4a;background:#2f2f2f;color:var(--gm-deep);
+  font-size:12px;font-weight:600;padding:4px 11px;border-radius:999px;cursor:pointer;
+  line-height:1.5;transition:background .15s ease,border-color .15s ease;
+}
+.shot-btn:hover{background:var(--gm-soft);border-color:#5f88c0}
+
+/* ---------- 统计 ---------- */
+.stats{display:flex;gap:9px;margin-bottom:14px}
+.stat{
+  flex:1;background:var(--gm-soft);border-radius:var(--radius-sm);padding:10px 11px;min-width:0;
+}
+.stat .k{font-size:11.5px;color:#8fa9c9;margin-bottom:1px;white-space:nowrap}
+.stat .v{font-size:22px;font-weight:700;color:var(--gm-deep);letter-spacing:-.02em;line-height:1.2}
+.stat .v small{font-size:12px;font-weight:600;margin-left:2px;color:var(--ink-3)}
+.stat.plain{background:#303030}
+.stat.plain .k{color:var(--ink-3)}
+.stat.plain .v{color:var(--ink)}
+.stat.goal{background:#2f2f2f;border:1px solid var(--line);display:flex;flex-direction:column;justify-content:center}
+.stat.goal .k{color:var(--ink-3)}
+.goal-row{display:flex;align-items:baseline;gap:3px}
+.goal-row input{
+  width:42px;border:none;border-bottom:1.5px solid #4f4f4f;background:transparent;
+  font-family:inherit;font-size:22px;font-weight:700;color:var(--gm-deep);
+  padding:0 2px 1px;outline:none;text-align:center;
+  -moz-appearance:textfield;
+}
+.goal-row input::-webkit-outer-spin-button,
+.goal-row input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.goal-row input:focus{border-bottom-color:var(--gm)}
+.goal-row span{font-size:12px;font-weight:600;color:var(--ink-3)}
+
+.progress{height:9px;border-radius:999px;background:#333333;overflow:hidden}
+.bar{
+  height:100%;width:0;border-radius:999px;background:var(--gm);
+  transition:width .45s cubic-bezier(.4,0,.2,1);
+}
+.bar.full{background:#5BAE4E}
+.progress-text{margin-top:7px;font-size:12.5px;color:var(--ink-3);text-align:right}
+
+.checkin{
+  width:100%;margin-top:14px;border:none;border-radius:10px;padding:14px;
+  font-size:15.5px;font-weight:600;color:#fff;cursor:pointer;
+  background:var(--gm);box-shadow:0 8px 18px -8px rgba(74,144,226,.35);
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  transition:transform .12s ease,background .15s ease;
+}
+.checkin:hover{background:#5aa0ec}
+.checkin:active{transform:scale(.985)}
+.checkin .plus{font-size:19px;line-height:1;font-weight:400}
+
+/* ---------- 记录列表 ---------- */
+.list-head{display:flex;align-items:center;gap:6px;margin:18px 0 8px;font-size:12.5px;color:var(--ink-3)}
+.rec-list{display:flex;flex-direction:column;gap:7px}
+.rec{
+  display:flex;align-items:flex-start;gap:10px;background:#303030;border:1px solid #333333;
+  border-radius:var(--radius-sm);padding:10px 11px;
+  transition:border-color .15s ease,background .15s ease;
+}
+.rec.selected{border-color:var(--gm);background:var(--gm-soft-2)}
+.rec-main{
+  flex:1;min-width:0;text-align:left;border:none;background:none;padding:0;cursor:pointer;
+  font-family:inherit;display:block;
+}
+.rec-top{display:flex;align-items:baseline;gap:8px}
+.rec-name{
+  font-size:14px;font-weight:600;color:var(--ink);flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.rec-time{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.rec-meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.del{
+  flex:0 0 26px;width:26px;height:26px;border:none;background:#3a3a3a;color:var(--ink-3);
+  border-radius:50%;font-size:17px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;margin-top:1px;
+  transition:background .15s ease,color .15s ease;
+}
+.del:hover{background:#402a2a;color:#e06c75}
+.del.locked{background:#3a3a3a;color:#6b6b6b;cursor:not-allowed}
+.del.locked:hover{background:#3a3a3a;color:#6b6b6b}
+.empty{
+  text-align:center;color:var(--ink-3);font-size:13.5px;padding:16px 10px;
+  background:#2e2e2e;border:1px dashed #454545;border-radius:var(--radius-sm);line-height:1.7;
+}
+
+/* ---------- 载体色片 ---------- */
+.chip{
+  display:inline-flex;align-items:center;gap:5px;
+  border:1px solid var(--chip-bd);background:var(--chip-bg);color:var(--chip-fg);
+  font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap;
+}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:0 0 7px}
+.chip.mini{padding:2px 8px;font-size:11.5px}
+
+/* ---------- 表单 ---------- */
+.form-block{margin-bottom:15px}
+.form-block > label{
+  display:block;font-size:14px;color:var(--ink);font-weight:700;margin-bottom:7px;
+  letter-spacing:-.01em;
+}
+.form-block > label .req{color:#e06c75}
+.field{
+  width:100%;border:1px solid #4a4a4a;border-radius:8px;padding:10px 12px;
+  tab-size:1;                 /* 编辑脚本时看到的缩进与代码框一致 */
+  font-family:inherit;font-size:16px;color:var(--ink);background:#2f2f2f;outline:none;
+  line-height:1.55;
+}
+.field:focus{border-color:var(--gm);box-shadow:0 0 0 3px rgba(74,144,226,.22)}
+textarea.field{resize:vertical;min-height:64px}
+.field::placeholder{color:#7e7e7e}
+.api-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.api-tag{
+  display:inline-flex;align-items:center;gap:6px;background:var(--gm-soft);
+  border:1px solid #4a4a4a;color:var(--gm-deep);
+  font-family:var(--mono);font-size:12.5px;font-weight:500;padding:4px 6px 4px 10px;border-radius:9px;
+}
+.api-tag button{
+  border:none;background:none;color:#9ab4d8;font-size:14px;line-height:1;cursor:pointer;
+  padding:0 3px;border-radius:5px;
+}
+.api-tag button:hover{color:var(--gm-deep);background:#3a3a3a}
+.hint-line{font-size:11.5px;color:var(--ink-3);margin-top:6px}
+
+/* 模块化载体 */
+.module{
+  border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;
+  background:#303030;border-left:3px solid var(--carrier-color,#4f4f4f);
+}
+.module-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.module-head .idx{font-size:11.5px;color:var(--ink-3);font-weight:600}
+.mod-del{
+  margin-left:auto;border:none;background:#3a3a3a;color:var(--ink-3);width:24px;height:24px;
+  border-radius:50%;font-size:15px;line-height:1;cursor:pointer;flex:0 0 24px;
+}
+.mod-del:hover{background:#402a2a;color:#e06c75}
+.type-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+.type-tab{
+  border:1.5px solid var(--line);background:#2f2f2f;color:var(--ink-2);
+  font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:999px;cursor:pointer;
+  transition:all .15s ease;white-space:nowrap;
+}
+.type-tab:hover{border-color:var(--c,#4f4f4f)}
+.type-tab.on{background:var(--c,#4a90e2);border-color:var(--c,#4a90e2);color:#fff}
+.type-tab.custom{border-style:dashed;color:var(--ink-3)}
+.type-picker{
+  padding:10px;border:1px dashed #4a4a4a;border-radius:var(--radius-sm);
+  background:#303030;margin-bottom:10px;
+}
+.add-module{
+  width:100%;border:1.5px dashed #4f4f4f;background:#303030;color:var(--gm-deep);
+  border-radius:9px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;
+  transition:background .15s ease,border-color .15s ease;
+}
+.add-module:hover{background:var(--gm-soft-2);border-color:var(--gm)}
+/* ---------- api 载体：一行代码 + 参数说明（编号+描述） ---------- */
+.sub-label{font-size:13px;color:var(--ink-2);font-weight:600;margin:12px 0 6px}
+.api-args-list{display:flex;flex-direction:column;gap:7px;margin-bottom:9px}
+.api-arg-row{display:flex;align-items:center;gap:8px}
+.api-arg-row .field{flex:1;min-width:0;font-size:15px;padding:9px 11px}
+.api-no-input{
+  flex:0 0 64px;width:64px;text-align:center;padding:9px 6px !important;
+  font-weight:700;color:var(--gm-deep);
+}
+.api-no-input::placeholder{font-weight:500;color:#7e7e7e}
+.api-arg-del{
+  border:none;background:#3a3a3a;color:var(--ink-3);width:28px;height:28px;border-radius:50%;
+  font-size:16px;line-height:1;cursor:pointer;flex:0 0 28px;
+}
+.api-arg-del:hover{background:#402a2a;color:#e06c75}
+.add-arg{
+  border:1.5px dashed #4f4f4f;background:#303030;color:var(--gm-deep);
+  border-radius:7px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;
+}
+.add-arg:hover{border-color:var(--gm);background:var(--gm-soft-2)}
+.api-code{
+  font-family:var(--mono);font-size:12.5px;color:var(--ink);
+  background:#333333;border:1px solid var(--line-soft);border-radius:6px;
+  padding:9px 11px;word-break:break-all;line-height:1.6;
+}
+.code-field{
+  font-family:var(--mono);font-size:14px;min-height:46px;resize:vertical;
+  line-height:1.6;white-space:pre-wrap;
+}
+.api-code.empty{color:var(--ink-3);font-family:var(--sans)}
+.api-param-list{display:flex;flex-direction:column;gap:7px;margin-top:9px}
+.api-param{display:flex;align-items:flex-start;gap:8px;font-size:13.5px;color:var(--ink-2);line-height:1.6}
+.api-param .no{
+  flex:0 0 auto;min-width:20px;height:20px;padding:0 6px;border-radius:6px;
+  background:var(--c,#4f4f4f);color:#fff;font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;margin-top:2px;
+  font-variant-numeric:tabular-nums;max-width:120px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;
+}
+.api-param .txt{flex:1;min-width:0;word-break:break-word}
+.api-param .txt.empty{color:var(--ink-3)}
+
+/* ---------- 对象载体：变量表 + 事件框 ---------- */
+.obj-name-input{font-family:var(--mono)}
+.obj-table-wrap{
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+  border:1px solid var(--line);border-radius:8px;background:#2f2f2f;
+}
+.obj-table{width:100%}
+.obj-tr{display:flex;align-items:stretch}
+.obj-td{
+  padding:6px 7px;border-bottom:1px solid var(--line-soft);box-sizing:border-box;min-width:0;
+}
+.obj-th{background:#303030}
+.obj-td-head{
+  font-size:11.5px;color:var(--ink-3);font-weight:600;
+  display:flex;align-items:center;white-space:nowrap;
+}
+.obj-td-del{flex:0 0 32px;display:flex;align-items:center;justify-content:center}
+.obj-row-del{
+  width:20px;height:20px;border:none;background:#3a3a3a;color:var(--ink-3);border-radius:50%;
+  font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.obj-row-del:hover{background:#402a2a;color:#e06c75}
+.obj-cell-input{
+  width:100%;border:1px solid var(--line);border-radius:8px;
+  padding:6px 8px;font-size:13px;font-family:inherit;background:#2f2f2f;color:var(--ink);
+}
+.obj-cell-input:focus{outline:none;border-color:var(--gm);box-shadow:0 0 0 3px rgba(74,144,226,.22)}
+.obj-table-empty{
+  padding:14px 10px;text-align:center;color:var(--ink-3);font-size:12.5px;
+  border-bottom:1px solid var(--line-soft);
+}
+.obj-events{display:flex;flex-direction:column;gap:9px}
+.obj-event{
+  border:1px solid var(--line);border-radius:8px;padding:9px;background:#303030;
+  display:flex;flex-direction:column;gap:8px;
+}
+.obj-event-head{display:flex;align-items:center;gap:8px}
+.obj-event-name{flex:1;min-width:0;font-size:13.5px}
+.obj-detail-name{
+  font-family:var(--mono);font-size:15px;font-weight:600;color:var(--ink);
+  background:#262626;border:1px solid var(--line-soft);border-radius:6px;
+  padding:7px 11px;margin-bottom:10px;word-break:break-all;
+}
+.obj-detail-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
+.obj-detail-table th,.obj-detail-table td{
+  border:1px solid var(--line-soft);padding:6px 8px;text-align:left;vertical-align:top;
+}
+.obj-detail-table th{background:#333333;color:var(--ink-3);font-weight:600;white-space:nowrap}
+.obj-detail-table td{color:var(--ink-2);word-break:break-word}
+.obj-detail-empty{color:var(--ink-3);font-size:13px;padding:6px 0}
+
+/* ---------- 暗色代码框 ---------- */
+.codebox{
+  background:#1e1e1e;border:1px solid #383838;border-radius:8px;overflow:hidden;
+}
+.codebox-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 10px;background:#252526;border-bottom:1px solid #383838;
+}
+.codebox-name{
+  font-family:var(--mono);font-size:12px;color:#9aa7b8;flex:1;min-width:0;word-break:break-all;
+}
+.code-copy{
+  flex:0 0 auto;border:1px solid #3d6ea8;background:#24344a;color:#9cc6f5;
+  font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:999px;cursor:pointer;
+  transition:background .15s ease,border-color .15s ease;
+}
+.code-copy:hover{background:#2d4363;border-color:#4a86c8}
+.code-copy.done{background:#24402c;border-color:#3f7a52;color:#8fd694}
+.codebox-body{
+  margin:0;padding:10px 12px;overflow-x:auto;
+  font-family:var(--mono);font-size:12.5px;line-height:1.65;
+  -webkit-overflow-scrolling:touch;
+  tab-size:1;                 /* tab 与空格同宽：显示成 1 个空格，内容仍是原文 tab */
+}
+.cl{display:grid;grid-template-columns:32px 1fr;column-gap:12px;align-items:start}
+.ln{
+  text-align:right;color:#5f6b80;user-select:none;-webkit-user-select:none;
+  font-variant-numeric:tabular-nums;border-right:1px solid #383838;padding-right:8px;
+}
+.lc{white-space:pre-wrap;word-break:break-word;color:#d4d4d4}
+.c-com{color:#6a9955;font-style:italic}
+.c-str{color:#ce9178}
+.c-num{color:#b5cea8}
+.c-kw{color:#569cd6}
+.c-fn{color:#dcdcaa}
+.c-cn{color:#c586c0}
+.c-pun{color:#808a99}
+
+/* ---------- API 库 ---------- */
+.lib-search{margin-bottom:9px}
+.rec.lib-open{border-color:var(--gm);background:var(--gm-soft-2)}
+.rec.lib-item{flex-wrap:wrap}
+.rec.lib-item .lib-uses{flex:1 0 100%}
+.lib-edit{
+  flex:0 0 auto;border:1px solid var(--line);background:#2f2f2f;color:var(--ink-3);
+  font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:999px;cursor:pointer;
+  align-self:flex-start;margin-top:2px;
+}
+.lib-edit:hover{border-color:var(--gm);color:var(--gm-deep);background:var(--gm-soft-2)}
+.rec.lib-open .rec-name{color:var(--gm-deep)}
+.rec-name.code{
+  font-family:var(--mono);font-size:13.5px;font-weight:500;
+  white-space:normal;overflow:visible;text-overflow:clip;word-break:break-all;
+}
+.lib-uses{
+  margin:2px 0 4px 12px;padding-left:10px;border-left:2px solid var(--line);
+  display:flex;flex-direction:column;gap:6px;
+}
+.lib-uses-head{font-size:11.5px;color:var(--ink-3);font-weight:600;margin:8px 0 0 14px}
+.lib-pick{
+  display:flex;align-items:center;gap:9px;
+  border:1.5px solid #4f4f4f;background:#2f2f2f;color:var(--gm-deep);
+  font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:8px;cursor:pointer;
+}
+.lib-pick:hover{border-color:var(--gm);background:var(--gm-soft-2)}
+.api-ref{
+  border:1px solid var(--line);background:var(--gm-soft-2);
+  border-radius:var(--radius-sm);padding:10px 12px;
+}
+.api-ref .ref-code{font-family:var(--mono);font-size:13.5px;color:var(--ink);word-break:break-all;line-height:1.5}
+.api-ref .ref-meta{font-size:11.5px;color:var(--ink-3);margin-top:5px}
+.api-ref .ref-gone{color:#e06c75;font-family:var(--sans)}
+.picker-list{display:flex;flex-direction:column;gap:6px;max-height:44vh;overflow:auto;-webkit-overflow-scrolling:touch}
+.picker-row{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  border:1.5px solid var(--line);background:#2f2f2f;border-radius:var(--radius-sm);
+  padding:10px 12px;cursor:pointer;
+}
+.picker-row.on{border-color:var(--gm);background:var(--gm-soft-2)}
+.picker-row .pk-code{font-family:var(--mono);font-size:13.5px;font-weight:500;color:var(--ink);word-break:break-all;flex:1;min-width:0}
+.picker-row .pk-sub{font-size:11.5px;color:var(--ink-3);margin-top:3px}
+.picker-row .pk-mark{flex:0 0 20px;height:20px;border-radius:50%;border:1.5px solid #4f4f4f;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff}
+.picker-row.on .pk-mark{background:var(--gm);border-color:var(--gm)}
+
+/* ---------- 图片 / 压缩包 ---------- */
+.hidden-file{display:none}
+.mod-media{display:flex;flex-direction:column;gap:9px}
+.mod-pick{
+  display:inline-flex;align-items:center;gap:7px;align-self:flex-start;
+  border:1.5px solid #4f4f4f;background:#2f2f2f;color:var(--gm-deep);
+  font-size:13.5px;font-weight:600;padding:9px 15px;border-radius:8px;cursor:pointer;
+  transition:background .15s ease,border-color .15s ease;
+}
+.mod-pick:hover{border-color:var(--gm);background:var(--gm-soft-2)}
+.mod-preview{
+  background:#262626;border:1px solid var(--line-soft);border-radius:8px;padding:9px;
+  display:flex;flex-direction:column;gap:7px;align-items:center;
+}
+.mod-preview img{
+  max-width:100%;max-height:240px;width:auto;height:auto;object-fit:contain;
+  border-radius:8px;display:block;background:#2f2f2f;
+}
+.mod-file{font-size:11.5px;color:var(--ink-3);word-break:break-all;text-align:center}
+.mod-file.left{text-align:left}
+.mod-clear{
+  align-self:flex-start;border:none;background:#3a3a3a;color:var(--ink-3);
+  font-size:12.5px;padding:6px 13px;border-radius:999px;cursor:pointer;
+}
+.mod-clear:hover{background:#402a2a;color:#e06c75}
+/* 超链接 / 网络图片 / 网络视频 */
+.link-item{display:flex;flex-direction:column;gap:10px;font-size:13.5px;color:var(--ink-2)}
+.link-item .link-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.link-item .link-row .ico{color:var(--c);flex:0 0 17px;display:flex}
+.link-item .link-row a{color:var(--gm-deep);font-family:var(--mono);font-size:12.5px;word-break:break-all;text-decoration:none}
+.link-item .link-row a:active{text-decoration:underline}
+.link-item .link-row .url-plain{color:var(--ink-2);font-family:var(--mono);font-size:12.5px;word-break:break-all}
+.link-item .link-tag{font-size:11px;color:var(--ink-3);border:1px solid var(--line-soft);border-radius:5px;padding:1px 6px;flex:0 0 auto}
+.link-media{padding:8px}
+.link-media img{max-width:100%;border-radius:8px;display:block;margin:0 auto}
+.link-media video{width:100%;max-height:340px;border-radius:8px;display:block;background:#000}
+/* 着色器 */
+.shader-detail{display:flex;flex-direction:column;gap:12px}
+.shader-part{display:flex;flex-direction:column;gap:7px}
+.shader-part-title{font-size:13px;color:var(--ink-2);font-weight:600}
+.shader-part .carrier-item{font-size:13px;color:var(--ink-3)}
+.toast{
+  position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(12px);
+  background:rgba(18,18,18,.95);color:#fff;font-size:13.5px;line-height:1.5;
+  padding:11px 17px;border-radius:8px;opacity:0;pointer-events:none;z-index:99;
+  max-width:86vw;text-align:center;transition:opacity .22s ease,transform .22s ease;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.lightbox{
+  position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99;display:none;
+  align-items:center;justify-content:center;padding:24px;
+}
+.lightbox.open{display:flex}
+.lightbox img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;display:block}
+.lightbox-close{
+  position:absolute;top:calc(14px + env(safe-area-inset-top));right:16px;
+  width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,.18);
+  color:#fff;font-size:23px;line-height:1;cursor:pointer;
+}
+.form-actions{display:flex;gap:9px;margin-top:4px}
+.form-note{
+  font-size:12px;color:var(--ink-3);text-align:center;
+  background:#333333;border:1px dashed #454545;border-radius:8px;
+  padding:10px 12px;margin-top:6px;line-height:1.6;
+}
+.btn{
+  border:none;border-radius:9px;padding:13px 0;font-size:15px;font-weight:600;cursor:pointer;
+  flex:1;transition:transform .12s ease,background .15s ease;
+}
+.btn:active{transform:scale(.985)}
+.btn-primary{background:var(--gm);color:#fff;box-shadow:0 8px 18px -9px rgba(74,144,226,.35)}
+.btn-primary:hover{background:#5aa0ec}
+.btn-ghost{background:#333333;color:var(--ink-2)}
+.btn-ghost:hover{background:#3f3f3f}
+
+/* ---------- 详情 ---------- */
+.detail-title{margin:0;font-size:19px;font-weight:700;letter-spacing:-.015em;line-height:1.35}
+.detail-time{font-size:12.5px;color:var(--ink-3);margin-top:3px}
+.detail-sec{margin-top:16px}
+.detail-sec h4{
+  margin:0 0 8px;font-size:15px;font-weight:700;color:var(--ink);
+  display:flex;align-items:center;gap:7px;letter-spacing:-.01em;
+}
+.detail-sec h4::before{
+  content:"";width:3px;height:16px;border-radius:2px;background:var(--gm);display:inline-block;
+}
+.detail-body{
+  font-size:14px;color:var(--ink-2);line-height:1.7;white-space:pre-wrap;word-break:break-word;
+  background:#2e2e2e;border:1px solid var(--line-soft);border-radius:8px;padding:10px 12px;
+}
+.detail-body.empty-text{color:var(--ink-3);font-size:13px}
+.api-list{display:flex;flex-wrap:wrap;gap:6px}
+.carrier-group{
+  border:1px solid var(--line-soft);border-radius:9px;overflow:hidden;margin-bottom:9px;
+  background:#2e2e2e;
+}
+.carrier-group-head{
+  display:flex;align-items:center;gap:7px;padding:8px 11px;
+  background:var(--cg-soft);border-bottom:1px solid var(--line-soft);
+}
+.carrier-group-head .stp{font-size:11.5px;font-weight:600;color:var(--ink-3);flex:0 0 auto}
+.carrier-group-head .nm{font-size:13.5px;font-weight:700;color:var(--c)}
+.carrier-group-head .cnt{margin-left:auto;font-size:11.5px;color:var(--ink-3)}
+.carrier-group-body{padding:8px 11px;display:flex;flex-direction:column;gap:6px}
+.carrier-item{
+  font-family:var(--mono);font-size:12.5px;color:var(--ink-2);line-height:1.55;
+  word-break:break-all;display:flex;gap:7px;align-items:flex-start;
+}
+.carrier-item::before{
+  content:"";width:5px;height:5px;border-radius:50%;background:var(--c);
+  flex:0 0 5px;margin-top:7px;
+}
+.carrier-item.plain{font-family:var(--sans);font-size:13.5px;color:var(--ink-2)}
+.detail-actions{margin-top:18px;display:flex;gap:9px}
+.detail-actions .btn{flex:1}
+
+/* ---------- 记录卡 ---------- */
+.card-export{
+  width:100%;border:1.5px solid #4a4a4a;background:#2f2f2f;color:var(--gm-deep);
+  border-radius:10px;padding:14px;font-size:15.5px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s ease;
+}
+.card-export:hover{background:var(--gm-soft)}
+.note{text-align:center;font-size:12px;color:var(--ink-3);margin:12px 0 2px;line-height:1.7}
+
+.modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;
+  align-items:flex-end;justify-content:center;z-index:50;backdrop-filter:blur(3px);
+}
+.modal.open{display:flex}
+/* 练习过程是二级界面：层级低于截图/记录卡弹层 */
+#processCard{z-index:45}
+.process-sheet{max-height:92vh}
+.process-hint{font-size:12px;color:var(--ink-3);margin:-4px 0 12px}
+.process-hint:empty{display:none}
+.sheet{
+  background:#2b2b2b;width:100%;max-width:560px;border-radius:14px 14px 0 0;
+  padding:18px 16px calc(20px + env(safe-area-inset-bottom));
+  animation:up .26s cubic-bezier(.2,.8,.2,1);max-height:94vh;overflow:auto;
+}
+@keyframes up{from{transform:translateY(22px);opacity:.6}to{transform:none;opacity:1}}
+.sheet-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sheet-head h3{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em}
+.sheet-head .close{margin-left:auto}
+.preview{
+  width:100%;border-radius:10px;border:1px solid var(--line);display:block;background:#262626;
+}
+.save-row{display:flex;gap:9px;margin-top:14px}
+.save-row .btn{flex:1;padding:13px 0;font-size:15px}
+@media (min-width:640px){
+  .modal{align-items:center}
+  .sheet{border-radius:24px}
+}
+
+/* ---------- 宽屏适配：分屏模式（左右各开一个应用） ----------
+   平板横屏 / 桌面宽屏：整个视口分成两半，左半是主应用，右半是练习过程应用。
+   两边各有自己的顶栏、各自独立滚动，中间是系统分屏那样的把手。 */
+@media (min-width:1000px){
+  html,body{height:100%}
+  body{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    grid-template-rows:auto minmax(0,1fr);
+    padding:0;
+    overflow:hidden;
+    background:var(--bg);
+  }
+  /* ---- 左栏：主应用（顶栏 + 主界面） ---- */
+  .topbar{
+    grid-column:1;grid-row:1;
+    position:static;              /* 固定在自己的格子里，不随内容滚走 */
+    padding:calc(14px + env(safe-area-inset-top)) 0 12px;
+  }
+  .bar-inner{max-width:none;padding:0 20px}
+  .wrap{
+    grid-column:1;grid-row:2;
+    max-width:none;width:100%;
+    padding:0 20px 40px;
+    min-height:0;                /* grid item 默认 min-height:auto 会把格子撑大，导致不滚动 */
+    overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+  }
+  /* ---- 右栏：练习过程应用 ---- */
+  #processCard{
+    grid-column:2;grid-row:1 / span 2;
+    position:relative;            /* in-flow，作为分屏的右半边 */
+    min-height:0;                 /* 同上：不加这行右屏会被内容撑高，滚不动 */
+    display:flex !important;
+    left:auto;top:auto;right:auto;bottom:auto;
+    width:auto;max-width:none;height:100%;
+    align-items:stretch;
+    background:var(--card);
+    border-left:none;
+    backdrop-filter:none;
+    animation:none;
+    z-index:25;
+  }
+  #processCard .sheet{
+    width:100%;max-width:none;height:100%;max-height:none;min-height:0;
+    background:var(--card);
+    border-radius:0;
+    border-left:none;
+    animation:none;
+    padding:calc(14px + env(safe-area-inset-top)) 18px 24px;
+    box-shadow:none;
+    overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+  }
+  /* 中间的分屏把手 */
+  #processCard::before{
+    content:"";position:absolute;left:-6px;top:0;bottom:0;width:12px;
+    background:linear-gradient(90deg,rgba(0,0,0,.45),rgba(0,0,0,.18));
+    border-left:1px solid var(--line);
+    border-right:1px solid var(--line);
+    pointer-events:none;
+  }
+  /* 标题栏跟随内容滚动时保持可见 */
+  #processCard .sheet-head{
+    position:sticky;top:calc(-14px - env(safe-area-inset-top));
+    background:var(--card);
+    padding-top:calc(14px + env(safe-area-inset-top));
+    margin-bottom:10px;
+    z-index:2;
+  }
+  #processCard .sheet-head h3{font-size:16.5px}
+  /* 左栏里横向排布的元素跟着变宽，别挤在一起 */
+  .stats{gap:12px}
+  .stat{padding:12px 14px}
+  .rec{padding:12px 14px}
+  .field{font-size:15px}
+}
+@media (max-width:380px){
+  .stat .v{font-size:19px}
+  .nick{max-width:130px}
+  .top-action{padding:7px 10px}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+ <div class="bar-inner">
+  <div class="avatar" id="avatar" aria-label="固定头像 G">G</div>
+  <div class="who">
+    <div class="nick-row">
+      <span class="nick" id="nickView">编程新手</span>
+      <button class="edit-btn" id="editBtn" type="button">编辑昵称</button>
+    </div>
+    <p class="sub" id="headSub">Gml代码练习记录</p>
+    <div class="nick-edit" id="nickEdit" style="display:none">
+      <input id="nickInput" type="text" maxlength="20" placeholder="输入昵称" autocomplete="off">
+      <button class="btn btn-primary" id="nickSave" type="button" style="flex:0 0 auto;padding:9px 16px;font-size:14px">保存</button>
+      <button class="btn btn-ghost" id="nickCancel" type="button" style="flex:0 0 auto;padding:9px 14px;font-size:14px">取消</button>
+    </div>
+  </div>
+  <button class="top-action icon-only" id="openProcessBtn" type="button" title="打开练习过程" aria-label="打开练习过程">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+  </button>
+  <button class="top-action" id="openCardBtn" type="button">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18"/><path d="M8.5 14.5l2.5 2.5 4-4.5"/></svg>
+    记录卡
+  </button>
+ </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ 练习记录 ============ -->
+  <section class="card">
+    <div class="card-head">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gm)"><path d="M4 19.5V6a2 2 0 0 1 2-2h13"/><path d="M6 17h13a2 2 0 0 0 2-2V8"/><path d="M9 9h6M9 13h4"/></svg>
+      <h2 id="recCardTitle">练习记录</h2>
+      <span class="hint" id="recCardHint">点一次 = 一次打卡</span>
+      <button class="hist-btn" id="histBtn" type="button" title="查看往期的打卡记录">
+        <svg id="histBtnIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+        <span id="histBtnText">历史记录</span>
+      </button>
+    </div>
+
+    <!-- 今日视图 -->
+    <div id="todayPane">
+
+    <div class="stats">
+      <div class="stat">
+        <div class="k">今日合计</div>
+        <div class="v" id="todayCount">0<small>次</small></div>
+      </div>
+      <div class="stat">
+        <div class="k">已挑战次数</div>
+        <div class="v" id="totalCount">0<small>次</small></div>
+      </div>
+      <div class="stat goal">
+        <div class="k">每日目标</div>
+        <div class="goal-row">
+          <input id="goalInput" type="number" min="1" max="99" inputmode="numeric" aria-label="每日目标次数">
+          <span>次</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="progress" role="progressbar" aria-label="今日进度"><div class="bar" id="progressBar"></div></div>
+    <div class="progress-text" id="progressText">今日进度 0 / 5</div>
+
+    <button class="checkin" id="checkinBtn" type="button"><span class="plus">＋</span> 打卡一次</button>
+
+    <div class="list-head"><span>今日打卡明细</span><span class="lh-tip">点一下打开练习过程</span><span id="listCount" style="margin-left:auto"></span></div>
+    <div class="rec-list" id="recordList"></div>
+    <div class="empty" id="emptyTip">今天还没有记录。<br>点上面的按钮完成第一次打卡。</div>
+    </div><!-- /todayPane -->
+
+    <!-- 历史记录视图 -->
+    <div id="historyPane" style="display:none">
+      <div class="hist-dates" id="histDates" aria-label="按日期浏览"></div>
+      <div class="hist-search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink-3);flex:0 0 auto"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="histSearch" type="search" placeholder="搜索练习名称" autocomplete="off" aria-label="搜索练习名称">
+        <button class="btn btn-ghost" id="histSearchBtn" type="button">搜索</button>
+      </div>
+      <div class="hist-sub" id="histSub"></div>
+      <div id="histList"></div>
+      <div class="empty" id="histEmpty" style="display:none">没有匹配的往期记录。</div>
+      <div class="pager" id="histPager"></div>
+    </div>
+  </section>
+
+  <!-- ============ API 库 ============ -->
+  <section class="card" id="apiLibCard">
+    <div class="card-head">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gm)"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H9v16H5.5A1.5 1.5 0 0 1 4 18.5Z"/><path d="M9 4h4v16H9z"/><path d="M15.5 4H18a1.5 1.5 0 0 1 1.5 1.5v13A1.5 1.5 0 0 1 18 20h-2.5"/><path d="M12 8.5h1M12 12h1M12 15.5h1"/></svg>
+      <h2>API 库</h2>
+      <span class="hint" id="libHint">共 0 个</span>
+      <button class="shot-btn" id="libAddBtn" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        新建 API
+      </button>
+    </div>
+    <input class="field lib-search" id="libSearch" type="search" autocomplete="off"
+           placeholder="搜索 API 代码或参数说明" aria-label="搜索 API 库">
+    <div class="rec-list" id="apiLibList"></div>
+    <div class="empty" id="libEmpty">API 库还是空的。<br>点右上角「新建 API」把常用 API 存进来，<br>练习时就能直接引用，不用重复写。</div>
+    <p class="note" id="libNote">练习题要求的 API 和代码载体里的 api，都从库里引用。</p>
+  </section>
+
+  <!-- ============ 导出 ============ -->
+  <section class="card">
+    <div class="card-head">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gm)"><path d="M12 3v12"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M4 18.5h16"/></svg>
+      <h2>挑战记录卡</h2>
+    </div>
+    <button class="card-export" id="exportBtn" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18"/><path d="M8.5 14.5l2.5 2.5 4-4.5"/></svg>
+      生成挑战记录卡
+    </button>
+    <p class="note">昵称与记录只保存在这台设备的浏览器里，刷新后依然在。<br>别人首次打开时看到的是默认昵称和空白记录。</p>
+  </section>
+
+</main>
+
+<!-- ============ 练习过程（二级界面，默认不显示） ============ -->
+<div class="modal" id="processCard">
+  <div class="sheet process-sheet">
+    <div class="sheet-head">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gm-deep);flex:0 0 auto"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      <h3>练习过程</h3>
+      <button class="shot-btn" id="shotBtn" type="button" title="把这条练习过程生成一张图片">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.3-2h8l1.3 2h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z"/><circle cx="12" cy="13" r="3.2"/></svg>
+        截图
+      </button>
+      <button class="btn btn-ghost close" id="processClose" type="button" style="flex:0 0 auto;padding:6px 14px;font-size:13px">关闭</button>
+    </div>
+    <div class="process-hint" id="processHint">选择一条记录查看</div>
+    <div id="processBody"></div>
+  </div>
+</div>
+
+<!-- ============ 记录卡弹层 ============ -->
+<div class="modal" id="cardModal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3>挑战记录卡</h3>
+      <button class="btn btn-ghost close" id="cardClose" type="button" style="flex:0 0 auto;padding:6px 14px;font-size:13px">关闭</button>
+    </div>
+    <img class="preview" id="cardPreview" alt="挑战记录卡预览">
+    <div class="save-row">
+      <button class="btn btn-primary" id="saveCardBtn" type="button">保存图片</button>
+      <button class="btn btn-ghost" id="rebuildBtn" type="button">重新生成</button>
+    </div>
+    <p class="note">手机上也可以长按上面的图片，直接保存到相册。</p>
+  </div>
+</div>
+
+<!-- ============ API 编辑弹层 ============ -->
+<div class="modal" id="apiModal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3 id="apiModalTitle">新建 API</h3>
+      <button class="btn btn-ghost close" id="apiModalClose" type="button" style="flex:0 0 auto;padding:6px 14px;font-size:13px">关闭</button>
+    </div>
+    <div class="form-block" style="margin-bottom:12px">
+      <label>API 代码<span class="req"> *</span></label>
+      <textarea class="field code-field" id="apiCodeInput" rows="1"
+                placeholder="例如 ds_list_create(capacity, is_array)"></textarea>
+    </div>
+    <div class="form-block" style="margin-bottom:12px">
+      <label>参数说明（编号可自定义 + 简单描述）</label>
+      <div class="api-args-list" id="apiModalArgs"></div>
+      <button class="add-arg" id="apiModalAddArg" type="button">＋ 添加参数</button>
+    </div>
+    <div class="save-row">
+      <button class="btn btn-primary" id="apiModalSave" type="button">保存到 API 库</button>
+      <button class="btn btn-ghost" id="apiModalCancel" type="button">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ API 选择弹层 ============ -->
+<div class="modal" id="apiPicker">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3 id="apiPickerTitle">从 API 库选择</h3>
+      <button class="btn btn-ghost close" id="apiPickerClose" type="button" style="flex:0 0 auto;padding:6px 14px;font-size:13px">关闭</button>
+    </div>
+    <input class="field" id="apiPickerSearch" type="search" autocomplete="off"
+           placeholder="搜索 API 代码" aria-label="搜索 API" style="margin-bottom:9px">
+    <div class="picker-list" id="apiPickerList"></div>
+    <div class="empty" id="apiPickerEmpty">库里还没有 API，先去 API 库新建一个。</div>
+    <div class="save-row">
+      <button class="btn btn-primary" id="apiPickerOk" type="button">确定</button>
+      <button class="btn btn-ghost" id="apiPickerCancel" type="button">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose" type="button" aria-label="关闭">×</button>
+  <img id="lightboxImg" alt="放大查看">
+</div>
+
+<div class="modal" id="shotModal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3>练习截图</h3>
+      <button class="btn btn-ghost close" id="shotClose" type="button" style="flex:0 0 auto;padding:6px 14px;font-size:13px">关闭</button>
+    </div>
+    <img class="preview" id="shotPreview" alt="练习过程截图预览">
+    <div class="save-row">
+      <button class="btn btn-primary" id="shotSave" type="button">保存图片</button>
+      <button class="btn btn-ghost" id="shotRebuild" type="button">重新生成</button>
+    </div>
+    <p class="note">手机上也可以长按上面的图片，直接保存到相册。</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= 常量 ================= */
+  var STORE_KEY = 'gml-practice-log-v2';
+  var SITE_NAME = 'Gml代码练习记录';
+  var DEFAULT_NICK = '编程新手';
+
+  /* 内置代码载体类型（api 不在其中：api 载体只能从 API 库引用） */
+  var CARRIER_TYPES = ['脚本', '对象', '操作描述', '图片', '超链接', '着色器'];
+  var DEFAULT_MODULE_TYPE = '脚本';
+
+  /* 载体配色池：同色系但互相可辨，首次出现随机取，同一载体永久同色 */
+  var CARRIER_PALETTE = [
+    '#4a90e2', /* GameMaker 蓝 */
+    '#2FD3B4', /* 青绿 */
+    '#FF8F42', /* 橙 */
+    '#C77DFF', /* 紫 */
+    '#F0C04A', /* 金 */
+    '#FF6060', /* 红 */
+    '#3FA9F5', /* 天蓝 */
+    '#7CC46B'  /* 绿 */
+  ];
+
+  var $ = function(s){ return document.querySelector(s); };
+  function el(tag, cls, txt){
+    var n = document.createElement(tag);
+    if(cls) n.className = cls;
+    if(txt !== undefined && txt !== null) n.textContent = txt;
+    return n;
+  }
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  /* ================= 状态 ================= */
+  function defaultState(){
+    return {
+      nickname: DEFAULT_NICK,
+      dailyGoal: 5,
+      records: [],
+      carrierColors: {},
+      customTypes: [],
+      apiLib: []
+    };
+  }
+
+  var state = load();
+  migrateApiLib();
+  migrateObjects();
+  migrateCarriers();
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORE_KEY);
+      if(!raw) return defaultState();
+      var s = JSON.parse(raw);
+      if(!s || typeof s !== 'object') return defaultState();
+      var d = defaultState();
+      for(var k in d) if(!(k in s)) s[k] = d[k];
+      if(!Array.isArray(s.records)) s.records = [];
+      if(!Array.isArray(s.customTypes)) s.customTypes = [];
+      if(!Array.isArray(s.apiLib)) s.apiLib = [];
+      if(!s.carrierColors || typeof s.carrierColors !== 'object') s.carrierColors = {};
+      if(typeof s.nickname !== 'string' || !s.nickname.trim()) s.nickname = DEFAULT_NICK;
+      return s;
+    }catch(e){ return defaultState(); }
+  }
+  function save(){
+    try{
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+      quotaWarned = false;
+      return true;
+    }catch(e){
+      if(!quotaWarned){
+        quotaWarned = true;
+        toast('浏览器存不下了：图片可能太大。删掉几张旧图片或换张小图再试。');
+      }
+      return false;
+    }
+  }
+
+  /* 实时保存：输入即落盘（合并 250ms 内的连续输入，避免频繁写 localStorage） */
+  var saveTimer = null;
+  function saveSoon(){
+    if(saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){
+      saveTimer = null;
+      save();
+      syncNamesUI();
+    }, 250);
+  }
+  var quotaWarned = false;
+
+  function toast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){ t.classList.remove('show'); }, 3200);
+  }
+
+  function allTypes(){
+    return CARRIER_TYPES.concat(state.customTypes || []);
+  }
+  /* 模块的类型选项：api 不在其中，api 载体只能从 API 库引用 */
+  function moduleTypes(){
+    /* 只给内置类型（自定义类型功能已下线，老数据仍可查看编辑） */
+    return CARRIER_TYPES.slice();
+  }
+
+  /* ================= API 库 ================= */
+  /* 库条目：{ id, code, params:[{no,desc}] } */
+  /* 记录里只存引用 id（rec.apis 与 type==='api' 的模块都存 refId） */
+
+  function apiItem(refId){
+    var lib = state.apiLib || [];
+    for(var i=0;i<lib.length;i++) if(lib[i].id === refId) return lib[i];
+    return null;
+  }
+  function apiCode(refId){
+    var it = apiItem(refId);
+    return it ? it.code : '';
+  }
+  /* 哪些练习用了这个 API（要求区引用 + 载体引用都算） */
+  function apiUses(refId){
+    var out = [];
+    (state.records || []).forEach(function(rec){
+      var hit = false;
+      (rec.apis || []).forEach(function(r){ if(r === refId) hit = true; });
+      (rec.modules || []).forEach(function(m){ if(m && m.type === 'api' && m.refId === refId) hit = true; });
+      if(hit) out.push(rec);
+    });
+    out.sort(function(a,b){ return b.ts - a.ts; });
+    return out;
+  }
+  function libFindByCode(code){
+    var c = String(code || '').trim().toLowerCase();
+    if(!c) return null;
+    var lib = state.apiLib || [];
+    for(var i=0;i<lib.length;i++) if(String(lib[i].code).trim().toLowerCase() === c) return lib[i];
+    return null;
+  }
+  /* 把库里某条 API 引用进一条记录（要求区 / 载体区共用） */
+  function linkApi(rec, refId, asModule){
+    if(!rec || !refId) return false;
+    var it = apiItem(refId);
+    if(!it) return false;
+    if(asModule){
+      rec.modules = rec.modules || [];
+      var dup = false;
+      rec.modules.forEach(function(m){ if(m && m.type === 'api' && m.refId === refId) dup = true; });
+      if(dup) return false;
+      rec.modules.push({ type:'api', refId:refId });
+      return true;
+    }
+    rec.apis = rec.apis || [];
+    if(rec.apis.indexOf(refId) === -1){ rec.apis.push(refId); return true; }
+    return false;
+  }
+
+  /* 老数据迁移：把散落在记录里的 api 代码收进 API 库，记录改成引用 */
+  function migrateApiLib(){
+    var changed = false;
+    var lib = state.apiLib = state.apiLib || [];
+    lib.forEach(function(it){
+      if(!it.id){ it.id = uid(); changed = true; }
+      it.code = String(it.code || '').trim();
+      it.params = normParams(it.params);
+    });
+
+    /* ---- 修复历史损坏 ----
+       老版迁移把记录里的「引用 id」误当成 API 代码，于是每次刷新都会新建一条
+       code = 旧 id 的假条目，引用也被改指向它 —— 表现就是「刷新一次 API 就变一次」。
+       特征：假条目的 code 长得像内部 uid，且库里存在另一条目的 id 正好等于它。
+       修法：把引用假条目的地方改回引用那条真条目，再删掉假条目。 */
+    var byId = {};
+    lib.forEach(function(it){ byId[it.id] = it; });
+    var remap = {}, garbage = [];
+    lib.forEach(function(it){
+      if(it.id !== it.code && /^r[A-Za-z0-9]{6,}$/.test(it.code) && byId[it.code]){
+        garbage.push(it);
+        remap[it.id] = byId[it.code].id;
+      }
+    });
+    if(garbage.length){
+      var gset = {};
+      garbage.forEach(function(g){ gset[g.id] = true; });
+      (state.records || []).forEach(function(rec){
+        if(Array.isArray(rec.apis)){
+          rec.apis = rec.apis.map(function(r){
+            return (typeof r === 'string' && gset[r]) ? remap[r] : r;
+          });
+        }
+        (rec.modules || []).forEach(function(m){
+          if(m && m.type === 'api' && gset[m.refId]) m.refId = remap[m.refId];
+        });
+      });
+      state.apiLib = lib = lib.filter(function(it){ return !gset[it.id]; });
+      changed = true;
+    }
+
+    function ensure(code, params){
+      var c = String(code || '').trim();
+      if(!c) return null;
+      var hit = libFindByCode(c);
+      if(hit){
+        if(params && params.length && !hit.params.length){ hit.params = normParams(params); changed = true; }
+        return hit;
+      }
+      var item = { id: uid(), code: c, params: normParams(params || []) };
+      lib.push(item);
+      changed = true;
+      return item;
+    }
+
+    (state.records || []).forEach(function(rec){
+      /* 要求区的 API：统一成「引用 id」 */
+      if(Array.isArray(rec.apis)){
+        var refs = [];
+        rec.apis.forEach(function(a){
+          if(typeof a === 'string'){
+            /* ① 命中已有条目的 id → 这就是引用，保持不变（正常形态） */
+            var hitId = null;
+            for(var i=0;i<lib.length;i++){ if(lib[i].id === a){ hitId = lib[i]; break; } }
+            if(hitId){ if(refs.indexOf(hitId.id) === -1) refs.push(hitId.id); return; }
+            /* ② 命中已有条目的 code → 老数据形态，改成引用，不新建 */
+            var hitCode = libFindByCode(a);
+            if(hitCode){ if(refs.indexOf(hitCode.id) === -1) refs.push(hitCode.id); return; }
+            /* ③ 长得像内部 id 但库里没有 → 悬挂引用，原样保留（页面显示「已从 API 库删除」） */
+            if(/^r[A-Za-z0-9]{6,}$/.test(a)){ if(refs.indexOf(a) === -1) refs.push(a); return; }
+            /* ④ 真的是一段 API 代码 → 收进库里 */
+            var it = ensure(a, null);
+            if(it && refs.indexOf(it.id) === -1) refs.push(it.id);
+          }else if(a && a.refId){
+            if(refs.indexOf(a.refId) === -1) refs.push(a.refId);
+          }else if(a && a.code){
+            var it2 = ensure(a.code, a.params);
+            if(it2 && refs.indexOf(it2.id) === -1) refs.push(it2.id);
+          }
+        });
+        var same = refs.length === rec.apis.length &&
+                   refs.every(function(r, i){ return r === rec.apis[i]; });
+        if(!same) changed = true;
+        rec.apis = refs;
+      }
+      /* 载体里的 api 模块：内容搬进库，模块只留引用 */
+      (rec.modules || []).forEach(function(m){
+        if(m && m.type === 'api' && !m.refId){
+          var it3 = ensure(m.value || m.code || '', m.params);
+          if(it3){
+            m.refId = it3.id;
+            delete m.value;
+            delete m.params;
+            changed = true;
+          }
+        }
+      });
+    });
+
+    if(changed) save();
+  }
+
+  /* 老数据迁移：对象载体补上变量表和事件框 */
+  /* 载体类型迁移：压缩包 → 超链接；着色器补 shader 字段 */
+  function migrateCarriers(){
+    var changed = false;
+    (state.records || []).forEach(function(rec){
+      (rec.modules || []).forEach(function(m){
+        if(!m || !m.type) return;
+        if(m.type === '压缩包'){
+          m.type = '超链接';
+          if(!m.value) m.value = '';
+          changed = true;
+        }
+        if(m.type === '着色器' && (!m.shader || typeof m.shader !== 'object')){
+          m.shader = { vertex:'', fragment:'' };
+          changed = true;
+        }
+      });
+    });
+    if(changed) save();
+  }
+
+  function migrateObjects(){
+    var changed = false;
+    (state.records || []).forEach(function(rec){
+      (rec.modules || []).forEach(function(m){
+        if(m && m.type === '对象'){
+          if(!Array.isArray(m.fields)){ m.fields = []; changed = true; }
+          if(!Array.isArray(m.events)){ m.events = []; changed = true; }
+        }
+      });
+    });
+    if(changed) save();
+  }
+
+  /* ================= 工具 ================= */
+  function pad(n){ return n < 10 ? '0'+n : ''+n; }
+  function dateKey(d){
+    d = d || new Date();
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  }
+  function timeText(ts){
+    var d = new Date(ts);
+    return pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+  function longDate(d){
+    d = d || new Date();
+    return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';
+  }
+  function todayKey(){ return dateKey(); }
+  function recordsToday(){
+    var k = todayKey();
+    return state.records.filter(function(r){ return dateKey(new Date(r.ts)) === k; });
+  }
+  function streakDays(){
+    var days = {};
+    state.records.forEach(function(r){ days[dateKey(new Date(r.ts))] = 1; });
+    var n = 0, cur = new Date();
+    if(!days[dateKey(cur)]) cur.setDate(cur.getDate()-1);
+    while(days[dateKey(cur)]){ n++; cur.setDate(cur.getDate()-1); }
+    return n;
+  }
+  function uid(){ return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+  /* 载体颜色：首次出现随机分配，之后固定不变 */
+  function carrierColor(name){
+    if(!name) return '#4a90e2';
+    if(state.carrierColors[name]) return state.carrierColors[name];
+    var used = {};
+    Object.keys(state.carrierColors).forEach(function(k){ used[state.carrierColors[k].toLowerCase()] = 1; });
+    var free = CARRIER_PALETTE.filter(function(c){ return !used[c.toLowerCase()]; });
+    var color;
+    if(free.length){
+      color = free[Math.floor(Math.random()*free.length)];
+    }else{
+      color = hslToHex(((CARRIER_PALETTE.length + Object.keys(state.carrierColors).length) * 137.508) % 360, 66, 56);
+    }
+    state.carrierColors[name] = color;
+    save();
+    return color;
+  }
+  function hslToHex(h, s, l){
+    s/=100; l/=100;
+    var k = function(n){ return (n + h/30) % 12; };
+    var a = s * Math.min(l, 1-l);
+    var f = function(n){
+      var v = l - a*Math.max(-1, Math.min(Math.min(k(n)-3, 9-k(n)), 1));
+      return Math.round(255*v).toString(16).padStart(2,'0');
+    };
+    return '#'+f(0)+f(8)+f(4);
+  }
+  function hexA(hex, a){
+    var h = (hex || '#4a90e2').replace('#','');
+    if(h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    var r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+    return 'rgba('+r+','+g+','+b+','+a+')';
+  }
+  function chipEl(text, color, mini){
+    var c = el('span', 'chip' + (mini ? ' mini' : ''));
+    c.style.setProperty('--chip-fg', color);
+    c.style.setProperty('--chip-bg', hexA(color, 0.10));
+    c.style.setProperty('--chip-bd', hexA(color, 0.32));
+    var d = el('i', 'dot');
+    c.appendChild(d);
+    c.appendChild(document.createTextNode(text));
+    return c;
+  }
+  function recTypes(rec){
+    var seen = [], out = [];
+    (rec.modules || []).forEach(function(m){
+      if(m.type && seen.indexOf(m.type) === -1){ seen.push(m.type); out.push(m.type); }
+    });
+    return out;
+  }
+
+  /* ================= 渲染：顶栏 ================= */
+  function renderHeader(){
+    $('#nickView').textContent = state.nickname || DEFAULT_NICK;
+    $('#headSub').textContent = '今日 ' + recordsToday().length + ' 次 · 已挑战 ' + state.records.length + ' 次';
+    if(document.activeElement !== $('#goalInput')) $('#goalInput').value = state.dailyGoal;
+  }
+
+  /* ================= 渲染：API 库 ================= */
+  var libOpenId = null;    /* 展开中的库条目 */
+  var libQuery = '';       /* 搜索词 */
+
+  function libMatches(it, q){
+    if(!q) return true;
+    var s = String(q).toLowerCase();
+    if(String(it.code).toLowerCase().indexOf(s) >= 0) return true;
+    var ps = normParams(it.params);
+    for(var i=0;i<ps.length;i++){
+      if(String(ps[i].no || '').toLowerCase().indexOf(s) >= 0) return true;
+      if(String(ps[i].desc || '').toLowerCase().indexOf(s) >= 0) return true;
+    }
+    return false;
+  }
+
+  function renderApiLib(){
+    var list = $('#apiLibList');
+    list.innerHTML = '';
+    var lib = state.apiLib || [];
+    var q = libQuery.trim();
+    var items = lib.filter(function(it){ return libMatches(it, q); });
+
+    $('#libHint').textContent = q
+      ? ('搜到 ' + items.length + ' / ' + lib.length + ' 个')
+      : ('共 ' + lib.length + ' 个');
+    $('#libEmpty').style.display = lib.length ? 'none' : '';
+    $('#libNote').style.display = lib.length ? '' : 'none';
+
+    if(lib.length && !items.length){
+      list.appendChild(el('div', 'empty', '没有匹配「' + q + '」的 API。'));
+      return;
+    }
+
+    items.forEach(function(it){
+      var uses = apiUses(it.id);
+      var ps = normParams(it.params);
+
+      var li = el('li', 'rec lib-item' + (libOpenId === it.id ? ' lib-open' : ''));
+
+      var main = el('button', 'rec-main');
+      main.type = 'button';
+      main.dataset.libopen = it.id;
+      var top = el('div', 'rec-top');
+      top.appendChild(el('span', 'rec-name code', it.code));
+      top.appendChild(el('span', 'rec-time', uses.length ? (uses.length + ' 处引用') : '未被引用'));
+      main.appendChild(top);
+      var meta = el('div', 'rec-meta');
+      meta.appendChild(chipEl(ps.length ? ('参数 ' + ps.length) : '无参数', '#7a7a7a', true));
+      main.appendChild(meta);
+      li.appendChild(main);
+
+      var edit = el('button', 'lib-edit', '编辑');
+      edit.type = 'button';
+      edit.dataset.libedit = it.id;
+      li.appendChild(edit);
+
+      var del = el('button', 'del' + (uses.length ? ' locked' : ''), '×');
+      del.type = 'button';
+      del.dataset.libdel = it.id;
+      del.setAttribute('aria-label', uses.length
+        ? (it.code + ' 正被 ' + uses.length + ' 处练习引用，不能删除')
+        : ('从 API 库删除 ' + it.code));
+      del.title = uses.length ? ('还有 ' + uses.length + ' 处引用，不能删除') : '从 API 库删除';
+      li.appendChild(del);
+
+      /* 展开：使用了这个 API 的练习（复刻打卡明细的条目样式） */
+      if(libOpenId === it.id){
+        var box = el('div', 'lib-uses');
+        box.appendChild(el('div', 'lib-uses-head', '使用了这个 API 的练习（' + uses.length + '）'));
+        if(!uses.length){
+          box.appendChild(el('div', 'empty', '还没有练习引用它。'));
+        }else{
+          uses.forEach(function(rec){
+            var u = el('li', 'rec');
+            var um = el('button', 'rec-main');
+            um.type = 'button';
+            um.dataset.openrec = rec.id;
+            var ut = el('div', 'rec-top');
+            ut.appendChild(el('span', 'rec-name', rec.name || '未命名练习'));
+            ut.appendChild(el('span', 'rec-time',
+              (dateKey(new Date(rec.ts)) === todayKey() ? '' : dateKey(new Date(rec.ts)).slice(5) + ' ') + timeText(rec.ts)));
+            um.appendChild(ut);
+            var umeta = el('div', 'rec-meta');
+            var ts = recTypes(rec);
+            if(!ts.length){
+              umeta.appendChild(chipEl('待填写', '#909090', true));
+            }else{
+              ts.forEach(function(t){ umeta.appendChild(chipEl(t, carrierColor(t), true)); });
+            }
+            um.appendChild(umeta);
+            u.appendChild(um);
+            box.appendChild(u);
+          });
+        }
+        li.appendChild(box);
+      }
+
+      list.appendChild(li);
+    });
+  }
+
+  /* ================= 画布里的暗色代码框 ================= */
+  var CODE_FONT = '"JetBrains Mono","SF Mono",Menlo,monospace';
+
+  /* 量一段代码在画布上要占多高（含软换行） */
+  function measureCodeBlock(ctx, w, code, fs){
+    fs = fs || 20;
+    var rows = gmlLineTokens(code == null ? '' : code);
+    ctx.save();
+    ctx.font = '500 ' + fs + 'px ' + CODE_FONT;
+    var vis = rows.map(function(tokens){ return layoutCodeLine(ctx, tokens, w - 130); });
+    ctx.restore();
+    var total = 0;
+    vis.forEach(function(v){ total += v.length; });
+    return { vis: vis, h: 16 + total*26 + 16, lines: rows };
+  }
+
+  /* 画一个暗色代码框，返回高度 */
+  function drawCodeBlock(ctx, x, y, w, code, fs){
+    fs = fs || 20;
+    var meta = measureCodeBlock(ctx, w, code, fs);
+    ctx.save();
+    roundRect(ctx, x, y, w, meta.h, 12); ctx.clip();   /* 超出框宽的文字被裁掉，不会溢到框外 */
+    ctx.fillStyle = '#1e1e1e';
+    roundRect(ctx, x, y, w, meta.h, 12); ctx.fill();
+    ctx.strokeStyle = '#383838';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x+56, y+10); ctx.lineTo(x+56, y+meta.h-10);
+    ctx.stroke();
+    var ly = y + 16;
+    var segs = [];
+    meta.vis.forEach(function(visRows, li){
+      visRows.forEach(function(vrow, vi){
+        if(vi === 0){
+          ctx.font = '400 18px ' + CODE_FONT;
+          ctx.fillStyle = '#5f6b80';
+          ctx.textAlign = 'right';
+          ctx.fillText(String(li+1), x+46, ly+15);
+          ctx.textAlign = 'left';
+        }
+        var lx = x + 66;
+        ctx.font = '500 ' + fs + 'px ' + CODE_FONT;
+        vrow.forEach(function(tk){
+          ctx.fillStyle = CANVAS_TOK_COLOR[tk.t] || '#d4d4d4';
+          ctx.fillText(tk.s, lx, ly+15);
+          lx += ctx.measureText(tk.s).width;
+        });
+        segs.push({ li: li, vi: vi, no: vi === 0 ? li+1 : 0, y: ly,
+                   text: vrow.map(function(tk){ return tk.s; }).join('') });
+        ly += 26;
+      });
+    });
+    ctx.restore();
+    /* 记录布局数据，供自检脚本断言（逻辑行数 / 视觉行数 / 折行数 / 每段行号） */
+    var _vis = segs.length;
+    if(window.__gml) (window.__gml.lastShotCodeRows = window.__gml.lastShotCodeRows || []).push({
+      logical: meta.vis.length, visual: _vis, wrapped: _vis - meta.vis.length,
+      segs: meta.vis.map(function(v){ return v.length; }),
+      segInfo: segs
+    });
+    return meta.h;
+  }
+
+  /* ================= 对象载体 ================= */
+  /* 结构：{ type:'对象', value:'对象名', fields:[{name,param,desc}], events:[{name,code}] } */
+
+  function normFields(f){
+    if(!Array.isArray(f)) return [];
+    return f.map(function(x){
+      x = x || {};
+      return {
+        name: String(x.name || ''),
+        param: String(x.param || ''),
+        desc: String(x.desc || '')
+      };
+    });
+  }
+  function normEvents(e){
+    if(!Array.isArray(e)) return [];
+    return e.map(function(x){
+      x = x || {};
+      return { name: String(x.name || ''), code: String(x.code || '') };
+    });
+  }
+
+  /* 表单里的对象编辑器：对象名 + 预定义变量表 + 事件代码框 */
+  function buildObjectField(m, refresh){
+    var wrap = el('div', 'obj-field');
+
+    /* 1. 对象名 */
+    wrap.appendChild(el('div', 'sub-label', '对象名'));
+    var nameIn = el('input', 'field obj-name-input');
+    nameIn.type = 'text';
+    nameIn.placeholder = '例如 obj_player';
+    nameIn.dataset.role = 'objectName';
+    nameIn.value = m.value || '';
+    nameIn.addEventListener('input', function(){ m.value = nameIn.value; saveSoon(); });
+    wrap.appendChild(nameIn);
+
+    /* 2. 预定义变量表：每次加一列，每列 3 行（变量名 / 参数 / 说明） */
+    m.fields = normFields(m.fields);
+    wrap.appendChild(el('div', 'sub-label', '预定义变量表（每行一个变量）'));
+    var tableWrap = el('div', 'obj-table-wrap');
+    var table = el('div', 'obj-table');
+
+    /* 每行一个变量，行里 3 列：变量名 / 参数 / 说明 */
+    var COLS = [
+      { key:'name',  label:'变量名', flex:'1.1' },
+      { key:'param', label:'参数',   flex:'1' },
+      { key:'desc',  label:'说明',   flex:'1.5' }
+    ];
+
+    function renderTable(){
+      table.innerHTML = '';
+      if(!m.fields.length){
+        table.appendChild(el('div', 'obj-table-empty', '还没有预定义变量，点下面「＋ 添加一行」开始。'));
+        return;
+      }
+      var head = el('div', 'obj-tr obj-th');
+      COLS.forEach(function(c){
+        var th = el('div', 'obj-td obj-td-head', c.label);
+        th.style.flex = c.flex;
+        head.appendChild(th);
+      });
+      head.appendChild(el('div', 'obj-td obj-td-head obj-td-del'));
+      table.appendChild(head);
+
+      m.fields.forEach(function(f, ri){
+        var tr = el('div', 'obj-tr');
+        COLS.forEach(function(c){
+          var td = el('div', 'obj-td');
+          td.style.flex = c.flex;
+          var inp = el('input', 'obj-cell-input');
+          inp.type = 'text';
+          inp.value = f[c.key] || '';
+          inp.setAttribute('aria-label', '第 ' + (ri+1) + ' 个变量的' + c.label);
+          inp.addEventListener('input', function(){ f[c.key] = inp.value; saveSoon(); });
+          td.appendChild(inp);
+          tr.appendChild(td);
+        });
+        var delTd = el('div', 'obj-td obj-td-del');
+        var del = el('button', 'obj-row-del', '×');
+        del.type = 'button';
+        del.setAttribute('aria-label', '删除第 ' + (ri+1) + ' 个变量');
+        del.addEventListener('click', function(){
+          m.fields.splice(ri, 1);
+          saveSoon();
+          renderTable();
+        });
+        delTd.appendChild(del);
+        tr.appendChild(delTd);
+        table.appendChild(tr);
+      });
+    }
+    renderTable();
+    tableWrap.appendChild(table);
+    wrap.appendChild(tableWrap);
+
+    var addField = el('button', 'add-arg', '＋ 添加一行');
+    addField.type = 'button';
+    addField.addEventListener('click', function(){
+      m.fields.push({ name:'', param:'', desc:'' });
+      saveSoon();
+      renderTable();
+    });
+    wrap.appendChild(addField);
+
+    /* 3. 事件代码框 */
+    m.events = normEvents(m.events);
+    wrap.appendChild(el('div', 'sub-label', '事件代码框'));
+    var evWrap = el('div', 'obj-events');
+
+    function renderEvents(){
+      evWrap.innerHTML = '';
+      if(!m.events.length){
+        evWrap.appendChild(el('div', 'hint-line', '还没有事件，点下面「＋ 添加事件」开始。'));
+        return;
+      }
+      m.events.forEach(function(ev, i){
+        var box = el('div', 'obj-event');
+        var head = el('div', 'obj-event-head');
+        var evName = el('input', 'field obj-event-name');
+        evName.type = 'text';
+        evName.placeholder = '事件名，例如 Create / Step / Draw';
+        evName.dataset.role = 'eventName';
+        evName.value = ev.name || '';
+        evName.addEventListener('input', function(){ ev.name = evName.value; saveSoon(); });
+        head.appendChild(evName);
+        var del = el('button', 'mod-del', '×');
+        del.type = 'button';
+        del.setAttribute('aria-label', '删除这个事件');
+        del.addEventListener('click', function(){
+          m.events.splice(i, 1);
+          saveSoon();
+          renderEvents();
+        });
+        head.appendChild(del);
+        box.appendChild(head);
+
+        var codeIn = el('textarea', 'field code-field');
+        codeIn.rows = 4;
+        codeIn.dataset.role = 'eventCode';
+        codeIn.placeholder = '// 这里写这个事件的代码';
+        codeIn.value = ev.code || '';
+        codeIn.addEventListener('input', function(){ ev.code = codeIn.value; saveSoon(); });
+        box.appendChild(codeIn);
+
+        evWrap.appendChild(box);
+      });
+    }
+    renderEvents();
+    wrap.appendChild(evWrap);
+
+    var addEvent = el('button', 'add-arg', '＋ 添加事件');
+    addEvent.type = 'button';
+    addEvent.addEventListener('click', function(){
+      m.events.push({ name:'', code:'' });
+      saveSoon();
+      renderEvents();
+    });
+    wrap.appendChild(addEvent);
+
+    return wrap;
+  }
+
+  /* 详情里的对象展示：对象名 + 变量表 + 事件代码框 */
+  function buildObjectDetail(m){
+    var box = el('div', 'obj-detail');
+    box.appendChild(el('div', 'obj-detail-name', m.value || '（未填写对象名）'));
+
+    var fSec = el('div');
+    fSec.appendChild(el('div', 'sub-label', '预定义变量表'));
+    var fields = normFields(m.fields);
+    if(fields.length){
+      var t = el('table', 'obj-detail-table');
+      var thead = el('thead');
+      var trh = el('tr');
+      trh.appendChild(el('th', null, '变量名'));
+      trh.appendChild(el('th', null, '参数'));
+      trh.appendChild(el('th', null, '说明'));
+      thead.appendChild(trh);
+      t.appendChild(thead);
+      var tbody = el('tbody');
+      fields.forEach(function(f){
+        var tr = el('tr');
+        tr.appendChild(el('td', null, f.name || '（未填写）'));
+        tr.appendChild(el('td', null, f.param || '（未填写）'));
+        tr.appendChild(el('td', null, f.desc || '（未填写）'));
+        tbody.appendChild(tr);
+      });
+      t.appendChild(tbody);
+      fSec.appendChild(t);
+    }else{
+      fSec.appendChild(el('div', 'obj-detail-empty', '没有预定义变量'));
+    }
+    box.appendChild(fSec);
+
+    var eSec = el('div');
+    eSec.appendChild(el('div', 'sub-label', '事件代码框'));
+    var events = normEvents(m.events);
+    if(events.length){
+      events.forEach(function(ev){
+        eSec.appendChild(buildCodeBox(ev.code || '', ev.name || '事件'));
+      });
+    }else{
+      eSec.appendChild(el('div', 'obj-detail-empty', '没有事件'));
+    }
+    box.appendChild(eSec);
+
+    return box;
+  }
+
+  /* ================= 暗色代码框 ================= */
+  /* GML 保留字 */
+  var GM_KEYWORDS = {
+    'begin':1,'break':1,'case':1,'constructor':1,'continue':1,'default':1,'delete':1,
+    'div':1,'do':1,'else':1,'end':1,'enum':1,'exit':1,'for':1,'function':1,'globalvar':1,
+    'if':1,'new':1,'repeat':1,'return':1,'static':1,'struct':1,'switch':1,'var':1,
+    'while':1,'with':1,'and':1,'or':1,'xor':1,'not':1,'mod':1,'try':1,'catch':1,
+    'finally':1,'throw':1
+  };
+  var GM_CONSTS = {'true':1,'false':1,'undefined':1,'NaN':1,'infinity':1,'global':1};
+
+  /* 极简 GML 分词器：注释 / 字符串 / 数字 / 关键字 / 函数 / 常量 / 标识符 / 标点 */
+  function tokenizeGml(src, state){
+    state = state || { inBlock:false };
+    var out = [];
+    var i = 0, n = src.length;
+    while(i < n){
+      var ch = src.charAt(i);
+      if(state.inBlock){
+        var endC = src.indexOf('*/', i);
+        if(endC < 0){ out.push({ t:'com', s:src.slice(i) }); i = n; }
+        else { out.push({ t:'com', s:src.slice(i, endC+2) }); i = endC+2; state.inBlock = false; }
+        continue;
+      }
+      if(ch === '/' && src.charAt(i+1) === '/'){
+        out.push({ t:'com', s:src.slice(i) }); i = n; continue;
+      }
+      if(ch === '/' && src.charAt(i+1) === '*'){
+        var endB = src.indexOf('*/', i+2);
+        if(endB < 0){ out.push({ t:'com', s:src.slice(i) }); i = n; state.inBlock = true; }
+        else { out.push({ t:'com', s:src.slice(i, endB+2) }); i = endB+2; }
+        continue;
+      }
+      if(ch === '"' || ch === "'"){
+        var j = i + 1;
+        while(j < n){
+          if(src.charAt(j) === '\\'){ j += 2; continue; }
+          if(src.charAt(j) === ch) break;
+          j++;
+        }
+        j = Math.min(j+1, n);
+        out.push({ t:'str', s:src.slice(i, j) });
+        i = j; continue;
+      }
+      if(ch >= '0' && ch <= '9'){
+        var k = i;
+        while(k < n && /[0-9a-fA-FxX.]/.test(src.charAt(k))) k++;
+        out.push({ t:'num', s:src.slice(i, k) });
+        i = k; continue;
+      }
+      if(/[A-Za-z_]/.test(ch)){
+        var m = i;
+        while(m < n && /[A-Za-z0-9_]/.test(src.charAt(m))) m++;
+        var word = src.slice(i, m);
+        var type = 'id';
+        if(GM_KEYWORDS[word]) type = 'kw';
+        else if(GM_CONSTS[word]) type = 'cn';
+        else if(src.charAt(m) === '(') type = 'fn';
+        else if(/^[A-Z]/.test(word)) type = 'cn';
+        out.push({ t:type, s:word });
+        i = m; continue;
+      }
+      if(/\s/.test(ch)){
+        var w = i;
+        while(w < n && /\s/.test(src.charAt(w))) w++;
+        out.push({ t:'ws', s:src.slice(i, w) });
+        i = w; continue;
+      }
+      var p = i;
+      while(p < n && !/[\sA-Za-z0-9_"']/.test(src.charAt(p))) p++;
+      if(p === i) p = i + 1;
+      out.push({ t:'pun', s:src.slice(i, p) });
+      i = p;
+    }
+    /* 注意：这里**不改写**原文的 tab —— 内容必须与源码逐字一致（长按复制要拿到原文）。
+       「tab 显示成 1 个空格宽」由排版层负责：
+         网页端 = CSS tab-size:1（.codebox-body / textarea）
+         canvas 端 = layoutCodeLine 绘制时把 tab 按 1 空格宽画 */
+    return { tokens: out, state: state };
+  }
+
+  /* 逐行上色（块注释状态跨行延续）；返回每行的 HTML */
+  /* 代码分行：末尾的换行不额外算一行（否则代码框底部会多出一条空白行 + 一个行号） */
+  function splitCodeLines(src){
+    var lines = String(src == null ? '' : src).split('\n');
+    if(lines.length > 1 && lines[lines.length-1] === '') lines.pop();
+    return lines;
+  }
+  function highlightGmlLines(src){
+    var lines = splitCodeLines(src);
+    var state = { inBlock:false };
+    var html = [];
+    lines.forEach(function(line){
+      var r = tokenizeGml(line, state);
+      state = r.state;
+      html.push(r.tokens.map(function(tk){
+        if(tk.t === 'ws') return esc(tk.s);
+        return '<span class="c-' + tk.t + '">' + esc(tk.s) + '</span>';
+      }).join(''));
+    });
+    return html;
+  }
+
+  /* 逐行取 token（截图里 canvas 用） */
+  function gmlLineTokens(src){
+    var lines = splitCodeLines(src);
+    var state = { inBlock:false };
+    var out = [];
+    lines.forEach(function(line){
+      var r = tokenizeGml(line, state);
+      state = r.state;
+      out.push(r.tokens);
+    });
+    return out;
+  }
+  var CANVAS_TOK_COLOR = {
+    com:'#6a9955', str:'#ce9178', num:'#b5cea8', kw:'#569cd6',
+    fn:'#dcdcaa', cn:'#c586c0', id:'#d4d4d4', pun:'#808a99', ws:'#d4d4d4'
+  };
+
+  /* canvas 里按像素宽度做软换行：返回每个逻辑行拆成的若干视觉行 */
+  function layoutCodeLine(ctx, tokens, maxW){
+    var rows = [[]];
+    var w = 0;
+    tokens.forEach(function(tk){
+      if(tk.t === 'ws'){
+        /* 画的时候 tab 按 1 个空格宽（原文的 tab 不改写，只在绘制层折算） */
+        var ws = tk.s.indexOf('\t') >= 0 ? tk.s.replace(/\t/g, ' ') : tk.s;
+        if(!rows[rows.length-1].length){
+          /* 行首缩进要保留 */
+          rows[rows.length-1].push({ t:tk.t, s:ws });
+          w += ctx.measureText(ws).width;
+          return;
+        }
+        rows[rows.length-1].push({ t:tk.t, s:ws });
+        w += ctx.measureText(ws).width;
+        return;
+      }
+      var buf = '';
+      for(var i=0;i<tk.s.length;i++){
+        var ch = tk.s.charAt(i);
+        var cw = ctx.measureText(ch).width;
+        if(w + cw > maxW && (rows[rows.length-1].length || buf)){
+          if(buf){ rows[rows.length-1].push({ t:tk.t, s:buf }); buf = ''; }
+          rows.push([]);
+          w = 0;
+          if(ch === ' ') continue;
+        }
+        buf += ch;
+        w += cw;
+      }
+      if(buf) rows[rows.length-1].push({ t:tk.t, s:buf });
+    });
+    return rows;
+  }
+
+  /* 复制到剪贴板：clipboard API 不可用时（本地文件打开）回退到 execCommand */
+  function copyText(text, btn){
+    var done = function(){
+      if(btn){
+        var old = btn.textContent;
+        btn.textContent = '已复制';
+        btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = old; btn.classList.remove('done'); }, 1500);
+      }
+      toast('代码已复制');
+    };
+    var fallback = function(){
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      var ok = false;
+      try{ ok = document.execCommand('copy'); }catch(e){ ok = false; }
+      document.body.removeChild(ta);
+      if(ok) done();
+      else toast('复制失败，请长按选中代码手动复制');
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, fallback);
+    }else{
+      fallback();
+    }
+  }
+
+  /* 暗色代码框：行号 + 自动换行（折行不增加行号）+ 简单上色 + 快速复制 */
+  function buildCodeBox(text, name){
+    var box = el('div', 'codebox');
+    var bar = el('div', 'codebox-bar');
+    bar.appendChild(el('span', 'codebox-name', name || '代码'));
+    var copy = el('button', 'code-copy', '复制');
+    copy.type = 'button';
+    copy.setAttribute('aria-label', '复制这段代码');
+    copy.addEventListener('click', function(){ copyText(text, copy); });
+    bar.appendChild(copy);
+    box.appendChild(bar);
+
+    var body = el('pre', 'codebox-body');
+    var lines = highlightGmlLines(text);
+    lines.forEach(function(html, i){
+      var row = el('div', 'cl');
+      row.appendChild(el('span', 'ln', String(i+1)));
+      var lc = el('span', 'lc');
+      lc.innerHTML = html;
+      row.appendChild(lc);
+      body.appendChild(row);
+    });
+    box.appendChild(body);
+    return box;
+  }
+
+  /* 代码类载体（脚本 / 对象 / 自定义代码类型）用暗色代码框 */
+  var CODE_CARRIERS = ['脚本'];
+  function isCodeCarrier(type){
+    return CODE_CARRIERS.indexOf(type) >= 0;
+  }
+
+  /* ================= API 编辑弹层 ================= */
+  var apiEditing = null;   /* 正在编辑的库条目 */
+  var apiDraft = null;     /* 草稿 { code, params } */
+
+  function openApiModal(item){
+    apiEditing = item || null;
+    apiDraft = {
+      code: item ? item.code : '',
+      params: item ? normParams(item.params).map(function(p){ return { no:p.no, desc:p.desc }; })
+                   : [{ no:'1', desc:'' }]
+    };
+    $('#apiModalTitle').textContent = item ? '编辑 API' : '新建 API';
+    $('#apiCodeInput').value = apiDraft.code;
+    renderApiModalArgs();
+    $('#apiModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeApiModal(){
+    $('#apiModal').classList.remove('open');
+    document.body.style.overflow = '';
+    apiEditing = null;
+    apiDraft = null;
+  }
+  function renderApiModalArgs(){
+    var list = $('#apiModalArgs');
+    list.innerHTML = '';
+    apiDraft.params.forEach(function(p, i){
+      var row = el('div', 'api-arg-row');
+
+      var noIn = el('input', 'field api-no-input');
+      noIn.type = 'text'; noIn.maxLength = 5;
+      noIn.placeholder = '编号'; noIn.value = p.no || '';
+      noIn.setAttribute('aria-label', '第 ' + (i+1) + ' 个参数的编号');
+      noIn.addEventListener('input', function(){ p.no = noIn.value; });
+
+      var inp = el('input', 'field api-desc-input');
+      inp.type = 'text';
+      var hints = codeArgs($('#apiCodeInput').value);
+      inp.placeholder = hints[i] ? ('说明：' + hints[i]) : '简单描述，例如：列表容量';
+      inp.value = p.desc || '';
+      inp.setAttribute('aria-label', '第 ' + (i+1) + ' 个参数的说明');
+      inp.addEventListener('input', function(){ p.desc = inp.value; });
+
+      var x = el('button', 'api-arg-del', '×');
+      x.type = 'button';
+      x.setAttribute('aria-label', '删除第 ' + (i+1) + ' 个参数');
+      x.addEventListener('click', function(){
+        apiDraft.params.splice(i, 1);
+        renderApiModalArgs();
+      });
+
+      row.appendChild(noIn); row.appendChild(inp); row.appendChild(x);
+      list.appendChild(row);
+    });
+  }
+  function saveApiModal(){
+    var code = $('#apiCodeInput').value.trim();
+    if(!code){ toast('先写一行 API 代码'); return; }
+    var dup = libFindByCode(code);
+    if(dup && (!apiEditing || dup.id !== apiEditing.id)){
+      toast('API 库里已经有「' + code + '」了');
+      return;
+    }
+    var params = apiDraft.params
+      /* 只保留写了描述的参数：编号 + 描述成对才有意义 */
+      .filter(function(p){ return (p.desc || '').trim(); })
+      .map(function(p){ return { no:(p.no || '').trim() || '1', desc:(p.desc || '').trim() }; });
+    var wasEdit = !!apiEditing;
+    if(apiEditing){
+      apiEditing.code = code;
+      apiEditing.params = params;
+    }else{
+      state.apiLib.push({ id: uid(), code: code, params: params });
+    }
+    save();
+    closeApiModal();
+    renderApiLib();
+    toast(wasEdit ? 'API 已更新' : '已加入 API 库');
+  }
+  function deleteApiItem(id){
+    var it = apiItem(id);
+    if(!it) return;
+    var uses = apiUses(id);
+    if(uses.length){
+      /* 被引用的 API 不给删：先取消引用 */
+      toast('「' + it.code + '」还有 ' + uses.length + ' 处练习在引用，先取消引用再删除');
+      return;
+    }
+    state.apiLib = state.apiLib.filter(function(x){ return x.id !== id; });
+    if(libOpenId === id) libOpenId = null;
+    save();
+    renderApiLib();
+    renderAll();
+    toast('已从 API 库删除');
+  }
+
+  /* ================= API 选择弹层 ================= */
+  var pickerMode = null;     /* 'apis' | 'module' | 'one' */
+  var pickerRec = null;      /* 目标记录 */
+  var pickerMod = null;      /* 目标模块（mode='one'） */
+  var pickerSel = [];        /* 选中的 refId */
+
+  function openApiPicker(mode, rec, mod, title){
+    pickerMode = mode;
+    pickerRec = rec || null;
+    pickerMod = mod || null;
+    pickerSel = [];
+    if(mode === 'apis'){
+      (rec.apis || []).forEach(function(r){ pickerSel.push(r); });
+    }else if(mode === 'module'){
+      (rec.modules || []).forEach(function(m){ if(m && m.type === 'api' && m.refId) pickerSel.push(m.refId); });
+    }else if(mode === 'one' && mod){
+      if(mod.refId) pickerSel.push(mod.refId);
+    }
+    $('#apiPickerTitle').textContent = title || '从 API 库选择';
+    $('#apiPickerSearch').value = '';
+    renderApiPicker();
+    $('#apiPicker').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeApiPicker(){
+    $('#apiPicker').classList.remove('open');
+    document.body.style.overflow = '';
+    pickerMode = null; pickerRec = null; pickerMod = null; pickerSel = [];
+  }
+  function renderApiPicker(){
+    var list = $('#apiPickerList');
+    list.innerHTML = '';
+    var q = $('#apiPickerSearch').value.trim();
+    var lib = state.apiLib || [];
+    var items = lib.filter(function(it){ return libMatches(it, q); });
+    $('#apiPickerEmpty').style.display = lib.length ? 'none' : '';
+    if(lib.length && !items.length){
+      list.appendChild(el('div', 'empty', '没有匹配「' + q + '」的 API。'));
+      return;
+    }
+    items.forEach(function(it){
+      var on = pickerSel.indexOf(it.id) >= 0;
+      var row = el('button', 'picker-row' + (on ? ' on' : ''));
+      row.type = 'button';
+      row.appendChild(el('span', 'pk-mark', on ? '✓' : ''));
+      var box = el('span');
+      box.style.cssText = 'flex:1;min-width:0';
+      box.appendChild(el('span', 'pk-code', it.code));
+      var ps = normParams(it.params);
+      var sub = ps.length
+        ? ps.map(function(p){ return (p.no || '') + ' ' + (p.desc || ''); }).join(' · ')
+        : '无参数说明';
+      box.appendChild(el('div', 'pk-sub', sub));
+      row.appendChild(box);
+      row.addEventListener('click', function(){
+        var i = pickerSel.indexOf(it.id);
+        if(i >= 0) pickerSel.splice(i, 1); else pickerSel.push(it.id);
+        renderApiPicker();
+      });
+      list.appendChild(row);
+    });
+  }
+  function confirmApiPicker(){
+    var n = pickerSel.length;
+    if(pickerMode === 'apis' && pickerRec){
+      pickerRec.apis = pickerSel.slice();
+    }else if(pickerMode === 'module' && pickerRec){
+      var others = (pickerRec.modules || []).filter(function(m){ return !m || m.type !== 'api'; });
+      pickerSel.forEach(function(id){ others.push({ type:'api', refId:id }); });
+      pickerRec.modules = others;
+    }else if(pickerMode === 'one' && pickerMod){
+      if(pickerSel.length) pickerMod.refId = pickerSel[pickerSel.length - 1];
+    }
+    save();
+    closeApiPicker();
+    renderApiLib();
+    renderRecords();
+    renderProcess();
+    toast(n ? ('已引用 ' + n + ' 个 API') : '没有选择任何 API');
+  }
+
+  /* ================= 渲染：练习记录 ================= */
+  function renderRecords(){
+    var today = recordsToday().length;
+    var goal = Math.max(1, state.dailyGoal);
+    var pct = Math.min(100, today / goal * 100);
+
+    $('#todayCount').innerHTML = today + '<small>次</small>';
+    $('#totalCount').innerHTML = state.records.length + '<small>次</small>';
+    $('#progressBar').style.width = pct + '%';
+    $('#progressBar').classList.toggle('full', today >= goal);
+    $('#progressText').textContent = '今日进度 ' + today + ' / ' + goal + ' 次';
+
+    var list = $('#recordList');
+    list.innerHTML = '';
+
+    /* 打卡明细只显示今天的记录，往期归档在「历史记录」里 */
+    var sorted = recordsToday().slice().sort(function(a,b){ return b.ts - a.ts; });
+    sorted.forEach(function(rec){
+      var types = recTypes(rec);
+      var mainColor = types.length ? carrierColor(types[0]) : '#4a90e2';
+
+      var li = el('li', 'rec' + (rec.id === selectedId ? ' selected' : ''));
+      li.dataset.recId = rec.id;
+
+      var main = el('button', 'rec-main');
+      main.type = 'button';
+      main.dataset.select = rec.id;
+
+      var top = el('div', 'rec-top');
+      var nm = el('span', 'rec-name', rec.name || '未命名练习');
+      var tm = el('span', 'rec-time', timeText(rec.ts));
+      top.appendChild(nm); top.appendChild(tm);
+      main.appendChild(top);
+
+      var meta = el('div', 'rec-meta');
+      if(!types.length){
+        var c0 = el('span', 'chip mini');
+        c0.style.setProperty('--chip-fg', '#909090');
+        c0.style.setProperty('--chip-bg', '#2b2b2b');
+        c0.style.setProperty('--chip-bd', '#383838');
+        c0.textContent = '待填写';
+        meta.appendChild(c0);
+      }else{
+        types.forEach(function(t){ meta.appendChild(chipEl(t, carrierColor(t), true)); });
+        var apiN = (rec.apis || []).length;
+        if(apiN){
+          var a = el('span', 'chip mini');
+          a.style.setProperty('--chip-fg', '#7a7a7a');
+          a.style.setProperty('--chip-bg', '#2b2b2b');
+          a.style.setProperty('--chip-bd', '#383838');
+          a.textContent = 'API ' + apiN;
+          meta.appendChild(a);
+        }
+      }
+      main.appendChild(meta);
+
+      var del = el('button', 'del', '×');
+      del.type = 'button';
+      del.dataset.del = rec.id;
+      del.setAttribute('aria-label', '撤销这条记录');
+      del.title = '撤销';
+
+      li.appendChild(main);
+      li.appendChild(del);
+      list.appendChild(li);
+
+      /* 左侧色条：用首个载体的颜色 */
+      li.style.borderLeft = '3px solid ' + hexA(mainColor, 0.85);
+    });
+
+    $('#emptyTip').style.display = sorted.length ? 'none' : '';
+    $('#listCount').textContent = sorted.length ? ('共 ' + sorted.length + ' 条') : '';
+  }
+
+  /* 实时保存后同步列表里的名称（只改文字，不重建 DOM） */
+  function syncNamesUI(){
+    var byId = {};
+    state.records.forEach(function(r){ byId[r.id] = r; });
+    document.querySelectorAll('#recordList .rec').forEach(function(li){
+      var r = byId[li.dataset.recId];
+      if(!r) return;
+      var nm = li.querySelector('.rec-name');
+      if(nm) nm.textContent = r.name || '未命名练习';
+    });
+    document.querySelectorAll('#histList .hist-item').forEach(function(item){
+      var r = byId[item.dataset.histId];
+      if(!r) return;
+      var nm = item.querySelector('.hist-name');
+      if(nm) nm.textContent = r.name || '未命名练习';
+    });
+  }
+
+  /* ================= 渲染：练习过程 ================= */
+  var selectedId = null;   /* 选中的历史记录 */
+  var editingId = null;    /* 正在编辑的记录 */
+  var formRecId = null;    /* 当前渲染出来的表单属于哪条记录 */
+
+  function findRec(id){
+    for(var i=0;i<state.records.length;i++) if(state.records[i].id === id) return state.records[i];
+    return null;
+  }
+
+  function renderProcess(){
+    var box = $('#processBody');
+
+    /* 清空 DOM 之前，先把输入框里没保存的内容存回记录（否则重建表单会丢失） */
+    var editingRec = editingId ? findRec(editingId) : null;
+    if(editingId && !editingRec){ editingId = null; editingRec = null; }
+    if(editingRec) syncFormValues();
+
+    box.innerHTML = '';
+
+    $('#processClose').textContent = editingRec ? '完成' : (isWide() ? '清空' : '关闭');
+    if(editingRec){
+      $('#processHint').textContent = '填写本次练习内容 · 实时保存';
+      box.appendChild(buildForm(editingRec));
+      return;
+    }
+
+    var sel = selectedId ? findRec(selectedId) : null;
+    if(sel){
+      $('#processHint').textContent = '记录详情';
+      box.appendChild(buildDetail(sel));
+      return;
+    }
+
+    $('#processHint').textContent = '选择一条记录查看';
+    var ph = el('div', 'empty');
+    ph.innerHTML = '点上面的「打卡一次」开始新的练习，<br>或点选已有记录查看它的完整过程。';
+    box.appendChild(ph);
+  }
+
+  /* ---- 表单 ---- */
+  function buildForm(rec){
+    var form = el('form', 'form');
+    formRecId = rec.id;
+    form.addEventListener('submit', function(e){ e.preventDefault(); });
+
+    /* 记录名称 */
+    var b1 = el('div', 'form-block');
+    var l1 = el('label');
+    l1.appendChild(document.createTextNode('记录名称'));
+    l1.appendChild(el('span', 'req', ' *'));
+    var nameIn = el('input', 'field');
+    nameIn.type = 'text'; nameIn.maxLength = 40;
+    nameIn.placeholder = '例如：用 ds_list 管理背包';
+    nameIn.value = rec.name || '';
+    nameIn.dataset.field = 'name';
+    nameIn.addEventListener('input', function(){ rec.name = nameIn.value; saveSoon(); });
+    b1.appendChild(l1); b1.appendChild(nameIn);
+    form.appendChild(b1);
+
+    /* 练习题要求 */
+    var b2 = el('div', 'form-block');
+    var l2 = el('label');
+    l2.appendChild(document.createTextNode('练习题要求'));
+    l2.appendChild(el('span', 'req', ' *'));
+    var reqIn = el('textarea', 'field');
+    reqIn.rows = 3;
+    reqIn.placeholder = '这题要做什么？写清楚目标与约束。';
+    reqIn.value = rec.requirement || '';
+    reqIn.dataset.field = 'requirement';
+    reqIn.addEventListener('input', function(){ rec.requirement = reqIn.value; saveSoon(); });
+    b2.appendChild(l2); b2.appendChild(reqIn);
+    form.appendChild(b2);
+
+    /* 练习题提示 */
+    var b3 = el('div', 'form-block');
+    var l3 = el('label', null, '练习题提示');
+    var hintIn = el('textarea', 'field');
+    hintIn.rows = 2;
+    hintIn.placeholder = '思路、卡住的地方、要注意的坑。';
+    hintIn.value = rec.hint || '';
+    hintIn.dataset.field = 'hint';
+    hintIn.addEventListener('input', function(){ rec.hint = hintIn.value; saveSoon(); });
+    b3.appendChild(l3); b3.appendChild(hintIn);
+    form.appendChild(b3);
+
+    /* 练习题要求的 API（只能引用 API 库） */
+    var b4 = el('div', 'form-block');
+    var l4 = el('label', null, '练习题要求的 API');
+    var tagWrap = el('div', 'api-tags');
+    var pickBtn = el('button', 'lib-pick', '＋ 从 API 库选择');
+    pickBtn.type = 'button';
+    b4.appendChild(l4); b4.appendChild(tagWrap); b4.appendChild(pickBtn);
+    var hintLine = el('div', 'hint-line', 'API 只能从 API 库里选；这里显示代码，完整参数说明在练习过程里。');
+    b4.appendChild(hintLine);
+    form.appendChild(b4);
+
+    /* 代码载体（模块化） */
+    var b5 = el('div', 'form-block');
+    var l5 = el('label', null, '代码载体（模块化添加）');
+    var mods = el('div', 'mods');
+    b5.appendChild(l5); b5.appendChild(mods);
+
+    /* 点类型就加一个该类型的模块：类型定下后不能换 */
+    var picker = el('div', 'type-tabs type-picker');
+    moduleTypes().forEach(function(t){
+      var b = el('button', 'type-tab', '＋ ' + t);
+      b.type = 'button';
+      b.style.setProperty('--c', carrierColor(t));
+      b.addEventListener('click', function(){ addModule(t); });
+      picker.appendChild(b);
+    });
+    b5.appendChild(picker);
+
+    var addApiBtn = el('button', 'add-module', '＋ 从 API 库添加 api 载体');
+    addApiBtn.type = 'button';
+    b5.appendChild(addApiBtn);
+    b5.appendChild(el('div', 'hint-line', '点上面的类型就加一个该类型的载体；类型定下后不能换，想换就删掉重加。'));
+    form.appendChild(b5);
+
+    /* 内容实时保存，不需要「保存」按钮 */
+    form.appendChild(el('div', 'form-note', '内容会实时保存，不用手动点保存。填完点上面的「完成」看效果。'));
+
+    /* API 标签渲染（只显示代码） */
+    function renderApiTags(){
+      tagWrap.innerHTML = '';
+      (rec.apis || []).forEach(function(a, i){
+        var code = apiCode(a) || '（已从 API 库删除）';
+        var tag = el('span', 'api-tag');
+        tag.appendChild(document.createTextNode(code));
+        var x = el('button', null, '×');
+        x.type = 'button';
+        x.setAttribute('aria-label', '删除 ' + code);
+        x.addEventListener('click', function(){
+          rec.apis.splice(i, 1);
+          saveSoon();
+          renderApiTags();
+        });
+        tag.appendChild(x);
+        tagWrap.appendChild(tag);
+      });
+    }
+    renderApiTags();
+
+    pickBtn.addEventListener('click', function(){
+      openApiPicker('apis', rec, null, '选择练习题要求的 API');
+    });
+
+    /* 载体模块 */
+    rec.modules = rec.modules || [];
+
+    function renderModules(){
+      mods.innerHTML = '';
+      if(!rec.modules.length){
+        var modsEmpty = el('div', 'empty');
+        modsEmpty.innerHTML = '还没有代码载体。<br>点下面的类型加一个，类型定下后不能换。';
+        mods.appendChild(modsEmpty);
+        return;
+      }
+      rec.modules.forEach(function(m, i){
+        mods.appendChild(buildModule(m, i, renderModules, function(){
+          rec.modules.splice(i, 1);   /* 同时删掉数据，刷新后不会回来 */
+          saveSoon();
+          renderModules();
+        }, rec));
+      });
+    }
+    renderModules();
+
+    function addModule(t){
+      rec.modules.push({ type: t, value: '' });
+      saveSoon();
+      renderModules();
+    }
+
+    addApiBtn.addEventListener('click', function(){
+      openApiPicker('module', rec, null, '选择要引用的 API（api 载体）');
+    });
+
+    return form;
+  }
+
+  function buildModule(m, idx, refresh, remove, rec){
+    var box = el('div', 'module');
+    var color = carrierColor(m.type);
+    box.style.setProperty('--carrier-color', color);
+
+    var head = el('div', 'module-head');
+    head.appendChild(el('span', 'idx', '步骤 ' + (idx+1)));
+    head.appendChild(chipEl(m.type, color, true));
+    var del = el('button', 'mod-del', '×');
+    del.type = 'button';
+    del.setAttribute('aria-label', '删除这个步骤模块');
+    del.addEventListener('click', function(){ remove(); });
+    head.appendChild(del);
+    box.appendChild(head);
+
+    /* 载体类型在添加时就定死：这里不再提供类型切换 tab */
+
+    if(m.type === 'api'){
+      /* api 载体：只引用 API 库里的条目，内容在库里维护 */      var ref = apiItem(m.refId);
+      var refBox = el('div', 'api-ref');
+      if(ref){
+        refBox.appendChild(el('div', 'ref-code', ref.code));
+        var rps = normParams(ref.params);
+        refBox.appendChild(el('div', 'ref-meta', rps.length
+          ? rps.map(function(p){ return (p.no || '') + ' ' + (p.desc || ''); }).join('   ·   ')
+          : '这个 API 没有参数说明'));
+      }else{
+        refBox.appendChild(el('div', 'ref-code ref-gone', '（该 API 已从 API 库删除）'));
+        refBox.appendChild(el('div', 'ref-meta', '点下面的「更换 API」重新挑一个'));
+      }
+      box.appendChild(refBox);
+      var chg = el('button', 'lib-pick', '更换 API');
+      chg.type = 'button';
+      chg.addEventListener('click', function(){
+        openApiPicker('one', rec, m, '更换这个 api 载体');
+      });
+      box.appendChild(chg);
+    }else if(m.type === '图片'){
+      box.appendChild(buildImageField(m, refresh));
+    }else if(m.type === '超链接'){
+      box.appendChild(buildLinkField(m, refresh));
+    }else if(m.type === '着色器'){
+      box.appendChild(buildShaderField(m, refresh));
+    }else if(m.type === '对象'){
+      box.appendChild(buildObjectField(m, refresh));
+    }else{
+      var val = el('textarea', 'field');
+      val.rows = 2;
+      val.dataset.role = 'moduleValue';
+      val.placeholder = placeholderFor(m.type);
+      val.value = m.value || '';
+      val.addEventListener('input', function(){ m.value = val.value; saveSoon(); });
+      box.appendChild(val);
+    }
+
+    return box;
+  }
+
+  /* ---- api 载体：一行代码 + 参数说明（编号 + 简单描述） ---- */
+  function codeArgs(code){
+    var s = (code || '').trim();
+    var i = s.indexOf('(');
+    var j = s.lastIndexOf(')');
+    if(i < 0 || j <= i) return [];
+    return s.slice(i+1, j).split(',')
+            .map(function(x){ return x.trim(); })
+            .filter(function(x){ return x; });
+  }
+
+  /* 参数结构归一：兼容旧的纯字符串数组 */
+  function normParams(p){
+    if(!Array.isArray(p)) return [];
+    return p.map(function(x, i){
+      if(typeof x === 'string') return { no: String(i+1), desc: x };
+      x = x || {};
+      var no = (x.no === undefined || x.no === null || x.no === '') ? String(i+1) : String(x.no);
+      return { no: no, desc: x.desc ? String(x.desc) : '' };
+    });
+  }
+
+
+  /* ---- 图片载体 ---- */
+  function buildImageField(m, refresh){
+    var wrap = el('div', 'mod-media');
+
+    var pick = el('label', 'mod-pick');
+    pick.appendChild(svgIcon('M3 5.5A1.5 1.5 0 0 1 4.5 4h15A1.5 1.5 0 0 1 21 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z M3 15.5l4.5-4.5 3 3 5-5L21 13'));
+    pick.appendChild(document.createTextNode(m.value ? '换一张图片' : '选择图片'));
+    var file = el('input', 'hidden-file');
+    file.type = 'file';
+    file.accept = 'image/*';
+    pick.appendChild(file);
+    wrap.appendChild(pick);
+
+    if(m.value && /^data:image\//.test(m.value)){
+      var box = el('div', 'mod-preview');
+      var img = document.createElement('img');
+      img.src = m.value;
+      img.alt = m.fileName || '练习图片';
+      box.appendChild(img);
+      if(m.fileName) box.appendChild(el('div', 'mod-file', m.fileName));
+      wrap.appendChild(box);
+      var clr = el('button', 'mod-clear', '移除这张图片');
+      clr.type = 'button';
+      clr.addEventListener('click', function(){
+        m.value = ''; m.fileName = ''; m.fileSize = 0;
+        saveSoon();
+        refresh();
+      });
+      wrap.appendChild(clr);
+    }else{
+      wrap.appendChild(el('div', 'hint-line', '图片会自动缩到 1024px 以内保存，只存在这台设备上。'));
+    }
+
+    file.addEventListener('change', function(){
+      var f = file.files && file.files[0];
+      if(!f) return;
+      shrinkImage(f, function(dataURL){
+        m.value = dataURL;
+        m.fileName = f.name;
+        m.fileSize = f.size;
+        saveSoon();
+        refresh();
+      });
+    });
+
+    return wrap;
+  }
+
+  /* ---- 网络地址类型判断：图片 / 视频 / 普通链接 ---- */
+  function mediaKind(url){
+    var t = String(url == null ? '' : url).trim().toLowerCase();
+    if(!t) return 'none';
+    if(/\.(png|jpe?g|gif|webp|bmp|svg|avif)(\?.*)?$/.test(t)) return 'image';
+    if(/\.(mp4|webm|ogv|ogg|mov|m4v|mkv)(\?.*)?$/.test(t)) return 'video';
+    return 'link';
+  }
+
+  /* ---- 超链接载体：网络图片预览 / 网络视频播放器 / 普通链接 ---- */
+  function buildLinkField(m, refresh){
+    var wrap = el('div', 'mod-media');
+
+    var inp = el('input', 'field');
+    inp.type = 'text';
+    inp.inputMode = 'url';
+    inp.placeholder = '网络地址，例如 https://example.com/a.png';
+    inp.dataset.role = 'moduleValue';
+    inp.value = m.value || '';
+    wrap.appendChild(inp);
+
+    /* 预览单独放一个容器：改地址时只重绘预览，不动输入框（避免丢焦点） */
+    var pvHost = el('div', 'link-preview-host');
+    function paintPreview(){
+      pvHost.innerHTML = '';
+      var pv = linkMedia(m);
+      if(pv) pvHost.appendChild(pv);
+    }
+    paintPreview();
+    wrap.appendChild(pvHost);
+
+    inp.addEventListener('input', function(){
+      m.value = inp.value;
+      paintPreview();
+      saveSoon();
+    });
+
+    wrap.appendChild(el('div', 'hint-line', '图片地址直接预览，视频地址放播放器，其它地址显示成可点的链接。'));
+    return wrap;
+  }
+
+  /* 网络媒体预览：图片 → 图，视频 → 播放器，其它 → 空 */
+  function linkMedia(m){
+    var url = String(m.value || '').trim();
+    if(!url) return null;
+    var kind = mediaKind(url);
+    if(kind === 'image'){
+      var box = el('div', 'mod-preview link-media');
+      var img = document.createElement('img');
+      img.src = url;
+      img.alt = '网络图片';
+      img.loading = 'lazy';
+      img.onerror = function(){
+        if(img.getAttribute('data-failed')) return;
+        img.setAttribute('data-failed', '1');
+        box.appendChild(el('div', 'mod-file', '图片加载失败：' + url));
+      };
+      box.appendChild(img);
+      box.appendChild(el('div', 'mod-file', url));
+      return box;
+    }
+    if(kind === 'video'){
+      var vb = el('div', 'mod-preview link-media');
+      var v = document.createElement('video');
+      v.src = url;
+      v.controls = true;
+      v.preload = 'metadata';
+      v.playsInline = true;
+      v.onerror = function(){
+        if(v.getAttribute('data-failed')) return;
+        v.setAttribute('data-failed', '1');
+        vb.appendChild(el('div', 'mod-file', '视频加载失败：' + url));
+      };
+      vb.appendChild(v);
+      vb.appendChild(el('div', 'mod-file', url));
+      return vb;
+    }
+    return null;
+  }
+
+  /* ---- 着色器载体：顶点着色器 + 片段着色器 两个代码框 ---- */
+  function normShader(m){
+    var s = (m && m.shader) || {};
+    return {
+      vertex: typeof s.vertex === 'string' ? s.vertex : '',
+      fragment: typeof s.fragment === 'string' ? s.fragment : ''
+    };
+  }
+
+  function buildShaderField(m, refresh){
+    var wrap = el('div', 'mod-media');
+    if(!m.shader || typeof m.shader !== 'object') m.shader = { vertex:'', fragment:'' };
+    var sh = normShader(m);
+
+    function part(title, key, ph){
+      var p = el('div', 'shader-part');
+      p.appendChild(el('div', 'shader-part-title', title));
+      var ta = el('textarea', 'field code-area');
+      ta.rows = 5;
+      ta.placeholder = ph;
+      ta.value = sh[key];
+      ta.dataset.role = 'shader-' + key;
+      ta.addEventListener('input', function(){
+        m.shader[key] = ta.value;
+        saveSoon();
+      });
+      p.appendChild(ta);
+      if(!sh[key].trim()){
+        p.appendChild(el('div', 'hint-line', '留空 = 使用默认着色器代码'));
+      }
+      return p;
+    }
+
+    wrap.appendChild(part('顶点着色器', 'vertex', 'varying vec2 v_texcoord;   // 顶点着色器'));
+    wrap.appendChild(part('片段着色器', 'fragment', 'uniform sampler2D u_texture;   // 片段着色器'));
+    return wrap;
+  }
+
+  /* ---- 图片压缩：最长边 1024px，转 webp/jpeg ---- */
+  function shrinkImage(file, cb){
+    if(!/^image\//.test(file.type)){ toast('这不是图片文件'); return; }
+    var reader = new FileReader();
+    reader.onerror = function(){ toast('图片读取失败，换一张试试'); };
+    reader.onload = function(){
+      var img = new Image();
+      img.onerror = function(){ toast('这张图片打不开，换一张试试'); };
+      img.onload = function(){
+        var MAX = 1024;
+        var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+        var scale = Math.min(1, MAX / Math.max(w, h));
+        var cw = Math.max(1, Math.round(w * scale));
+        var ch = Math.max(1, Math.round(h * scale));
+        var cv = document.createElement('canvas');
+        cv.width = cw; cv.height = ch;
+        var ctx = cv.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.drawImage(img, 0, 0, cw, ch);
+        var out;
+        try{
+          out = cv.toDataURL('image/webp', 0.85);
+          if(out.indexOf('data:image/webp') !== 0) out = '';
+        }catch(e){ out = ''; }
+        if(!out) out = cv.toDataURL('image/jpeg', 0.85);
+        cb(out);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function prettySize(bytes){
+    if(!bytes) return '';
+    if(bytes < 1024) return bytes + ' B';
+    if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/1024/1024).toFixed(1) + ' MB';
+  }
+
+  function svgIcon(d){
+    var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.setAttribute('width', '17'); s.setAttribute('height', '17');
+    s.setAttribute('viewBox', '0 0 24 24');
+    s.setAttribute('fill', 'none');
+    s.setAttribute('stroke', 'currentColor');
+    s.setAttribute('stroke-width', '1.8');
+    s.setAttribute('stroke-linecap', 'round');
+    s.setAttribute('stroke-linejoin', 'round');
+    var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', d);
+    s.appendChild(p);
+    return s;
+  }
+
+  function placeholderFor(type){
+    if(type === 'api') return '函数名，例如 ds_list_create';
+    if(type === '脚本') return '脚本资源名，例如 scr_bag_init';
+    if(type === '对象') return '对象名，例如 obj_player';
+    if(type === '操作描述') return '这一步做了什么，例如：初始化背包列表';
+    if(type === '超链接') return '网络地址，例如 https://example.com/a.png';
+    if(type === '着色器') return '';
+    return '名称 / 说明';
+  }
+
+  /* ---- 详情 ---- */
+  function buildDetail(rec){
+    var box = el('div');
+
+    var h = el('h3', 'detail-title', rec.name || '未命名练习');
+    box.appendChild(h);
+    var t = el('div', 'detail-time',
+      (dateKey(new Date(rec.ts)) === todayKey() ? '今天 ' : dateKey(new Date(rec.ts)) + ' ') + timeText(rec.ts));
+    box.appendChild(t);
+
+    box.appendChild(detailSec('练习题要求', rec.requirement));
+    box.appendChild(detailSec('练习题提示', rec.hint));
+
+    /* API（只展示 API 的代码） */
+    var apiSec = el('div', 'detail-sec');
+    apiSec.appendChild(el('h4', null, '练习题要求的 API'));
+    if(rec.apis && rec.apis.length){
+      var al = el('div', 'api-list');
+      rec.apis.forEach(function(r){
+        var code = apiCode(r);
+        var s = el('span', 'api-tag');
+        s.appendChild(document.createTextNode(code || '（已从 API 库删除）'));
+        al.appendChild(s);
+      });
+      apiSec.appendChild(al);
+    }else{
+      apiSec.appendChild(el('div', 'detail-body empty-text', '未填写'));
+    }
+    box.appendChild(apiSec);
+
+    /* 代码载体 */
+    var cSec = el('div', 'detail-sec');
+    cSec.appendChild(el('h4', null, '用到的代码载体'));
+    var mods = rec.modules || [];
+    if(mods.length){
+      /* 按创建顺序展示：一步一块，块头标「步骤 N」+ 类型名（不按类型合并） */
+      var step = 0;
+      mods.forEach(function(m){
+        if(!m || !m.type) return;
+        step++;
+        var color = carrierColor(m.type);
+        var wrap = el('div', 'carrier-group');
+        wrap.style.setProperty('--c', color);
+        wrap.style.setProperty('--cg-soft', hexA(color, 0.16));
+        var h2 = el('div', 'carrier-group-head');
+        var dot = el('span');
+        dot.style.cssText = 'width:9px;height:9px;border-radius:50%;background:'+color+';flex:0 0 9px;';
+        h2.appendChild(dot);
+        h2.appendChild(el('span', 'stp', '步骤 ' + step));
+        var nm = el('span', 'nm', m.type);
+        nm.style.setProperty('--c', color);
+        h2.appendChild(nm);
+        wrap.appendChild(h2);
+        var body = el('div', 'carrier-group-body');
+        {
+          if(m.type === 'api'){
+            /* api 载体：完整展示（代码 + 参数说明），内容来自 API 库 */
+            var ref = apiItem(m.refId);
+            var code = ref ? ref.code : '（该 API 已从 API 库删除）';
+            body.appendChild(el('div', 'api-code' + (ref ? '' : ' empty'), code));
+            var params = ref ? normParams(ref.params) : [];
+            if(params.length){
+              var pl = el('div', 'api-param-list');
+              params.forEach(function(p, i){
+                var row = el('div', 'api-param');
+                row.appendChild(el('span', 'no', p.no || String(i+1)));
+                row.appendChild(el('span', 'txt' + (p.desc ? '' : ' empty'), p.desc || '（未填写）'));
+                pl.appendChild(row);
+              });
+              body.appendChild(pl);
+            }
+          }else if(m.type === '图片'){
+            body.appendChild(imagePreview(m, color));
+          }else if(m.type === '超链接'){
+            body.appendChild(linkRow(m, color));
+          }else if(m.type === '着色器'){
+            body.appendChild(shaderDetail(m, color));
+          }else if(m.type === '对象'){
+            /* 对象：对象名 + 预定义变量表 + 事件代码框 */
+            body.appendChild(buildObjectDetail(m));
+          }else if(isCodeCarrier(m.type)){
+            /* 脚本：暗色代码框（行号 + 自动换行 + 上色 + 复制）；空的不画空框 */
+            if((m.value || '').trim()){
+              body.appendChild(buildCodeBox(m.value, m.type));
+            }else{
+              var emptyItem = el('div', 'carrier-item', '（未填写）');
+              emptyItem.style.setProperty('--c', color);
+              body.appendChild(emptyItem);
+            }
+          }else{
+            var it = el('div', 'carrier-item' + (m.type === '操作描述' ? ' plain' : ''), m.value || '（未填写）');
+            it.style.setProperty('--c', color);
+            body.appendChild(it);
+          }
+        }
+        wrap.appendChild(body);
+        cSec.appendChild(wrap);
+      });
+    }else{
+      cSec.appendChild(el('div', 'detail-body empty-text', '未添加代码载体'));
+    }
+    box.appendChild(cSec);
+
+    var acts = el('div', 'detail-actions');
+    var edit = el('button', 'btn btn-ghost', '编辑这条记录');
+    edit.type = 'button';
+    edit.addEventListener('click', function(){
+      selectedId = null;
+      editingId = rec.id;
+      renderProcess();
+    });
+    acts.appendChild(edit);
+    box.appendChild(acts);
+
+    return box;
+  }
+
+  /* 详情里的图片预览（按原比例缩放，不裁切不变形） */
+  function imagePreview(m, color){
+    var box = el('div', 'mod-preview');
+    box.style.setProperty('--c', color);
+    if(m.value && /^data:image\//.test(m.value)){
+      var img = document.createElement('img');
+      img.src = m.value;
+      img.alt = m.fileName || '练习图片';
+      box.appendChild(img);
+      if(m.fileName) box.appendChild(el('div', 'mod-file', m.fileName));
+    }else{
+      box.appendChild(el('div', 'mod-file', '未选择图片'));
+    }
+    return box;
+  }
+
+  /* 详情里的超链接：图标 + 地址（网络图片/视频另附预览） */
+  function linkRow(m, color){
+    var wrap = el('div', 'link-item');
+    wrap.style.setProperty('--c', color);
+    var url = String(m.value || '').trim();
+    if(!url){
+      wrap.appendChild(el('div', 'mod-file', '未填写地址'));
+      return wrap;
+    }
+    var kind = mediaKind(url);
+    var row = el('div', 'link-row');
+    var ico = el('span', 'ico');
+    ico.appendChild(svgIcon('M10 13a5 5 0 0 0 7.1 0l2.8-2.8a5 5 0 0 0-7.1-7.1L11.6 4.4M14 11a5 5 0 0 0-7.1 0L4.1 13.9a5 5 0 0 0 7.1 7.1l1.3-1.3'));
+    row.appendChild(ico);
+    if(/^https?:\/\//i.test(url)){
+      var a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = url;
+      row.appendChild(a);
+    }else{
+      row.appendChild(el('span', 'url-plain', url));
+    }
+    row.appendChild(el('span', 'link-tag', kind === 'image' ? '图片' : kind === 'video' ? '视频' : '链接'));
+    wrap.appendChild(row);
+    var pv = linkMedia(m);
+    if(pv) wrap.appendChild(pv);
+    return wrap;
+  }
+
+  /* 详情里的着色器：顶点 + 片段 两个代码框，空的写「使用默认着色器代码」 */
+  function shaderDetail(m, color){
+    var wrap = el('div', 'shader-detail');
+    wrap.style.setProperty('--c', color);
+    var sh = normShader(m);
+    [['顶点着色器', sh.vertex], ['片段着色器', sh.fragment]].forEach(function(p){
+      var blk = el('div', 'shader-part');
+      blk.appendChild(el('div', 'shader-part-title', p[0]));
+      if(String(p[1] || '').trim()){
+        blk.appendChild(buildCodeBox(p[1], 'GLSL'));
+      }else{
+        blk.appendChild(el('div', 'carrier-item', '使用默认着色器代码'));
+      }
+      wrap.appendChild(blk);
+    });
+    return wrap;
+  }
+
+  function detailSec(title, val){
+    var d = el('div', 'detail-sec');
+    d.appendChild(el('h4', null, title));
+    d.appendChild(el('div', 'detail-body' + (val ? '' : ' empty-text'), val || '未填写'));
+    return d;
+  }
+
+  /* ================= 交互 ================= */
+  function doCheckin(){
+    var rec = {
+      id: uid(),
+      ts: Date.now(),
+      name: '',
+      requirement: '',
+      hint: '',
+      apis: [],
+      modules: []
+    };
+    state.records.push(rec);
+    save();
+    selectedId = null;
+    editingId = rec.id;
+    renderAll();
+    openProcess();
+    var nameIn = $('[data-field="name"]');
+    if(nameIn) setTimeout(function(){ nameIn.focus(); }, 320);
+  }
+
+  /* ---- 练习过程：二级界面（默认不显示） ---- */
+  /* 宽屏（≥1000px）：分屏模式，练习过程变成右半边的独立应用 */
+  var WIDE_MQ = window.matchMedia('(min-width: 1000px)');
+  function isWide(){ return WIDE_MQ.matches; }
+
+  function openProcess(){
+    renderProcess();
+    $('#processCard').classList.add('open');
+    if(!isWide()) document.body.style.overflow = 'hidden';
+    var box = $('#processBody');
+    if(box) box.scrollTop = 0;
+  }
+  function closeProcess(){
+    /* 编辑中关闭：内容已实时保存，状态落定到详情 */
+    if(editingId){
+      var rec = findRec(editingId);
+      if(rec){ editingId = null; formRecId = null; selectedId = rec.id; save(); renderAll(); }
+    }
+    if(isWide()){
+      /* 宽屏：面板常驻，关闭 = 清空当前选中，回到空态 */
+      selectedId = null; editingId = null; formRecId = null;
+      save(); renderAll();
+      return;
+    }
+    $('#processCard').classList.remove('open');
+    if(!$('#shotModal').classList.contains('open') && !$('#cardModal').classList.contains('open')){
+      document.body.style.overflow = '';
+    }
+  }
+  /* 编辑态点「完成」：不关弹层，切到详情 */
+  function finishEditing(){
+    var rec = findRec(editingId);
+    if(!rec) return;
+    editingId = null;
+    formRecId = null;
+    selectedId = rec.id;
+    save();
+    renderAll();
+  }
+  /* 其它弹层关闭时，练习过程还开着就别解锁页面滚动（宽屏面板不占遮罩，不锁） */
+  function syncBodyLock(){
+    var overlay = $('#shotModal').classList.contains('open') || $('#cardModal').classList.contains('open');
+    var proc = !isWide() && $('#processCard').classList.contains('open');
+    document.body.style.overflow = (overlay || proc) ? 'hidden' : '';
+  }
+
+  function doDelete(id){
+    for(var i=0;i<state.records.length;i++){
+      if(state.records[i].id === id){
+        state.records.splice(i,1);
+        break;
+      }
+    }
+    if(selectedId === id) selectedId = null;
+    if(editingId === id){ editingId = null; formRecId = null; }
+    save();
+    renderAll();
+  }
+
+  function saveForm(){
+    var rec = findRec(editingId);
+    if(!rec) return;
+    var nameIn = $('[data-field="name"]');
+    var reqIn = $('[data-field="requirement"]');
+    var hintIn = $('[data-field="hint"]');
+    if(nameIn) rec.name = nameIn.value.trim();
+    if(reqIn) rec.requirement = reqIn.value.trim();
+    if(hintIn) rec.hint = hintIn.value.trim();
+    save();
+    editingId = null;
+    formRecId = null;
+    selectedId = rec.id;
+    renderAll();
+  }
+
+  function renderAll(){
+    renderHeader();
+    renderRecords();
+    renderApiLib();
+    renderProcess();
+    renderHistory();
+  }
+
+  /* ================= 历史记录 ================= */
+  /* 按日期分组展示往期打卡，点某条直接跳到该练习过程 */
+  function monthDay(key){
+    var p = key.split('-');
+    return (+p[1]) + '月' + (+p[2]) + '日';
+  }
+  function weekName(key){
+    var p = key.split('-');
+    var w = ['日','一','二','三','四','五','六'][new Date(+p[0], +p[1]-1, +p[2]).getDay()];
+    return '周' + w;
+  }
+  function daysAgo(key){
+    var p = key.split('-');
+    var t = new Date(); t.setHours(0,0,0,0);
+    var d = new Date(+p[0], +p[1]-1, +p[2]);
+    return Math.round((t - d) / 86400000);
+  }
+  function relativeDay(key){
+    var n = daysAgo(key);
+    if(n === 0) return '今天';
+    if(n === 1) return '昨天';
+    if(n === 2) return '前天';
+    if(n > 2 && n <= 30) return n + ' 天前';
+    return '';
+  }
+
+  /* ---- 历史记录视图：往期归档 + 日期卡片 + 名称搜索 + 分页 ---- */
+  var HIST_PAGE_SIZE = 10;      /* 每页 10 条 */
+  var histQuery = '';           /* 已提交的名称搜索词（点「搜索」才生效） */
+  var histDate = null;          /* 选中的日期 key，null = 全部日期 */
+  var histPage = 0;             /* 当前页（0 起） */
+  var recView = 'today';        /* 当前卡片视图：today | history */
+
+  /* 往期记录 = 除今天以外的全部记录 */
+  function archivedRecords(){
+    var k = todayKey();
+    return state.records.filter(function(r){ return dateKey(new Date(r.ts)) !== k; })
+      .sort(function(a,b){ return b.ts - a.ts; });
+  }
+
+  /* 日期卡片条：只列实际打过卡的日期，可左右滑动浏览 */
+  function renderHistDates(){
+    var box = $('#histDates');
+    if(!box) return;
+    var scrollLeft = box.scrollLeft;
+    box.innerHTML = '';
+
+    var counts = {}, order = [];
+    archivedRecords().forEach(function(rec){
+      var k = dateKey(new Date(rec.ts));
+      if(!counts[k]){ counts[k] = 0; order.push(k); }
+      counts[k]++;
+    });
+
+    /* 全部 */
+    var all = el('button', 'date-card all' + (histDate === null ? ' active' : ''));
+    all.type = 'button';
+    all.dataset.hdate = '';
+    all.appendChild(el('span', 'dc-d', '全部'));
+    all.appendChild(el('span', 'dc-m', archivedRecords().length + ' 次'));
+    box.appendChild(all);
+
+    order.forEach(function(k){
+      var rel = relativeDay(k);
+      var c = el('button', 'date-card' + (histDate === k ? ' active' : ''));
+      c.type = 'button';
+      c.dataset.hdate = k;
+      c.appendChild(el('span', 'dc-d', monthDay(k)));
+      c.appendChild(el('span', 'dc-m', weekName(k) + (rel ? ' · ' + rel : '') + ' · ' + counts[k] + ' 次'));
+      box.appendChild(c);
+    });
+
+    box.scrollLeft = scrollLeft;
+  }
+
+  function renderHistory(){
+    var box = $('#histList');
+    if(!box) return;
+    box.innerHTML = '';
+
+    var all = archivedRecords();
+    renderHistDates();
+
+    /* 筛选：名称（已提交） + 日期卡片（选中） */
+    var q = histQuery.trim().toLowerCase();
+    var list = all.filter(function(rec){
+      if(histDate && dateKey(new Date(rec.ts)) !== histDate) return false;
+      if(q && String(rec.name || '').toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+
+    var pages = Math.max(1, Math.ceil(list.length / HIST_PAGE_SIZE));
+    if(histPage > pages - 1) histPage = pages - 1;
+    if(histPage < 0) histPage = 0;
+    var start = histPage * HIST_PAGE_SIZE;
+    var pageRecs = list.slice(start, start + HIST_PAGE_SIZE);
+
+    /* 统计 */
+    var dayCount = {}, d;
+    all.forEach(function(rec){ dayCount[dateKey(new Date(rec.ts))] = 1; });
+    var filtering = !!q || !!histDate;
+    $('#histSub').textContent = filtering
+      ? ('筛出 ' + list.length + ' 条 · 往期共 ' + Object.keys(dayCount).length + ' 天 / ' + all.length + ' 次')
+      : ('往期共 ' + Object.keys(dayCount).length + ' 天 · ' + all.length + ' 次打卡');
+
+    /* 空态：没有往期记录 vs 筛选无结果 */
+    var noHist = all.length === 0;
+    var noMatch = !noHist && list.length === 0;
+    $('#histEmpty').style.display = (noHist || noMatch) ? '' : 'none';
+    $('#histEmpty').innerHTML = noHist
+      ? '还没有往期记录。<br>今天的打卡会留在「打卡明细」里，明天这里才有内容。'
+      : (q ? ('没有名称含「' + histQuery.trim() + '」的往期记录。')
+            : '这一天没有往期记录。');
+
+    /* 按日期分组渲染当前页 */
+    var groups = {}, order = [];
+    pageRecs.forEach(function(rec){
+      d = dateKey(new Date(rec.ts));
+      if(!groups[d]){ groups[d] = []; order.push(d); }
+      groups[d].push(rec);
+    });
+
+    order.forEach(function(k){
+      var recs = groups[k];
+      var day = el('div', 'hist-day');
+
+      var head = el('div', 'hist-day-head');
+      var dateEl = el('span', 'hist-day-date', monthDay(k) + ' ' + weekName(k));
+      dateEl.title = '按这一天筛选';
+      dateEl.dataset.hday = k;
+      head.appendChild(dateEl);
+      var rel = relativeDay(k);
+      if(rel) head.appendChild(el('span', 'hist-day-tag', rel));
+      head.appendChild(el('span', 'hist-day-n', recs.length + ' 次'));
+      day.appendChild(head);
+
+      recs.forEach(function(rec){
+        var item = el('div', 'hist-item');
+        item.dataset.histId = rec.id;
+        var main = el('button', 'hist-item-main');
+        main.type = 'button';
+        main.dataset.hselect = rec.id;
+        main.appendChild(el('span', 'hist-time', timeText(rec.ts)));
+        main.appendChild(el('span', 'hist-name', rec.name || '未命名练习'));
+
+        var meta = el('div', 'hist-meta');
+        var types = recTypes(rec);
+        if(!types.length){
+          var c0 = el('span', 'chip mini');
+          c0.style.setProperty('--chip-fg', '#909090');
+          c0.style.setProperty('--chip-bg', '#2b2b2b');
+          c0.style.setProperty('--chip-bd', '#383838');
+          c0.textContent = '待填写';
+          meta.appendChild(c0);
+        }else{
+          types.forEach(function(t){ meta.appendChild(chipEl(t, carrierColor(t), true)); });
+          var apiN = (rec.apis || []).length;
+          if(apiN){
+            var a = el('span', 'chip mini');
+            a.style.setProperty('--chip-fg', '#7a7a7a');
+            a.style.setProperty('--chip-bg', '#2b2b2b');
+            a.style.setProperty('--chip-bd', '#383838');
+            a.textContent = 'API ' + apiN;
+            meta.appendChild(a);
+          }
+        }
+        main.appendChild(meta);
+        item.appendChild(main);
+
+        var del = el('button', 'del', '×');
+        del.type = 'button';
+        del.dataset.hdel = rec.id;
+        del.setAttribute('aria-label', '撤销这条记录');
+        del.title = '撤销';
+        item.appendChild(del);
+
+        day.appendChild(item);
+      });
+
+      box.appendChild(day);
+    });
+
+    /* 分页条 */
+    var pager = $('#histPager');
+    pager.innerHTML = '';
+    if(pages > 1){
+      var prev = el('button', '', '‹ 上一页');
+      prev.type = 'button';
+      prev.disabled = histPage === 0;
+      prev.addEventListener('click', function(){ histPage--; renderHistory(); });
+      pager.appendChild(prev);
+
+      pager.appendChild(el('span', 'pg-now', (histPage + 1) + ' / ' + pages));
+
+      var next = el('button', '', '下一页 ›');
+      next.type = 'button';
+      next.disabled = histPage >= pages - 1;
+      next.addEventListener('click', function(){ histPage++; renderHistory(); });
+      pager.appendChild(next);
+    }
+  }
+
+  /* 切换「练习记录」卡片视图 */
+  function switchRecView(v){
+    recView = (v === 'history') ? 'history' : 'today';
+    var isHist = recView === 'history';
+    $('#todayPane').style.display = isHist ? 'none' : '';
+    $('#historyPane').style.display = isHist ? '' : 'none';
+    $('#recCardTitle').textContent = isHist ? '历史记录' : '练习记录';
+    $('#recCardHint').textContent = isHist ? '往期归档在这里' : '点一次 = 一次打卡';
+    $('#histBtnText').textContent = isHist ? '返回打卡明细' : '历史记录';
+    $('#histBtnIcon').innerHTML = isHist
+      ? '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>'
+      : '<path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/>';
+    $('#histBtn').title = isHist ? '回到今天的打卡明细' : '查看往期的打卡记录';
+    if(isHist) renderHistory();
+  }
+
+  $('#histBtn').addEventListener('click', function(){
+    switchRecView(recView === 'history' ? 'today' : 'history');
+  });
+
+  /* 名称搜索：输入不自动生效，点「搜索」（或回车）才提交 */
+  function submitHistSearch(){
+    histQuery = $('#histSearch').value;
+    histPage = 0;
+    renderHistory();
+  }
+  $('#histSearchBtn').addEventListener('click', submitHistSearch);
+  $('#histSearch').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); submitHistSearch(); }
+  });
+
+  /* 日期卡片：点一下才按那天筛选 */
+  $('#histDates').addEventListener('click', function(e){
+    var card = e.target.closest ? e.target.closest('[data-hdate]') : null;
+    if(!card) return;
+    var k = card.getAttribute('data-hdate');
+    histDate = k ? k : null;
+    histPage = 0;
+    renderHistory();
+  });
+
+  $('#histList').addEventListener('click', function(e){
+    var dayEl = e.target.closest ? e.target.closest('[data-hday]') : null;
+    if(dayEl){
+      var k = dayEl.getAttribute('data-hday');
+      histDate = (histDate === k) ? null : k;   /* 再点一次取消筛选 */
+      histPage = 0;
+      renderHistory();
+      return;
+    }
+    var delBtn = e.target.closest ? e.target.closest('[data-hdel]') : null;
+    if(delBtn){ doDelete(delBtn.getAttribute('data-hdel')); return; }
+    var selBtn = e.target.closest ? e.target.closest('[data-hselect]') : null;
+    if(selBtn){
+      selectedId = selBtn.getAttribute('data-hselect');
+      editingId = null;
+      formRecId = null;
+      renderAll();
+      openProcess();
+      return;
+    }
+  });
+
+  /* ---- API 库：搜索 / 新建 / 展开 / 引用 ---- */
+  $('#libSearch').addEventListener('input', function(){
+    libQuery = this.value;
+    renderApiLib();
+  });
+  $('#libAddBtn').addEventListener('click', function(){ openApiModal(null); });
+
+  document.addEventListener('click', function(e){
+    var t = e.target;
+
+    /* 库条目：展开 / 收起「使用了这个 API 的练习」 */
+    var openBtn = t.closest ? t.closest('[data-libopen]') : null;
+    if(openBtn){
+      var id = openBtn.getAttribute('data-libopen');
+      libOpenId = (libOpenId === id) ? null : id;
+      renderApiLib();
+      return;
+    }
+    var editBtn2 = t.closest ? t.closest('[data-libedit]') : null;
+    if(editBtn2){
+      openApiModal(apiItem(editBtn2.getAttribute('data-libedit')));
+      return;
+    }
+    var delBtn2 = t.closest ? t.closest('[data-libdel]') : null;
+    if(delBtn2){
+      deleteApiItem(delBtn2.getAttribute('data-libdel'));
+      return;
+    }
+    /* 库条目里点某条练习 → 打开它的练习过程 */
+    var openRecBtn = t.closest ? t.closest('[data-openrec]') : null;
+    if(openRecBtn){
+      selectedId = openRecBtn.getAttribute('data-openrec');
+      editingId = null;
+      formRecId = null;
+      renderAll();
+      openProcess();
+      return;
+    }
+  });
+
+  /* ---- API 编辑弹层 ---- */
+  $('#apiModalClose').addEventListener('click', closeApiModal);
+  $('#apiModalCancel').addEventListener('click', closeApiModal);
+  $('#apiModalSave').addEventListener('click', saveApiModal);
+  $('#apiModalAddArg').addEventListener('click', function(){
+    apiDraft.params.push({ no: String(apiDraft.params.length + 1), desc: '' });
+    renderApiModalArgs();
+  });
+  $('#apiCodeInput').addEventListener('input', function(){
+    if(apiDraft){ apiDraft.code = this.value; renderApiModalArgs(); }
+  });
+  $('#apiModal').addEventListener('click', function(e){
+    if(e.target === this) closeApiModal();
+  });
+
+  /* ---- API 选择弹层 ---- */
+  $('#apiPickerClose').addEventListener('click', closeApiPicker);
+  $('#apiPickerCancel').addEventListener('click', closeApiPicker);
+  $('#apiPickerOk').addEventListener('click', confirmApiPicker);
+  $('#apiPickerSearch').addEventListener('input', renderApiPicker);
+  $('#apiPicker').addEventListener('click', function(e){
+    if(e.target === this) closeApiPicker();
+  });
+
+  $('#checkinBtn').addEventListener('click', doCheckin);
+
+  document.addEventListener('click', function(e){
+    var t = e.target;
+
+    /* 详情里的图片：点一下全屏看大图 */
+    var bigImg = t.closest ? t.closest('#processBody .mod-preview img') : null;
+    if(bigImg){ openLightbox(bigImg.src, bigImg.alt); return; }
+
+    var delBtn = t.closest ? t.closest('[data-del]') : null;
+    if(delBtn){ doDelete(delBtn.getAttribute('data-del')); return; }
+
+    var selBtn = t.closest ? t.closest('[data-select]') : null;
+    if(selBtn){
+      selectedId = selBtn.getAttribute('data-select');
+      editingId = null;
+      renderAll();
+      openProcess();
+      return;
+    }
+  });
+
+  $('#goalInput').addEventListener('change', function(){
+    var v = parseInt(this.value, 10);
+    state.dailyGoal = isNaN(v) ? 5 : Math.max(1, Math.min(99, v));
+    save();
+    renderHeader();
+    renderRecords();
+  });
+
+  /* 昵称编辑 */
+  function openNick(){
+    $('#nickEdit').style.display = 'flex';
+    $('#nickInput').value = state.nickname;
+    $('#nickInput').focus();
+    $('#nickInput').select();
+    $('#editBtn').style.display = 'none';
+  }
+  function closeNick(){
+    $('#nickEdit').style.display = 'none';
+    $('#editBtn').style.display = '';
+  }
+  $('#editBtn').addEventListener('click', openNick);
+  $('#nickCancel').addEventListener('click', closeNick);
+  $('#nickSave').addEventListener('click', function(){
+    var v = $('#nickInput').value.trim();
+    if(v) state.nickname = v.slice(0,20);
+    save();
+    closeNick();
+    renderHeader();
+  });
+  $('#nickInput').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); $('#nickSave').click(); }
+  });
+
+  /* ================= 图片放大 ================= */
+  function openLightbox(src, alt){
+    $('#lightboxImg').src = src;
+    $('#lightboxImg').alt = alt || '放大查看';
+    $('#lightbox').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLightbox(){
+    $('#lightbox').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  $('#lightboxClose').addEventListener('click', closeLightbox);
+  $('#lightbox').addEventListener('click', function(e){
+    if(e.target === this || e.target === $('#lightboxImg')) closeLightbox();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') closeLightbox();
+  });
+
+  /* ================= 练习过程截图 ================= */
+  function loadImage(src){
+    return new Promise(function(resolve){
+      var im = new Image();
+      im.onload = function(){ resolve(im); };
+      im.onerror = function(){ resolve(null); };
+      im.src = src;
+    });
+  }
+
+  function buildPracticeShot(rec){
+    var W = 1440, X = 120, CW = W - 2*X, PAD = 64, GAP = 30;
+    var FF = '"Outfit","PingFang SC","Noto Sans CJK SC","Noto Sans SC",sans-serif';
+    var MF = '"JetBrains Mono","SF Mono",Menlo,monospace';
+
+    var texts = [];
+    var blocks = [];
+    if(window.__gml) window.__gml.lastShotCodeRows = [];
+
+    return (async function(){
+      /* 预加载图片载体（要等解码完才能画） */
+      var imgMap = {};
+      var mods = rec.modules || [];
+      for(var i=0;i<mods.length;i++){
+        var m0 = mods[i];
+        if(m0 && m0.type === '图片' && m0.value && /^data:image\//.test(m0.value)){
+          var im0 = await loadImage(m0.value);
+          if(im0) imgMap[m0.value] = im0;
+        }
+      }
+
+      var mcv = document.createElement('canvas');
+      mcv.width = W; mcv.height = 10;
+      var mctx = mcv.getContext('2d');
+
+      /* ---- 头部：名称 + 时间 ---- */
+      blocks.push({ h:134, draw:function(ctx, y){
+        ctx.fillStyle = '#8f8f8f'; ctx.font = '400 24px ' + FF;
+        var head = SITE_NAME + ' · ' + longDate();
+        ctx.fillText(head, X, y+24); texts.push(head);
+        ctx.fillStyle = '#f0f0f0'; ctx.font = '700 46px ' + FF;
+        var nm = truncate(ctx, rec.name || '未命名练习', CW);
+        ctx.fillText(nm, X, y+86); texts.push(nm);
+        ctx.fillStyle = '#a0a0a0'; ctx.font = '400 24px ' + FF;
+        var tm = (dateKey(new Date(rec.ts)) === todayKey() ? '今天 ' : dateKey(new Date(rec.ts)) + ' ') + timeText(rec.ts);
+        ctx.fillText(tm, X, y+124); texts.push(tm);
+      }});
+
+      /* ---- 练习题要求 / 练习题提示 ---- */
+      [
+        { title:'练习题要求', body:rec.requirement, size:26, lines:6, color:'#c0c0c0', weight:'500' },
+        { title:'练习题提示', body:rec.hint,     size:24, lines:4, color:'#909090', weight:'400' }
+      ].forEach(function(sec){
+        mctx.font = sec.weight + ' ' + sec.size + 'px ' + FF;
+        var lines = sec.body ? wrapText(mctx, sec.body, CW-36, sec.lines) : [];
+        var step = sec.size + 14;
+        blocks.push({
+          h: lines.length ? 60 + (lines.length-1)*step + 18 : 0,
+          draw:function(ctx, y){
+            ctx.fillStyle = '#8f8f8f'; ctx.font = '600 23px ' + FF;
+            ctx.fillText(sec.title, X, y+22); texts.push(sec.title);
+            ctx.fillStyle = sec.color; ctx.font = sec.weight + ' ' + sec.size + 'px ' + FF;
+            lines.forEach(function(line, i){
+              ctx.fillText(line, X, y+52+i*step);
+              texts.push(line);
+            });
+          }
+        });
+      });
+
+      /* ---- 练习题要求的 API ---- */
+      var apiChips = (rec.apis || []).map(function(r){ return apiCode(r) || '（已从 API 库删除）'; });
+      if(apiChips.length){
+        mctx.font = '500 22px ' + MF;
+        var apiRows = [], cur = [], curW = 0;
+        apiChips.forEach(function(a){
+          var w = mctx.measureText(a).width + 36;
+          if(cur.length && curW + w > CW-36){ apiRows.push(cur); cur = []; curW = 0; }
+          cur.push({ t:a, w:w });
+          curW += w + 12;
+        });
+        if(cur.length) apiRows.push(cur);
+        blocks.push({ h:30 + apiRows.length*52, draw:function(ctx, y){
+          ctx.fillStyle = '#8f8f8f'; ctx.font = '600 23px ' + FF;
+          ctx.fillText('练习题要求的 API', X, y+22); texts.push('练习题要求的 API');
+          var ry = y+38;
+          apiRows.forEach(function(row){
+            var rx = X;
+            row.forEach(function(c){
+              ctx.fillStyle = 'rgba(74,144,226,.14)';
+              roundRect(ctx, rx, ry, c.w, 40, 10); ctx.fill();
+              ctx.fillStyle = '#7ab4f0'; ctx.font = '500 22px ' + MF;
+              ctx.fillText(c.t, rx+18, ry+27); texts.push(c.t);
+              rx += c.w + 12;
+            });
+            ry += 52;
+          });
+        }});
+      }
+
+      /* ---- 用到的代码载体（按创建顺序，一步一块） ---- */
+      var stpNo = 0;
+      mods.forEach(function(m){
+        if(!m || !m.type) return;
+        stpNo++;
+        /* 画布是最后统一绘制的，步号必须在这里存快照，否则所有块都画最后一个号 */
+        var stepNo = stpNo;
+        var color = carrierColor(m.type);
+        var inner = [];
+        {
+          if(m.type === '图片'){
+            var im = imgMap[m.value];
+            var iw = 0, ih = 0;
+            if(im){
+              iw = Math.min(CW-72, im.naturalWidth);
+              ih = iw * im.naturalHeight / im.naturalWidth;
+              if(ih > 300){ ih = 300; iw = ih * im.naturalWidth / im.naturalHeight; }
+            }
+            inner.push({ kind:'img', m:m, im:im, w:iw, h:ih });
+          }else if(m.type === 'api'){
+            var ref = apiItem(m.refId);
+            inner.push({ kind:'api', m:m, code: ref ? ref.code : '（该 API 已从 API 库删除）',
+                         params: ref ? normParams(ref.params) : [] });
+          }else if(m.type === '超链接'){
+            inner.push({ kind:'link', m:m, url:String(m.value || '').trim(),
+                         linkKind: mediaKind(m.value) });
+          }else if(m.type === '着色器'){
+            var shd = normShader(m);
+            inner.push({ kind:'shader', m:m, vertex:shd.vertex, fragment:shd.fragment });
+          }else if(m.type === '对象'){
+            inner.push({ kind:'object', m:m, fields: normFields(m.fields), events: normEvents(m.events) });
+          }else if(isCodeCarrier(m.type)){
+            inner.push({ kind:'code', m:m, rows: gmlLineTokens(m.value || ''),
+                         lines: splitCodeLines(m.value) });
+          }else{
+            inner.push({ kind:'text', m:m });
+          }
+        }
+
+        var itemsH = 0;
+        inner.forEach(function(it){
+          if(it.kind === 'img') it.rowH = (it.im ? it.h : 0) + 52;
+          else if(it.kind === 'api') it.rowH = 32 + it.params.length*28 + 12;
+          else if(it.kind === 'link') it.rowH = 46;
+          else if(it.kind === 'shader'){
+            /* 着色器：顶点 + 片段 两个代码框，空的写「使用默认着色器代码」 */
+            it.parts = [];
+            var shH = 0;
+            [['顶点着色器', it.vertex], ['片段着色器', it.fragment]].forEach(function(p){
+              if(String(p[1] || '').trim()){
+                var mm = measureCodeBlock(mctx, CW-36, p[1], 22);
+                it.parts.push({ title:p[0], meta:mm, code:p[1] });
+                shH += 26 + mm.h + 12;
+              }else{
+                it.parts.push({ title:p[0], empty:true });
+                shH += 26 + 34 + 12;
+              }
+            });
+            it.rowH = shH;
+          }
+          else if(it.kind === 'code'){
+            /* 暗色代码框：按像素宽度软换行，行号只标在逻辑行首；空的不画空框 */
+            if((it.m.value || '').trim()){
+              it.meta = measureCodeBlock(mctx, CW-36, it.m.value || '', 22);
+              it.rowH = it.meta.h;
+            }else{
+              it.empty = true;
+              it.rowH = 38;
+            }
+          }
+          else if(it.kind === 'object'){
+            /* 对象：对象名 + 预定义变量表 + 事件代码框 */
+            var oh = 40;
+            if(it.fields.length) oh += 34*(it.fields.length + 1) + 16;
+            it.evMeta = [];
+            it.events.forEach(function(ev){
+              var em = measureCodeBlock(mctx, CW-36, ev.code || '', 22);
+              it.evMeta.push(em);
+              oh += 26 + em.h + 12;
+            });
+            it.rowH = oh;
+          }
+          else it.rowH = 38;
+          itemsH += it.rowH;
+        });
+        var gh = 46 + itemsH + 8;
+
+        blocks.push({ h:gh, draw:function(ctx, y){
+          ctx.fillStyle = hexA(color, 0.16);
+          roundRect(ctx, X, y, CW, gh-8, 16); ctx.fill();
+
+          ctx.fillStyle = color;
+          ctx.beginPath(); ctx.arc(X+28, y+30, 7, 0, Math.PI*2); ctx.fill();
+          ctx.fillStyle = color; ctx.font = '700 24px ' + FF;
+          var typeW = ctx.measureText(m.type).width;
+          ctx.fillText(m.type, X+46, y+38); texts.push(m.type);
+          ctx.fillStyle = '#8f8f8f'; ctx.font = '600 21px ' + FF;
+          ctx.fillText('步骤 ' + stepNo, X+46 + typeW + 14, y+38);
+          texts.push('步骤 ' + stepNo);
+
+          var iy = y+46;
+          inner.forEach(function(it){
+            if(it.kind === 'img'){
+              if(it.im){
+                ctx.fillStyle = '#262626';
+                roundRect(ctx, X+18, iy, it.w+16, it.h+10, 12); ctx.fill();
+                ctx.drawImage(it.im, X+26, iy+5, it.w, it.h);
+                ctx.fillStyle = '#8f8f8f'; ctx.font = '400 20px ' + FF;
+                var fn = it.m.fileName || '';
+                ctx.fillText(truncate(ctx, fn, it.w), X+26, iy+it.h+34);
+                texts.push(fn);
+              }
+            }else if(it.kind === 'api'){
+              ctx.fillStyle = '#f0f0f0'; ctx.font = '500 22px ' + MF;
+              var code = it.code || '（未填代码）';
+              ctx.fillText(truncate(ctx, code, CW-60), X+26, iy+24); texts.push(code);
+              it.params.forEach(function(p, pi){
+                var noTxt = p.no || String(pi+1);
+                ctx.fillStyle = color; ctx.font = '700 18px ' + FF;
+                ctx.fillText(noTxt, X+26, iy+54+pi*28);
+                /* 编号宽度按实际文字量，描述跟着往后挪，避免长编号压住描述 */
+                var noW = ctx.measureText(noTxt).width;
+                var dx = Math.max(X+74, X+26 + noW + 14);
+                ctx.fillStyle = '#909090'; ctx.font = '400 20px ' + FF;
+                ctx.fillText(truncate(ctx, p.desc || '（未填写）', (X+CW-24) - dx), dx, iy+54+pi*28);
+                texts.push(p.desc || '（未填写）');
+              });
+            }else if(it.kind === 'link'){
+              ctx.strokeStyle = color; ctx.lineWidth = 2;
+              ctx.strokeRect(X+26, iy+8, 28, 24);
+              ctx.beginPath();
+              ctx.moveTo(X+26, iy+15); ctx.lineTo(X+54, iy+15);
+              ctx.stroke();
+              ctx.fillStyle = '#909090'; ctx.font = '400 22px ' + MF;
+              var zn = it.url || '未填写地址';
+              var ztag = it.linkKind === 'image' ? '（图片）' : it.linkKind === 'video' ? '（视频）' : '';
+              ctx.fillText(truncate(ctx, zn + ztag, CW-150), X+68, iy+28); texts.push(zn + ztag);
+            }else if(it.kind === 'shader'){
+              /* 着色器：顶点 + 片段 两个代码框 */
+              var sxb = X+18, swb = CW-36, soy = iy;
+              it.parts.forEach(function(p){
+                ctx.font = '600 18px ' + FF;
+                ctx.fillStyle = '#8f8f8f';
+                ctx.fillText(p.title, sxb, soy+14);
+                texts.push(p.title);
+                soy += 26;
+                if(p.empty){
+                  ctx.font = '400 21px ' + FF;
+                  ctx.fillStyle = '#8f8f8f';
+                  ctx.fillText('使用默认着色器代码', sxb+10, soy+24);
+                  texts.push('使用默认着色器代码');
+                  soy += 34 + 12;
+                }else{
+                  var ehh = drawCodeBlock(ctx, sxb, soy, swb, p.code, 22);
+                  p.code.split('\n').forEach(function(ln){ texts.push(ln); });
+                  soy += ehh + 12;
+                }
+              });
+            }else if(it.kind === 'code'){
+              /* 暗色代码框 + 行号 + 上色（折行不增加行号） */
+              if(it.empty){
+                ctx.font = '400 21px ' + FF;
+                ctx.fillStyle = '#8f8f8f';
+                ctx.fillText('（未填写）', X+26, iy+26);
+                texts.push('（未填写）');
+              }else{
+                it.lines.forEach(function(ln){ texts.push(ln); });
+                drawCodeBlock(ctx, X+18, iy, CW-36, it.m.value || '', 22);
+              }
+            }else if(it.kind === 'object'){
+              /* 对象：对象名 + 变量表 + 事件代码框 */
+              var bx = X+18, bw = CW-36;
+              ctx.font = '600 22px ' + MF;
+              ctx.fillStyle = '#f0f0f0';
+              var onm = it.m.value || '（未填写对象名）';
+              ctx.fillText(truncate(ctx, onm, bw), bx, iy+24);
+              texts.push(onm);
+              var oy = iy + 40;
+              if(it.fields.length){
+                /* 行式：表头一行（变量名 | 参数 | 说明），下面每行一个变量 */
+                var rowH = 34;
+                var colX = [0, 0.30, 0.56];
+                var tW = bw;
+                ctx.font = '500 18px ' + FF;
+                ctx.fillStyle = '#8f8f8f';
+                ['变量名','参数','说明'].forEach(function(lab, ci){
+                  ctx.fillText(lab, bx + tW*colX[ci] + 10, oy + 22);
+                });
+                /* 表头底 + 网格线 */
+                ctx.strokeStyle = '#3f3f3f';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(bx+0.5, oy+0.5, tW-1, rowH*(it.fields.length+1)-1);
+                it.fields.forEach(function(f, ri){
+                  var ry = oy + (ri+1)*rowH;
+                  ctx.font = '400 18px ' + FF;
+                  ctx.fillStyle = '#c0c0c0';
+                  [f.name, f.param, f.desc].forEach(function(v, ci){
+                    var cw = (ci === 2 ? tW*0.44 : tW*0.26);
+                    ctx.fillText(truncate(ctx, String(v || ''), cw-16), bx + tW*colX[ci] + 10, ry + 22);
+                    texts.push(String(v || ''));
+                  });
+                });
+                oy += rowH*(it.fields.length+1) + 16;
+              }
+              it.events.forEach(function(ev, ei){
+                ctx.font = '600 18px ' + FF;
+                ctx.fillStyle = '#8f8f8f';
+                ctx.fillText(ev.name || '事件', bx, oy+14);
+                texts.push(ev.name || '事件');
+                oy += 26;
+                var eh = drawCodeBlock(ctx, bx, oy, bw, ev.code || '', 22);
+                (ev.code || '').split('\n').forEach(function(ln){ texts.push(ln); });
+                oy += eh + 12;
+              });
+            }else{
+              var plain = (m.type === '操作描述');
+              ctx.fillStyle = '#c0c0c0';
+              ctx.font = (plain?'400 ':'500 ') + '22px ' + (plain?FF:MF);
+              var tv = it.m.value || '（未填写）';
+              ctx.fillText(truncate(ctx, tv, CW-60), X+26, iy+28); texts.push(tv);
+            }
+            iy += it.rowH;
+          });
+        }});
+      });
+
+      /* ---- 底部 ---- */
+      blocks.push({ h:96, draw:function(ctx, y){
+        ctx.strokeStyle = '#2e2e2e'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(X, y+8); ctx.lineTo(X+CW, y+8); ctx.stroke();
+        ctx.fillStyle = '#4a90e2';
+        roundRect(ctx, X, y+30, 34, 34, 10); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = '700 22px ' + FF;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('G', X+17, y+48);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = '#8f8f8f'; ctx.font = '400 22px ' + FF;
+        ctx.fillText('每一次练习都算数 · ' + SITE_NAME, X+48, y+54);
+        ctx.textAlign = 'right';
+        ctx.fillText(state.nickname || DEFAULT_NICK, X+CW, y+54);
+        ctx.textAlign = 'left';
+      }});
+
+      /* ---- 画布 ---- */
+      var H = PAD*2;
+      blocks.forEach(function(b){ H += b.h + GAP; });
+      var cv = document.createElement('canvas');
+      cv.width = W; cv.height = H;
+      var ctx = cv.getContext('2d');
+
+      var g = ctx.createLinearGradient(0,0,W,H);
+      g.addColorStop(0, '#2f3a48');
+      g.addColorStop(0.55, '#26303c');
+      g.addColorStop(1, '#2a3442');
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,W,H);
+
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,.30)';
+      ctx.shadowBlur = 46;
+      ctx.shadowOffsetY = 14;
+      ctx.fillStyle = '#2b2b2b';
+      roundRect(ctx, PAD, PAD, W-2*PAD, H-2*PAD, 44);
+      ctx.fill();
+      ctx.restore();
+
+      var y = PAD + 26;
+      blocks.forEach(function(b){
+        if(b.h <= 0) return;
+        b.draw(ctx, y);
+        y += b.h + GAP;
+      });
+
+      cv.texts = texts;
+      return cv;
+    })();
+  }
+
+  var shotCanvas = document.createElement('canvas');
+
+  function currentShotRec(){
+    if(editingId){
+      var er = findRec(editingId);
+      if(er) return er;
+    }
+    if(selectedId){
+      var sr = findRec(selectedId);
+      if(sr) return sr;
+    }
+    return null;
+  }
+
+  /* 编辑中：把输入框当前的值同步到记录（只改内存，不落盘），保证截图跟看到的一致 */
+  function syncFormValues(){
+    if(!editingId) return;
+    if(formRecId !== editingId) return;   /* 表单不是这条记录的，别乱写 */
+    var rec = findRec(editingId);
+    if(!rec) return;
+    var nameIn = $('[data-field="name"]');
+    var reqIn = $('[data-field="requirement"]');
+    var hintIn = $('[data-field="hint"]');
+    if(nameIn) rec.name = nameIn.value.trim();
+    if(reqIn) rec.requirement = reqIn.value.trim();
+    if(hintIn) rec.hint = hintIn.value.trim();
+  }
+
+  function refreshShot(){
+    var rec = currentShotRec();
+    if(!rec){ toast('先选一条记录，或点「打卡一次」新建一条'); return Promise.resolve(false); }
+    syncFormValues();
+    return buildPracticeShot(rec).then(function(cv){
+      shotCanvas.width = cv.width;
+      shotCanvas.height = cv.height;
+      shotCanvas.getContext('2d').drawImage(cv, 0, 0);
+      $('#shotPreview').src = shotCanvas.toDataURL('image/png');
+      if(window.__gml) window.__gml.lastShotTexts = cv.texts || [];
+      return true;
+    });
+  }
+
+  $('#shotBtn').addEventListener('click', function(){
+    $('#shotModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    refreshShot();
+  });
+  $('#shotRebuild').addEventListener('click', function(){ refreshShot(); });
+  $('#shotClose').addEventListener('click', function(){
+    $('#shotModal').classList.remove('open');
+    syncBodyLock();
+  });
+  $('#shotModal').addEventListener('click', function(e){
+    if(e.target === this){
+      $('#shotModal').classList.remove('open');
+      syncBodyLock();
+    }
+  });
+  $('#shotSave').addEventListener('click', function(){
+    var url = shotCanvas.toDataURL('image/png');
+    if(!url || url.length < 100){ toast('还没有生成截图'); return; }
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'gml-练习过程-' + todayKey() + '.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+
+  /* ================= 挑战记录卡 ================= */
+  function roundRect(ctx,x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
+  }
+  function truncate(ctx, text, maxW){
+    if(ctx.measureText(text).width <= maxW) return text;
+    var s = text;
+    while(s.length > 1 && ctx.measureText(s+'…').width > maxW) s = s.slice(0,-1);
+    return s + '…';
+  }
+  /* 按像素宽度折行，最多 maxLines 行，超出加省略号 */
+  function wrapText(ctx, text, maxW, maxLines){
+    var lines = [];
+    var s = String(text == null ? '' : text).replace(/\r/g, '').trim();
+    if(!s) return lines;
+    var line = '';
+    for(var i=0;i<s.length;i++){
+      var ch = s.charAt(i);
+      if(ch === '\n'){
+        lines.push(line); line = '';
+        if(lines.length >= maxLines) return lines;
+        continue;
+      }
+      if(ctx.measureText(line + ch).width > maxW){
+        if(line){ lines.push(line); line = ch; }
+        else lines.push(ch);
+        if(lines.length >= maxLines){
+          if(i + 1 < s.length) lines[lines.length-1] = lines[lines.length-1].replace(/.$/, '') + '…';
+          return lines;
+        }
+      }else{
+        line += ch;
+      }
+    }
+    if(line) lines.push(line);
+    return lines;
+  }
+
+  var cardCanvas = document.createElement('canvas');
+
+  function buildCard(){
+    var W = 1080, X = 104, CW = W - 2*X;
+    var FF = '"Outfit","PingFang SC","Noto Sans CJK SC","Noto Sans SC",sans-serif';
+    var MF = '"JetBrains Mono","SF Mono",Menlo,monospace';
+
+    var today = recordsToday().slice().sort(function(a,b){ return a.ts - b.ts; });
+    var shown = today.slice(0, 8);
+    var hidden = today.length - shown.length;
+
+    var top = 118;
+    var headerBottom = top + 132;
+    var statsTop = headerBottom + 44;
+    var statsH = 108;
+
+    /* 焦点记录：正在编辑 > 今天最近的一道有题面的 > 选中的 > 今天最后一条 */
+    var focus = null, focusLabel = '本次练习';
+    if(editingId){
+      focus = findRec(editingId);
+      if(focus) focusLabel = '正在记录';
+    }
+    if(!focus){
+      for(var fi=shown.length-1; fi>=0; fi--){
+        if(shown[fi].requirement || shown[fi].hint){ focus = shown[fi]; break; }
+      }
+    }
+    if(!focus && selectedId){
+      focus = findRec(selectedId);
+      if(focus) focusLabel = '选中练习';
+    }
+    if(!focus && shown.length) focus = shown[shown.length-1];
+
+    var mcv = document.createElement('canvas');
+    mcv.width = W; mcv.height = 10;
+    var mctx = mcv.getContext('2d');
+
+    var focusBox = null;
+    if(focus){
+      var fPad = 18, fLabelW = 54;
+      var fTextW = CW - fPad*2 - fLabelW;
+      mctx.font = '500 24px ' + FF;
+      var reqLines = focus.requirement ? wrapText(mctx, focus.requirement, fTextW, 3) : [];
+      mctx.font = '400 22px ' + FF;
+      var hintLines = focus.hint ? wrapText(mctx, focus.hint, fTextW, 2) : [];
+      var reqH = reqLines.length ? 10 + reqLines.length*34 : 0;
+      var hintH = hintLines.length ? 10 + hintLines.length*32 : 0;
+      focusBox = {
+        rec: focus, req: reqLines, hint: hintLines,
+        pad: fPad, labelW: fLabelW, textW: fTextW,
+        h: fPad + 48 + reqH + hintH + fPad
+      };
+    }
+
+    var sectionTop = statsTop + statsH + 40;
+    if(focusBox) sectionTop += focusBox.h + 34;
+    var listTitleTop = sectionTop;
+    var rowsTop = listTitleTop + 62;
+
+    /* 记录行：带练习题摘录的行更高 */
+    var rowInfo = shown.map(function(rec){
+      var excerpt = rec.requirement || rec.hint || '';
+      return { rec: rec, excerpt: excerpt, h: excerpt ? 122 : 84 };
+    });
+    var rowsH = rowInfo.length ? rowInfo.reduce(function(s, r){ return s + r.h; }, 0) : 76;
+    var H = rowsTop + rowsH + (hidden > 0 ? 44 : 0) + 168;
+
+    var cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    var ctx = cv.getContext('2d');
+    var texts = [];   /* 画进卡片里的文字，供自检断言用 */
+
+    /* 背景 */
+    var g = ctx.createLinearGradient(0,0,W,H);
+    g.addColorStop(0, '#2f3a48');
+    g.addColorStop(0.55, '#26303c');
+    g.addColorStop(1, '#2a3442');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    /* 白卡 */
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.30)';
+    ctx.shadowBlur = 46;
+    ctx.shadowOffsetY = 14;
+    ctx.fillStyle = '#2b2b2b';
+    roundRect(ctx, 54, 54, W-108, H-108, 44);
+    ctx.fill();
+    ctx.restore();
+
+    /* 头部：G 头像 */
+    ctx.save();
+    ctx.shadowColor = 'rgba(74,144,226,.50)';
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetY = 6;
+    ctx.fillStyle = '#4a90e2';
+    ctx.beginPath();
+    ctx.arc(X+52, top+52, 52, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 52px ' + FF;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('G', X+52, top+54);
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#f0f0f0';
+    ctx.font = '700 44px ' + FF;
+    ctx.fillText(truncate(ctx, state.nickname || DEFAULT_NICK, CW-240), X+126, top+44);
+    ctx.fillStyle = '#8f8f8f';
+    ctx.font = '400 25px ' + FF;
+    ctx.fillText(SITE_NAME + ' · ' + longDate(), X+126, top+84);
+
+    ctx.strokeStyle = '#2e2e2e';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(X, headerBottom);
+    ctx.lineTo(W-X, headerBottom);
+    ctx.stroke();
+
+    /* 统计三格 */
+    var tiles = [
+      { k:'今日合计', v:String(today.length), u:'次' },
+      { k:'已挑战次数', v:String(state.records.length), u:'次' },
+      { k:'连续天数', v:String(streakDays()), u:'天' }
+    ];
+    var tw = (CW - 18*2)/3;
+    tiles.forEach(function(t, i){
+      var x = X + i*(tw+18);
+      ctx.fillStyle = i === 0 ? 'rgba(74,144,226,.14)' : '#303030';
+      roundRect(ctx, x, statsTop, tw, statsH, 18);
+      ctx.fill();
+      ctx.fillStyle = i === 0 ? '#8fa9c9' : '#8f8f8f';
+      ctx.font = '400 22px ' + FF;
+      ctx.textAlign = 'center';
+      ctx.fillText(t.k, x+tw/2, statsTop+36);
+      ctx.fillStyle = i === 0 ? '#7ab4f0' : '#f0f0f0';
+      ctx.font = '700 38px ' + FF;
+      ctx.textAlign = 'center';
+      ctx.fillText(t.v, x+tw/2, statsTop+82);
+      var vw = ctx.measureText(t.v).width;   /* 在数字字号下量宽，再画单位 */
+      ctx.fillStyle = '#7e7e7e';
+      ctx.font = '400 19px ' + FF;
+      ctx.fillText(t.u, x+tw/2 + vw/2 + 9, statsTop+82);
+    });
+    ctx.textAlign = 'left';
+
+    /* 本次练习：把练习题完整截取进卡片 */
+    if(focusBox){
+      var f = focusBox;
+      var fy = statsTop + statsH + 40;
+      var tx = X + f.pad;
+      var ty = fy + f.pad;
+
+      ctx.fillStyle = '#333333';
+      roundRect(ctx, X, fy, CW, f.h, 18);
+      ctx.fill();
+      ctx.fillStyle = '#4a90e2';
+      roundRect(ctx, X, fy+18, 4, f.h-36, 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#4a90e2';
+      ctx.font = '700 21px ' + FF;
+      ctx.fillText(focusLabel, tx, ty+16);
+      texts.push(focusLabel);
+
+      ctx.fillStyle = '#f0f0f0';
+      ctx.font = '700 28px ' + FF;
+      var fName = truncate(ctx, f.rec.name || '未命名练习', f.textW + f.labelW);
+      ctx.fillText(fName, tx, ty+52);
+      texts.push(fName);
+
+      var ly = ty + 52;
+      if(f.req.length){
+        ly += 10;
+        ctx.fillStyle = '#8f8f8f';
+        ctx.font = '600 22px ' + FF;
+        ctx.fillText('要求', tx, ly+22);
+        ctx.fillStyle = '#c0c0c0';
+        ctx.font = '500 24px ' + FF;
+        f.req.forEach(function(line, i){
+          ctx.fillText(line, tx + f.labelW, ly + 22 + i*34);
+          texts.push(line);
+        });
+        ly += f.req.length * 34;
+      }
+      if(f.hint.length){
+        ly += 10;
+        ctx.fillStyle = '#8f8f8f';
+        ctx.font = '600 22px ' + FF;
+        ctx.fillText('提示', tx, ly+22);
+        ctx.fillStyle = '#909090';
+        ctx.font = '400 22px ' + FF;
+        f.hint.forEach(function(line, i){
+          ctx.fillText(line, tx + f.labelW, ly + 22 + i*32);
+          texts.push(line);
+        });
+      }
+    }
+
+    /* 今日挑战 */
+    ctx.fillStyle = '#f0f0f0';
+    ctx.font = '700 32px ' + FF;
+    ctx.fillText('今日挑战', X, listTitleTop+38);
+    ctx.strokeStyle = '#2e2e2e';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(X, listTitleTop+62);
+    ctx.lineTo(W-X, listTitleTop+62);
+    ctx.stroke();
+
+    /* 记录行 */
+    if(!rowInfo.length){
+      ctx.fillStyle = '#333333';
+      roundRect(ctx, X, rowsTop, CW, 76, 16);
+      ctx.fill();
+      ctx.fillStyle = '#8f8f8f';
+      ctx.font = '400 26px ' + FF;
+      ctx.textAlign = 'center';
+      ctx.fillText('今天还没有挑战记录', W/2, rowsTop+47);
+      ctx.textAlign = 'left';
+    }else{
+      var ry = rowsTop;
+      rowInfo.forEach(function(info){
+        var rec = info.rec;
+        var y = ry;
+        var rowH = info.h;
+        var types = recTypes(rec);
+        var color = types.length ? carrierColor(types[0]) : '#4a90e2';
+
+        ctx.fillStyle = '#333333';
+        roundRect(ctx, X, y+6, CW, rowH-14, 14);
+        ctx.fill();
+        ctx.fillStyle = color;
+        roundRect(ctx, X, y+18, 5, rowH-38, 3);
+        ctx.fill();
+
+        ctx.fillStyle = '#f0f0f0';
+        ctx.font = '600 28px ' + FF;
+        var rowName = truncate(ctx, rec.name || '未命名练习', CW-330);
+        ctx.fillText(rowName, X+26, y+42);
+        texts.push(rowName);
+
+        ctx.fillStyle = '#a0a0a0';
+        ctx.font = '400 23px ' + FF;
+        ctx.fillText(timeText(rec.ts), X+26, y+70);
+
+        /* 右侧：载体类型名（各用自己的颜色）+ API 数 */
+        var labels = types.length ? types : ['待填写'];
+        var rx = W - X - 26;
+        ctx.textAlign = 'right';
+        var shownTypes = labels.slice(0, 3);
+        for(var k = shownTypes.length - 1; k >= 0; k--){
+          ctx.font = '600 21px ' + FF;
+          var c = types.length ? carrierColor(shownTypes[k]) : '#909090';
+          ctx.fillStyle = c;
+          ctx.fillText(shownTypes[k], rx, y+42);
+          rx -= ctx.measureText(shownTypes[k]).width + 16;
+        }
+        if(labels.length > 3){
+          ctx.font = '400 20px ' + FF;
+          ctx.fillStyle = '#a0a0a0';
+          ctx.fillText('+' + (labels.length - 3), rx + 6, y+42);
+        }
+        var apiN = (rec.apis || []).length;
+        if(apiN){
+          ctx.fillStyle = '#a0a0a0';
+          ctx.font = '400 21px ' + FF;
+          ctx.fillText(apiN + ' 个 API', W-X-26, y+70);
+        }
+        ctx.textAlign = 'left';
+
+        /* 练习题摘录 */
+        if(info.excerpt){
+          ctx.fillStyle = '#8f8f8f';
+          ctx.font = '400 21px ' + FF;
+          var exLine = truncate(ctx, '题：' + info.excerpt.replace(/\s+/g, ' '), CW-62);
+          ctx.fillText(exLine, X+26, y+100);
+          texts.push(exLine);
+        }
+
+        ry += rowH;
+      });
+
+      if(hidden > 0){
+        ctx.fillStyle = '#a0a0a0';
+        ctx.font = '400 23px ' + FF;
+        ctx.fillText('还有 ' + hidden + ' 条今日挑战未显示', X+26, rowsTop + rowsH + 26);
+      }
+    }
+
+    /* 页脚 */
+    var fy = H - 150;
+    ctx.strokeStyle = '#2e2e2e';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(X, fy);
+    ctx.lineTo(W-X, fy);
+    ctx.stroke();
+
+    ctx.fillStyle = '#4a90e2';
+    roundRect(ctx, X, fy+30, 34, 34, 10);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 22px ' + FF;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('G', X+17, fy+48);
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#8f8f8f';
+    ctx.font = '400 24px ' + FF;
+    ctx.fillText('每一次练习都算数 · ' + SITE_NAME, X+48, fy+54);
+    ctx.textAlign = 'right';
+    ctx.fillText(longDate(), W-X, fy+54);
+
+    cv.texts = texts;
+    return cv;
+  }
+
+  function refreshCard(){
+    var cv = buildCard();
+    cardCanvas.width = cv.width;
+    cardCanvas.height = cv.height;
+    cardCanvas.getContext('2d').drawImage(cv, 0, 0);
+    $('#cardPreview').src = cardCanvas.toDataURL('image/png');
+    if(window.__gml) window.__gml.lastCardTexts = cv.texts || [];
+  }
+
+  function openCard(){
+    refreshCard();
+    $('#cardModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeCard(){
+    $('#cardModal').classList.remove('open');
+    syncBodyLock();
+  }
+
+  $('#exportBtn').addEventListener('click', openCard);
+  $('#openCardBtn').addEventListener('click', openCard);
+  $('#openProcessBtn').addEventListener('click', function(){
+    if(!state.records.length){ toast('还没有记录，先点「打卡一次」开始新的练习'); return; }
+    if(!selectedId || !findRec(selectedId)){
+      /* 默认打开最近一条 */
+      var sorted = state.records.slice().sort(function(a,b){ return b.ts - a.ts; });
+      selectedId = sorted[0].id;
+      editingId = null;
+      renderAll();
+    }
+    openProcess();
+  });
+  $('#processClose').addEventListener('click', function(){
+    if(editingId) finishEditing();
+    else closeProcess();
+  });
+  $('#processCard').addEventListener('click', function(e){
+    if(isWide()) return;          /* 宽屏下这是常驻面板，点面板本身不关闭 */
+    if(e.target === this) closeProcess();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+      if($('#shotModal').classList.contains('open')) return;   /* 截图弹层自己处理 */
+      if(!isWide() && $('#processCard').classList.contains('open')) closeProcess();
+    }
+  });
+  /* 宽窄切换：宽屏是常驻右栏，窄屏是遮罩弹层 */
+  function syncWideMode(){
+    if(isWide()){
+      $('#processCard').classList.add('open');   /* 右栏常驻（CSS 里也强制显示） */
+    }else{
+      if(selectedId || editingId) $('#processCard').classList.add('open');
+      else $('#processCard').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  }
+  if(WIDE_MQ.addEventListener) WIDE_MQ.addEventListener('change', syncWideMode);
+  else if(WIDE_MQ.addListener) WIDE_MQ.addListener(syncWideMode);
+  $('#rebuildBtn').addEventListener('click', refreshCard);
+  $('#cardClose').addEventListener('click', closeCard);
+  $('#cardModal').addEventListener('click', function(e){
+    if(e.target === this) closeCard();
+  });
+  $('#saveCardBtn').addEventListener('click', function(){
+    /* 与预览同一个 canvas 源，PNG 与预览完全一致 */
+    var url = cardCanvas.toDataURL('image/png');
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'gml-挑战记录卡-' + todayKey() + '.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+
+  /* ================= 启动 ================= */
+  renderAll();
+  window.__gml = { state: state, render: renderAll };
+})();
+</script>
+</body>
+</html>
