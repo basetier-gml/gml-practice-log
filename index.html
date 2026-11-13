@@ -936,12 +936,54 @@ description: 用「Gml代码练习记录」网页（https://basetier-gml.github.
 | 5 | **再按用户的想法修改**，改完重新截图返回 | 迭代到用户满意 |
 | 6 | **补偿**：玩家确认「练习过程成立」后 → 再清一次数据 → 把任务开始前的存档装回来 → 按确认的信息把那条练习再打开一次 | 演示用的数据不该留在玩家真实记录里；把现场恢复回去，并让确认好的练习重新出现在页面上 |
 
-第 4 步的截图 = 练习过程弹层标题栏「截图」按钮生成的长图（1440 宽 PNG，底部带二维码）。
-第 6 步的详细做法见下面 §7。
+第 4 步的截图 = 练习过程弹层标题栏「截图」按钮生成的长图（1440 宽 PNG，**二维码固定在图片开头**）。
+第 6 步的详细做法见下面 §8。
+
+> **在无头浏览器里跑，优先用 §2 的命令接口**（`window.gml.cmd(...)`），
+> 不用去抠 DOM 选择器；需要点界面元素时再回退到 Playwright 的 click。
 
 ---
 
-## 2. 第 1 步：先存档
+## 2. 命令接口（无头浏览器里首选这个）
+
+页面挂了一个命令接口：**每条命令等价于手动点一下按钮，但不用抠 DOM 选择器**。
+在 Playwright / CDP / 任何能执行 JS 的地方：
+
+```js
+await page.evaluate(() => window.gml.cmd('help'))                       // 看命令清单
+await page.evaluate(() => window.gml.cmd('checkin', {name:'…', requirement:'…', hint:'…'}))
+await page.evaluate(() => window.gml.cmd('addModule', {type:'脚本', value:'function f(){}'}))
+const r = await page.evaluate(() => window.gml.cmd('screenshot'))       // → {ok:true, dataUrl:'data:image/png;…'}
+```
+
+返回值永远是 Promise，结果是 `{ok:true, ...}` 或 `{ok:false, error:'原因'}` —— **先看 ok 再取字段**。
+
+| 命令 | 参数 | 干什么 |
+|---|---|---|
+| `help` | – | 命令清单 |
+| `state` | – | 当前状态（昵称/设置/记录列表/API 列表/当前打开的练习） |
+| `clear` | – | 清空全部数据（内存 + localStorage） |
+| `export` | – | 整站存档 payload 对象（不触发下载） |
+| `import` | `{json}` | 导入整站存档并覆盖（对象或 JSON 字符串都行） |
+| `checkin` | `{name, requirement, hint}` | 打卡并打开练习过程 |
+| `set` | `{field:'name'\|'requirement'\|'hint', value}` | 改当前练习的字段 |
+| `addModule` | `{type, value}` | 加一个代码载体（type：脚本/对象/操作描述/SVG绘图/超链接/着色器） |
+| `addObject` | `{name, fields:[[变量名,参数,说明]], events:[{name,code}]}` | 加一个对象载体（`fields` 只在材料明确写了「预定义变量」时才填，否则留空） |
+| `addApi` | `{code:'函数名', params:[{no,desc}]}` | 往 API 库加一条 |
+| `refApi` / `unrefApi` | `{code}` | 引用 / 取消引用库里的 API |
+| `setNick` | `{name}` | 改昵称 |
+| `setAvatar` | `{dataUrl:'data:image/…'}` | 设头像 |
+| `screenshot` | – | 生成练习过程截图 → `{dataUrl,width,height}` |
+| `exportPractice` | – | 导出当前这一条练习的 payload |
+| `shareLink` | – | 这条练习的分享链接/二维码 `{url,version,size,tooLong}` |
+| `finish` / `close` | – | 结束编辑 / 关掉弹层 |
+| `lang` | `{lang:'zh'\|'en'}` | 切语言 |
+
+⚠ 程序改完记录字段后，页面会**重建表单**（`renderProcess` → `syncFormValues` 是「表单→记录」方向），
+所以命令接口内部是「先写记录、再写回表单、最后才渲染」——**你自己直接改页面 JS 时要照这个顺序**，
+否则新填的内容会被空表单抹掉（这个坑我踩过 ✓）。
+
+## 3. 第 1 步：先存档
 
 - 入口：顶栏**玩家名右边的「菜单 ▾」→「存档」**（`#menuBtn` → `#miExport`），
   下载 `gml-practice-log-backup-YYYY-MM-DD.json`。
@@ -949,7 +991,7 @@ description: 用「Gml代码练习记录」网页（https://basetier-gml.github.
   两者别搞混：前者是**整站**，后者是**一条**。
 - 整站存档 JSON：`{app:"gml-practice-log", version:2, exportedAt, counts:{records,apiLib}, data:{user,settings,records,api}}`。
 
-## 3. 第 2 步：清空全部数据
+## 4. 第 2 步：清空全部数据
 
 ```js
 localStorage.clear(); sessionStorage.clear();
@@ -958,9 +1000,10 @@ localStorage.clear(); sessionStorage.clear();
 然后 **reload** 页面。自检：记录数 0、API 库 0、昵称回到默认。
 （站点启动时本来就会删掉老的大 key `gml-practice-log-v2`，不用管它。）
 
-## 4. 第 3 步：一次打卡
+## 5. 第 3 步：一次打卡
 
 1. 点「打卡一次」（`#checkinBtn`）⇒ **练习过程弹层自动打开**（`#processCard`），此时是**编辑态**。
+   （无头浏览器里等价命令：`cmd('checkin', {name, requirement, hint})` ✓）
 2. 填三个字段（**没有 id，用 data-field 选**）：
    - 名称 `[data-field="name"]`
    - 练习题要求 `[data-field="requirement"]`
@@ -977,9 +1020,13 @@ localStorage.clear(); sessionStorage.clear();
 - 定稿代码里的**构造函数 / 独立脚本** → 建**脚本**载体（一个 `.module` 里一个 textarea）。
 - 定稿代码里的**挂载对象** → 建**对象**载体：
   - 对象名填 `[data-role="objectName"]`（例如 `obj_player`）
-  - 「预定义变量表」按行填（变量名 | 参数 | 说明）
   - 「事件代码框」：点「＋ 添加事件」，事件名填 `[data-role="eventName"]`（Create / Step / Draw…），
     代码填进该事件框里的 textarea
+  - 「预定义变量表」按行填（变量名 | 参数 | 说明），但注意：
+    ⚠ **「预定义变量」不是 Create 事件里写的那些变量/函数**！
+    Create 事件里的赋值代码原样放进**事件代码框**（事件名写 Create ✓）。
+    「预定义变量表」只填**材料里明确写成「预定义变量」的那几项**；
+    没明确说就**留空**，不要从 Create 事件里推导变量 ✗。
 - 载体顺序 = **定稿代码的顺序**，一个文件一个载体，别合并。
 - 代码**逐字照抄**，tab 缩进也要一致。
 
@@ -991,7 +1038,7 @@ localStorage.clear(); sessionStorage.clear();
   `#apiCodeInput` 填代码，`#apiModalAddArg` 加参数行，`#apiModalSave` 保存，`#apiModalCancel` 取消。
 - 库里的 API 被引用后不能直接删（会提示「还有 N 处练习在引用」）。
 
-## 5. 第 4 步：返回练习过程截图
+## 6. 第 4 步：返回练习过程截图
 
 - 练习过程弹层标题栏 →「截图」（`#shotBtn`）→ 生成 1440 宽长图 → 弹层里是 `#shotPreview`（一个 `img`）。
 - 存成 PNG 交付给用户。页面上的「保存图片」（`#shotSave`）是给真人点的；脚本侧直接取 `img.src` 的 dataURL
@@ -999,14 +1046,14 @@ localStorage.clear(); sessionStorage.clear();
 - 图里包含：题面、提示、API 引用、全部代码载体（按步骤分块）、底部二维码（站点网址 + 这条练习的压缩包）。
 - 内容改完要**重新点「截图」**（`#shotRebuild`）—— 旧图不会自动更新。
 
-## 6. 第 5 步：按用户的想法修改
+## 7. 第 5 步：按用户的想法修改
 
 - 继续在**同一个练习过程弹层**里改（内容实时保存），改完再截图返回。
 - 详情态里想回去改：点「编辑这条记录」回到编辑态。
   ⚠ 编辑态会重建表单，动手前先确认上一次输入没丢。
 - 删一条练习：主界面记录卡右上角 ×。删 API：API 库条目上的 ×。
 
-## 7. 补偿：玩家确认「练习过程成立」之后
+## 8. 补偿：玩家确认「练习过程成立」之后
 
 玩家确认后按这三步把现场恢复回去（**别把演示数据留在玩家真实记录里**）：
 
@@ -1014,6 +1061,7 @@ localStorage.clear(); sessionStorage.clear();
    练习过程弹层 →「存读档」→「导出这一条练习」（`#pbBtn` → `#pbExportBtn`）⇒ 拿到**单条**练习 JSON
    （它引用的 API 也一起打包在里面 ✓）。
 2. **再次清空网页数据**：`localStorage.clear(); sessionStorage.clear();` → reload。
+   （命令：`cmd('clear')` ✓ —— 它会连内存状态一起清掉，不用 reload ✓）
 3. **把任务开始前的存档装回来**：菜单 ▾ →「读档」→ 选第 1 步开头存下的**整站备份**
    → 弹层里点「**覆盖现有数据**」（要连点两次确认 ✓）
    ⇒ 玩家原来的记录 / API 库 / 昵称 / 设置全回来了。
@@ -1026,14 +1074,14 @@ localStorage.clear(); sessionStorage.clear();
 5. 自检：整站记录数 = 任务开始前的数量 **+1**（多出来那条就是确认好的练习）；
    昵称、设置跟任务开始前一致 ✓。
 
-## 8. 其它功能入口
+## 9. 其它功能入口
 
 - 整站导入（**只有覆盖一种方式**）：菜单 → 读档 → 选文件 → 弹层里点「覆盖现有数据」（要**点两次**确认）。
 - 单条练习导入：练习过程 →「存读档」→「导入一条练习」。
 - 挑战记录卡（1080 分享图）：菜单 → 分享打卡记录截图。
 - 改名字 / 换头像 / 中英切换：都在同一个「菜单 ▾」里。
 
-## 9. 坑（都是真踩过的）
+## 10. 坑（都是真踩过的）
 
 1. **打卡会自动打开练习过程弹层** ⇒ 之后要点主界面的东西，先关弹层（`#processClose` 或 Esc），
    否则 Playwright 会报 "intercepts pointer events"。
@@ -1049,7 +1097,7 @@ localStorage.clear(); sessionStorage.clear();
 7. **宽屏（≥1000px）** 是左右分屏，练习过程在右栏常驻、关不掉 ⇒ 自动化用窄视口更省事。
 8. **页面里写死的中文文案要进 i18n 字典才会翻译**；用户的昵称/头像带 `data-i18n-skip`，不会被翻译。
 
-## 10. 真实用例（2026-11-13，第 77 期「带分段的小血条」）
+## 11. 真实用例（2026-11-13，第 77 期「带分段的小血条」）
 
 用户原话：「打开这个网页…点击"打卡一次"创建一个新的练习过程，按照页面中的提示文本输入当前挑战的内容，
 然后在下面的"代码载体"中按我定稿代码的顺序添加载体，如果我用的是构造函数或者是脚本，就创建脚本载体，
@@ -1065,6 +1113,8 @@ AI 的实际动作（这个顺序可以照抄）：
 3. 建 3 个 API（代码只写函数名，参数按顺序写说明）：`clamp` / `draw_healthbar` / `draw_line`。
 4. 填题面（**手动断行**，别让长句折行溢出；例：题面 13 行最长 25 字、提示 21 行最长 22 字）。
 5. 加载体：脚本 1 + 对象 obj_player（Create / Step / Draw），代码与源文件**逐字一致**（含 tab 缩进）。
+   ⚠ Create 事件里的 `hp=8; max_hp=hp;` 是**事件代码**（放事件框），
+   **不是「预定义变量表」** ⇒ 那次变量表是留空的 ✓。
 6. 引用 API，顺序 clamp → draw_healthbar → draw_line。
 7. **导出前先截图核对**：详情页截图 +「编辑 API」弹层截图（证明代码框里只有函数名）。
 8. 导出存档（练习过程 → 存读档 → 导出），拿到 JSON 后**脚本校验**：
@@ -1077,7 +1127,7 @@ AI 的实际动作（这个顺序可以照抄）：
 ⇒ **API 代码字段只保留函数名**（括号里的参数属于「参数说明」，不要塞进代码框），
 并且要求清缓存重建后再导一版。
 
-## 11. 交付给用户什么
+## 12. 交付给用户什么
 
 - 整站存档 JSON（菜单 → 存档）
 - 单条练习存档 JSON（练习过程 → 存读档 → 导出）
@@ -5361,9 +5411,14 @@ __lang = detectLang();
     return shareEncode(practicePayload(rec)).then(function(code){
       /* 二维码内容 = 在线网站网址 + 这条练习的压缩包（别的扫码软件会提示是否打开这个网址） */
       var url = SHARE_URL + QR_FLAG + code;
-      var info = qrInfo(url, QR_WIDTH);
-      if(!info.ok) return { url:'', code:code, tooLong:true, size:0, version:0 };
-      return { url:url, code:code, tooLong:false, size:info.size, version:info.version };
+      /* 先按「图片宽度的三分之一」试；内容太长放不下就逐级放大，
+         保证只要二维码本身能编出来，图上就一定有码（放大了也放不下才提示用文件导出） */
+      var sizes = [QR_WIDTH, 560, 640, 720, 800, 900];
+      for(var i=0;i<sizes.length;i++){
+        var info = qrInfo(url, sizes[i]);
+        if(info.ok) return { url:url, code:code, tooLong:false, size:info.size, version:info.version };
+      }
+      return { url:'', code:code, tooLong:true, size:0, version:0 };
     });
   }
   /* 把二维码画到画布上（版本与自检时用的那个一致） */
@@ -8283,17 +8338,46 @@ __lang = detectLang();
       mcv.width = W; mcv.height = 10;
       var mctx = mcv.getContext('2d');
 
+      /* 二维码固定在图片「开头」：分享链接要提前算好，头部块才知道留多大位置 */
+      var share = await buildShareLink(rec);
+      var QR_SIZE = share.url ? (share.size || QR_WIDTH) : 0;
+      var HEAD_H = QR_SIZE ? (QR_SIZE + 142) : 134;
+      if(window.__gml) window.__gml.lastShotQr = null;
+
       
-      blocks.push({ h:134, draw:function(ctx, y){
+      blocks.push({ h:HEAD_H, draw:function(ctx, y){
+        var leftW = QR_SIZE ? (CW - QR_SIZE - 48) : CW;
+        var top = y + Math.max(0, (HEAD_H - 134) / 2);
         ctx.fillStyle = '#8f8f8f'; ctx.font = '400 24px ' + FF;
         var head = SITE_NAME + ' · ' + longDate();
-        ctx.fillText(head, X, y+24); texts.push(head);
+        ctx.fillText(head, X, top+24); texts.push(head);
         ctx.fillStyle = '#f0f0f0'; ctx.font = '700 46px ' + FF;
-        var nm = truncate(ctx, rec.name || T('未命名练习'), CW);
-        ctx.fillText(nm, X, y+86); texts.push(nm);
+        var nm = truncate(ctx, rec.name || T('未命名练习'), leftW);
+        ctx.fillText(nm, X, top+86); texts.push(nm);
         ctx.fillStyle = '#a0a0a0'; ctx.font = '400 24px ' + FF;
         var tm = (dateKey(new Date(rec.ts)) === todayKey() ? T('今天 ') : dateKey(new Date(rec.ts)) + ' ') + timeText(rec.ts);
-        ctx.fillText(tm, X, y+124); texts.push(tm);
+        ctx.fillText(tm, X, top+124); texts.push(tm);
+
+        if(QR_SIZE){
+          /* 码在右上角，说明文字在码的上下两行（跟标题不打架） */
+          var qx = X + CW - QR_SIZE, qy = y + 74;
+          if(window.__gml) window.__gml.lastShotQr = { x:qx, y:qy, size:QR_SIZE, version:share.version, url:share.url };
+          ctx.fillStyle = '#8f8f8f'; ctx.font = '600 18px ' + FF;
+          ctx.textAlign = 'right';
+          ctx.fillText(T('GML 练习存档 · 扫码导入'), qx + QR_SIZE, y+58);
+          ctx.textAlign = 'left';
+          drawQrOnCanvas(ctx, share.url, qx, qy, QR_SIZE, share.version);
+          ctx.fillStyle = '#8f8f8f'; ctx.font = '400 16px ' + FF;
+          ctx.textAlign = 'right';
+          ctx.fillText(T('换个设备也能接着练'), qx + QR_SIZE, qy + QR_SIZE + 28);
+          ctx.textAlign = 'left';
+        }else if(share.tooLong){
+          ctx.fillStyle = '#8f8f8f'; ctx.font = '400 18px ' + FF;
+          ctx.textAlign = 'right';
+          ctx.fillText(T('这条练习太长，二维码放不下'), X + CW, y + 58);
+          ctx.fillText(T('请用「存读档」导出成文件'), X + CW, y + 86);
+          ctx.textAlign = 'left';
+        }
       }});
 
       
@@ -8600,10 +8684,7 @@ __lang = detectLang();
       });
 
       
-      var share = await buildShareLink(rec);
-      var QR_SIZE = share.url ? (share.size || QR_WIDTH) : 0;
-      var footH = share.url ? (QR_SIZE + 46) : 96;
-      blocks.push({ h:footH, draw:function(ctx, y){
+      blocks.push({ h:96, draw:function(ctx, y){
         ctx.strokeStyle = '#2e2e2e'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(X, y+8); ctx.lineTo(X+CW, y+8); ctx.stroke();
         if(!drawAvatarOnCanvas(ctx, X, y+30, 34, false)){
@@ -8617,24 +8698,8 @@ __lang = detectLang();
         ctx.fillStyle = '#8f8f8f'; ctx.font = '400 22px ' + FF;
         ctx.fillText(TF('footer_line', {site:SITE_NAME}), X+48, y+54);
         ctx.textAlign = 'right';
-        ctx.fillText(state.user.name || DEFAULT_NICK, X+CW - (share.url ? QR_SIZE + 28 : 0), y+54);
+        ctx.fillText(state.user.name || DEFAULT_NICK, X+CW, y+54);
         ctx.textAlign = 'left';
-        if(share.url){
-          var qx = X + CW - QR_SIZE, qy = y + 22;
-          if(drawQrOnCanvas(ctx, share.url, qx, qy, QR_SIZE, share.version)){
-            ctx.fillStyle = '#8f8f8f'; ctx.font = '600 16px ' + FF;
-            ctx.textAlign = 'right';
-            ctx.fillText(T('GML 练习存档 · 扫码导入'), qx - 26, y + 104);
-            ctx.fillText(T('换个设备也能接着练'), qx - 26, y + 130);
-            ctx.textAlign = 'left';
-          }
-        }else if(share.tooLong){
-          ctx.fillStyle = '#8f8f8f'; ctx.font = '400 15px ' + FF;
-          ctx.textAlign = 'right';
-          ctx.fillText(T('这条练习太长，二维码放不下'), X+CW, y+54);
-          ctx.fillText(T('请用「存读档」导出成文件'), X+CW, y+76);
-          ctx.textAlign = 'left';
-        }
       }});
 
       
@@ -9342,6 +9407,257 @@ __lang = detectLang();
   $('#svgModal').addEventListener('click', function(e){
     if(e.target === this) closeSvgBoard();
   });
+
+
+  /* ============================================================
+     命令接口：让 AI 在无头浏览器里用「命令」驱动这个界面
+     —— 不用抠 DOM 选择器，一条命令等价于手动点一下按钮。
+
+     用法（Playwright / CDP / 任何能执行 JS 的地方）：
+       await page.evaluate(() => window.gml.cmd('help'))
+       await page.evaluate(() => window.gml.cmd('checkin', {name:'第 77 期', requirement:'…', hint:'…'}))
+       await page.evaluate(() => window.gml.cmd('addModule', {type:'脚本', value:'function f(){}'}))
+       await page.evaluate(() => window.gml.cmd('screenshot'))      // → {ok:true, dataUrl:'data:image/png;…'}
+
+     每条命令都返回 Promise，值是 {ok:true, ...} 或 {ok:false, error:'原因'}。
+     完整说明也写进了页面里的 skill（#gml-ai-skill）。
+     ============================================================ */
+  function cmdCurrentRec(){
+    var id = editingId || selectedId;
+    return id ? findRec(id) : null;
+  }
+  function cmdFail(msg){ return { ok:false, error:msg }; }
+  /* 把记录里的字段写进表单输入框。
+     renderProcess() 重建表单前会 syncFormValues()（表单→记录），
+     所以程序改完记录必须先写回表单，再 render，值才不会被空表单抹掉。 */
+  function cmdFillForm(rec){
+    if(!rec) return;
+    var map = { name:'name', requirement:'requirement', hint:'hint' };
+    for(var k in map){
+      var el = $('[data-field="' + map[k] + '"]');
+      if(el) el.value = rec[map[k]] || '';
+    }
+  }
+  function cmdNeedRec(){
+    var r = cmdCurrentRec();
+    return r ? null : cmdFail('现在没有打开的练习，先执行 checkin');
+  }
+  var GML_CMDS = {
+    /* 列出所有命令 */
+    help: function(){
+      return { ok:true, commands:[
+        { name:'state',        desc:'看当前状态：昵称、设置、记录列表、API 列表、当前打开的练习' },
+        { name:'clear',        desc:'清空全部数据（内存 + localStorage），回到干净状态' },
+        { name:'export',       desc:'导出整站存档，返回 payload 对象（不触发下载）' },
+        { name:'import',       desc:'导入整站存档并覆盖，参数 {json: 存档对象或 JSON 字符串}' },
+        { name:'checkin',      desc:'打卡并打开练习过程，参数 {name, requirement, hint}' },
+        { name:'set',          desc:'改当前练习的字段，参数 {field:"name|requirement|hint", value}' },
+        { name:'addModule',    desc:'加一个代码载体，参数 {type:"脚本|对象|操作描述|SVG绘图|超链接|着色器", value}' },
+        { name:'addObject',    desc:'加一个对象载体，参数 {name, fields:[[变量名,参数,说明]], events:[{name,code}]}' },
+        { name:'addApi',       desc:'往 API 库加一条，参数 {code:"函数名", params:[{no,desc}]}' },
+        { name:'refApi',       desc:'让当前练习引用库里的 API，参数 {code}' },
+        { name:'unrefApi',     desc:'取消引用，参数 {code}' },
+        { name:'setNick',      desc:'改昵称，参数 {name}' },
+        { name:'setAvatar',    desc:'设头像，参数 {dataUrl:"data:image/…"}' },
+        { name:'screenshot',   desc:'生成当前练习的过程截图，返回 {dataUrl,width,height}' },
+        { name:'exportPractice', desc:'导出当前这一条练习的存档，返回 payload 对象' },
+        { name:'shareLink',    desc:'算这条练习的分享链接/二维码，返回 {url,version,size,tooLong}' },
+        { name:'finish',       desc:'结束编辑（切到详情态，弹层不关）' },
+        { name:'close',        desc:'关掉练习过程弹层' },
+        { name:'lang',         desc:'切语言，参数 {lang:"zh|en"}' }
+      ], usage:'window.gml.cmd(命令名, 参数对象) → Promise<{ok, ...}>' };
+    },
+    state: function(){
+      return { ok:true, state:{
+        user: { name: state.user.name, hasImage: !!state.user.image },
+        settings: { dailyGoal: state.settings.dailyGoal, lang: state.settings.lang },
+        records: allRecs().map(function(r){
+          return { id:r.id, ts:r.ts, name:r.name, apis:(r.apis||[]).length,
+                   modules:(r.modules||[]).map(function(m){ return m.type; }) };
+        }),
+        api: allApis().map(function(a){ return { id:a.id, code:a.code, params:(a.params||[]).length }; }),
+        current: (function(){ var r = cmdCurrentRec(); return r ? r.id : null; })()
+      } };
+    },
+    clear: function(){
+      try{ localStorage.clear(); }catch(e){}
+      try{ sessionStorage.clear(); }catch(e){}
+      var d = defaultState();
+      state.user = d.user; state.settings = d.settings;
+      state.settings.lang = __lang;
+      state.records = {}; state.days = {}; state.api = {}; state.apiIndex = {};
+      editingId = null; selectedId = null; formRecId = null; deletedIds = {};
+      save(); renderAll(); applyLang();
+      return { ok:true, cleared:true };
+    },
+    export: function(){
+      var data = backupData();
+      return { ok:true, payload:{
+        app: BACKUP_APP, version: BACKUP_VERSION, exportedAt: new Date().toISOString(),
+        counts: { records: data.records.length, apiLib: data.apiLib.length }, data: data
+      } };
+    },
+    import: function(a){
+      try{
+        var obj = (a && a.json != null) ? a.json : null;
+        if(typeof obj === 'string') obj = JSON.parse(obj);
+        if(!obj || typeof obj !== 'object') return cmdFail('没给存档内容（参数 {json: 存档对象}）');
+        var incoming = (obj.data && typeof obj.data === 'object') ? obj.data : obj;
+        replaceBackup(incoming);
+        save(); renderAll(); applyLang();
+        return { ok:true, records: recCount(), api: apiCount() };
+      }catch(e){
+        return cmdFail('存档解析失败：' + String((e && e.message) || e));
+      }
+    },
+    checkin: function(a){
+      a = a || {};
+      doCheckin();
+      var r = cmdCurrentRec();
+      if(r){
+        if(a.name != null) r.name = String(a.name);
+        if(a.requirement != null) r.requirement = String(a.requirement);
+        if(a.hint != null) r.hint = String(a.hint);
+        cmdFillForm(r);
+        save('records'); save('days');
+        renderAll();
+      }
+      return { ok:true, id: r ? r.id : null };
+    },
+    set: function(a){
+      var bad = cmdNeedRec(); if(bad) return bad;
+      var r = cmdCurrentRec();
+      var f = String((a && a.field) || '').trim();
+      if(['name','requirement','hint'].indexOf(f) < 0) return cmdFail('field 只能是 name / requirement / hint');
+      r[f] = a.value == null ? '' : String(a.value);
+      cmdFillForm(r);
+      save('records'); renderAll();
+      return { ok:true, field:f, value:r[f] };
+    },
+    addModule: function(a){
+      var bad = cmdNeedRec(); if(bad) return bad;
+      a = a || {};
+      var r = cmdCurrentRec();
+      var type = String(a.type || '脚本');
+      if(CARRIER_TYPES.indexOf(type) < 0) return cmdFail('不认识的载体类型：' + type + '（可选：' + CARRIER_TYPES.join(' / ') + '）');
+      r.modules = r.modules || [];
+      r.modules.push({ type:type, value: a.value == null ? '' : String(a.value) });
+      save('records'); renderProcess();
+      return { ok:true, count:r.modules.length, types:r.modules.map(function(m){ return m.type; }) };
+    },
+    addObject: function(a){
+      var bad = cmdNeedRec(); if(bad) return bad;
+      a = a || {};
+      var r = cmdCurrentRec();
+      var m = { type:'对象', value: String(a.name || ''), fields:[], events:[] };
+      (a.fields || []).forEach(function(f){
+        if(Array.isArray(f)) m.fields.push({ name:String(f[0]||''), param:String(f[1]||''), desc:String(f[2]||'') });
+        else m.fields.push({ name:String(f.name||''), param:String(f.param||''), desc:String(f.desc||'') });
+      });
+      (a.events || []).forEach(function(e){
+        m.events.push({ name:String(e.name||''), code:String(e.code||'') });
+      });
+      r.modules = r.modules || [];
+      r.modules.push(m);
+      save('records'); renderProcess();
+      return { ok:true, count:r.modules.length };
+    },
+    addApi: function(a){
+      a = a || {};
+      var code = String(a.code || '').trim();
+      if(!code) return cmdFail('没给 API 代码');
+      var dup = libFindByCode(code);
+      if(dup) return { ok:true, id:dup.id, code:dup.code, existed:true };
+      var params = (a.params || []).map(function(p, i){
+        if(Array.isArray(p)) return { no:String(p[0] || (i+1)), desc:String(p[1] || '') };
+        return { no:String(p.no || (i+1)), desc:String(p.desc || '') };
+      }).filter(function(p){ return p.desc; });
+      var item = { id: uid(), code: code, params: params };
+      state.api[item.id] = item; apiIndexSet(item);
+      save('api'); save('apiIndex'); renderApiLib();
+      return { ok:true, id:item.id, code:code, params:params.length };
+    },
+    refApi: function(a){
+      var bad = cmdNeedRec(); if(bad) return bad;
+      var r = cmdCurrentRec();
+      var code = String((a && a.code) || '').trim();
+      var id = apiIdByCode(code);
+      if(!id) return cmdFail('API 库里没有：' + code + '（先 addApi）');
+      r.apis = r.apis || [];
+      if(r.apis.indexOf(id) < 0) r.apis.push(id);
+      save('records'); renderProcess();
+      return { ok:true, apis:r.apis.length, code:code };
+    },
+    unrefApi: function(a){
+      var bad = cmdNeedRec(); if(bad) return bad;
+      var r = cmdCurrentRec();
+      var code = String((a && a.code) || '').trim();
+      var id = apiIdByCode(code);
+      if(id) r.apis = (r.apis || []).filter(function(x){ return x !== id; });
+      save('records'); renderProcess();
+      return { ok:true, apis:(r.apis||[]).length };
+    },
+    setNick: function(a){
+      var v = String((a && a.name) || '').trim();
+      if(!v) return cmdFail('没给昵称');
+      state.user.name = v.slice(0,20);
+      save('user'); renderHeader();
+      return { ok:true, name:state.user.name };
+    },
+    setAvatar: function(a){
+      var url = String((a && a.dataUrl) || '');
+      if(!url) return cmdFail('没给头像数据（参数 {dataUrl:"data:image/…"}）');
+      state.user.image = url;
+      save('user'); renderHeader(); renderAvatar();
+      return { ok:true, hasImage:true };
+    },
+    screenshot: function(){
+      var bad = cmdNeedRec(); if(bad) return bad;
+      var r = cmdCurrentRec();
+      return buildPracticeShot(r).then(function(cv){
+        return { ok:true, dataUrl: cv.toDataURL('image/png'), width: cv.width, height: cv.height };
+      });
+    },
+    exportPractice: function(){
+      var bad = cmdNeedRec(); if(bad) return bad;
+      var r = cmdCurrentRec();
+      return { ok:true, payload: practicePayload(r) };
+    },
+    shareLink: function(){
+      var bad = cmdNeedRec(); if(bad) return bad;
+      var r = cmdCurrentRec();
+      return buildShareLink(r).then(function(s){
+        return { ok:true, url:s.url, version:s.version, size:s.size, tooLong:s.tooLong };
+      });
+    },
+    finish: function(){ closeProcess(); return { ok:true, editing:false }; },
+    close:  function(){ closeProcess(); return { ok:true, closed:true }; },
+    lang: function(a){
+      var l = String((a && a.lang) || '').trim();
+      if(l !== 'zh' && l !== 'en') return cmdFail('lang 只能是 zh / en');
+      setLang(l);
+      return { ok:true, lang:__lang };
+    }
+  };
+  window.gml = {
+    cmd: function(name, args){
+      var f = GML_CMDS[String(name || '').trim()];
+      if(!f){
+        return Promise.resolve({ ok:false, error:'没有这条命令：' + name + '（用 help 看清单）' });
+      }
+      try{
+        return Promise.resolve(f(args || {})).then(function(r){
+          return (r && typeof r === 'object') ? r : { ok:true, value:r };
+        }).catch(function(e){
+          return { ok:false, error:String((e && e.message) || e) };
+        });
+      }catch(e){
+        return Promise.resolve({ ok:false, error:String((e && e.message) || e) });
+      }
+    },
+    commands: GML_CMDS,
+    state: function(){ return state; }
+  };
 
   initAvatar();
   renderAll();
