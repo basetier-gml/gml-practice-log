@@ -756,12 +756,35 @@ textarea.field{resize:vertical;min-height:64px}
   .nick{max-width:130px}
   .top-action{padding:7px 10px}
 }
+
+/* ---------- 语言切换 ---------- */
+.lang-sw{
+  flex:0 0 auto;display:inline-flex;border:1px solid #4a4a4a;border-radius:999px;
+  overflow:hidden;background:#2f2f2f;
+}
+.lang-sw button{
+  border:0;background:transparent;color:var(--ink-3);
+  font-size:12px;font-weight:600;padding:6px 10px;cursor:pointer;line-height:1.4;
+  transition:background .15s ease,color .15s ease;
+}
+.lang-sw button + button{border-left:1px solid #4a4a4a}
+.lang-sw button.on{background:var(--gm);color:#fff}
+.lang-sw button:hover:not(.on){color:var(--gm-deep);background:var(--gm-soft)}
+/* 英文文案更长，按钮不换行 */
+.edit-btn{white-space:nowrap}
+.process-sheet .sheet-head h3{white-space:nowrap}
+/* 弹层标题栏空间紧：切换器做得更小 */
+.process-sheet .lang-sw button{font-size:11px;padding:4px 7px}
 </style>
 </head>
 <body>
 
 <header class="topbar">
- <div class="bar-inner">
+ <div class="bar-inner"><div class="lang-sw" id="langSw" role="group" aria-label="Language">
+<button type="button" data-lang="zh">中文</button>
+<button type="button" data-lang="en">EN</button>
+</div>
+
   <div class="avatar" id="avatar" aria-label="固定头像 G">G</div>
   <div class="who">
     <div class="nick-row">
@@ -883,7 +906,11 @@ textarea.field{resize:vertical;min-height:64px}
   <div class="sheet process-sheet">
     <div class="sheet-head">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gm-deep);flex:0 0 auto"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-      <h3>练习过程</h3>
+      <h3>练习过程</h3><div class="lang-sw" id="langSw" role="group" aria-label="Language">
+<button type="button" data-lang="zh">中文</button>
+<button type="button" data-lang="en">EN</button>
+</div>
+
       <button class="shot-btn" id="shotBtn" type="button" title="把这条练习过程生成一张图片">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.3-2h8l1.3 2h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z"/><circle cx="12" cy="13" r="3.2"/></svg>
         截图
@@ -979,25 +1006,680 @@ textarea.field{resize:vertical;min-height:64px}
 (function(){
   "use strict";
 
-  /* ================= 常量 ================= */
+  
   var STORE_KEY = 'gml-practice-log-v2';
-  var SITE_NAME = 'Gml代码练习记录';
-  var DEFAULT_NICK = '编程新手';
 
-  /* 内置代码载体类型（api 不在其中：api 载体只能从 API 库引用） */
+/* ============================================================
+   多语言：字典 / T() / TF() / 语言状态 / 切换
+   ============================================================ */
+var I18N = {
+  zh: {
+    "Gml代码练习记录": "Gml代码练习记录",
+    "编程新手": "编程新手",
+    "浏览器存不下了：图片可能太大。删掉几张旧图片或换张小图再试。": "浏览器存不下了：图片可能太大。删掉几张旧图片或换张小图再试。",
+    "搜到": "搜到",
+    "共": "共",
+    "没有被引用": "没有被引用",
+    "未被引用": "未被引用",
+    "参数": "参数",
+    "无参数": "无参数",
+    "编辑": "编辑",
+    "从 API 库删除": "从 API 库删除",
+    "使用了这个 API 的练习（": "使用了这个 API 的练习（",
+    "还没有练习引用它。": "还没有练习引用它。",
+    "未命名练习": "未命名练习",
+    "待填写": "待填写",
+    "编辑 API": "编辑 API",
+    "新建 API": "新建 API",
+    "编号": "编号",
+    "说明：": "说明：",
+    "简单描述，例如：列表容量": "简单描述，例如：列表容量",
+    "先写一行 API 代码": "先写一行 API 代码",
+    "API 已更新": "API 已更新",
+    "已加入 API 库": "已加入 API 库",
+    "已从 API 库删除": "已从 API 库删除",
+    "从 API 库选择": "从 API 库选择",
+    "无参数说明": "无参数说明",
+    "已引用": "已引用",
+    "没有选择任何 API": "没有选择任何 API",
+    "对象名": "对象名",
+    "例如 obj_player": "例如 obj_player",
+    "预定义变量表（每行一个变量）": "预定义变量表（每行一个变量）",
+    "变量名": "变量名",
+    "说明": "说明",
+    "还没有预定义变量，点下面「＋ 添加一行」开始。": "还没有预定义变量，点下面「＋ 添加一行」开始。",
+    "＋ 添加一行": "＋ 添加一行",
+    "事件代码框": "事件代码框",
+    "还没有事件，点下面「＋ 添加事件」开始。": "还没有事件，点下面「＋ 添加事件」开始。",
+    "事件名，例如 Create / Step / Draw": "事件名，例如 Create / Step / Draw",
+    "删除这个事件": "删除这个事件",
+    "// 这里写这个事件的代码": "// 这里写这个事件的代码",
+    "＋ 添加事件": "＋ 添加事件",
+    "（未填写对象名）": "（未填写对象名）",
+    "预定义变量表": "预定义变量表",
+    "（未填写）": "（未填写）",
+    "没有预定义变量": "没有预定义变量",
+    "事件": "事件",
+    "没有事件": "没有事件",
+    "已复制": "已复制",
+    "代码已复制": "代码已复制",
+    "复制失败，请长按选中代码手动复制": "复制失败，请长按选中代码手动复制",
+    "代码": "代码",
+    "复制": "复制",
+    "复制这段代码": "复制这段代码",
+    "完成": "完成",
+    "清空": "清空",
+    "关闭": "关闭",
+    "填写本次练习内容 · 实时保存": "填写本次练习内容 · 实时保存",
+    "记录详情": "记录详情",
+    "选择一条记录查看": "选择一条记录查看",
+    "点上面的「打卡一次」开始新的练习，<br>或点选已有记录查看它的完整过程。": "点上面的「打卡一次」开始新的练习，<br>或点选已有记录查看它的完整过程。",
+    "记录名称": "记录名称",
+    "例如：用 ds_list 管理背包": "例如：用 ds_list 管理背包",
+    "练习题要求": "练习题要求",
+    "这题要做什么？写清楚目标与约束。": "这题要做什么？写清楚目标与约束。",
+    "练习题提示": "练习题提示",
+    "思路、卡住的地方、要注意的坑。": "思路、卡住的地方、要注意的坑。",
+    "练习题要求的 API": "练习题要求的 API",
+    "＋ 从 API 库选择": "＋ 从 API 库选择",
+    "API 只能从 API 库里选；这里显示代码，完整参数说明在练习过程里。": "API 只能从 API 库里选；这里显示代码，完整参数说明在练习过程里。",
+    "代码载体（模块化添加）": "代码载体（模块化添加）",
+    "＋ 从 API 库添加 api 载体": "＋ 从 API 库添加 api 载体",
+    "点上面的类型就加一个该类型的载体；类型定下后不能换，想换就删掉重加。": "点上面的类型就加一个该类型的载体；类型定下后不能换，想换就删掉重加。",
+    "内容会实时保存，不用手动点保存。填完点上面的「完成」看效果。": "内容会实时保存，不用手动点保存。填完点上面的「完成」看效果。",
+    "（已从 API 库删除）": "（已从 API 库删除）",
+    "删除": "删除",
+    "选择练习题要求的 API": "选择练习题要求的 API",
+    "还没有代码载体。<br>点下面的类型加一个，类型定下后不能换。": "还没有代码载体。<br>点下面的类型加一个，类型定下后不能换。",
+    "选择要引用的 API（api 载体）": "选择要引用的 API（api 载体）",
+    "删除这个步骤模块": "删除这个步骤模块",
+    "这个 API 没有参数说明": "这个 API 没有参数说明",
+    "（该 API 已从 API 库删除）": "（该 API 已从 API 库删除）",
+    "点下面的「更换 API」重新挑一个": "点下面的「更换 API」重新挑一个",
+    "更换 API": "更换 API",
+    "更换这个 api 载体": "更换这个 api 载体",
+    "换一张图片": "换一张图片",
+    "选择图片": "选择图片",
+    "练习图片": "练习图片",
+    "移除这张图片": "移除这张图片",
+    "图片会自动缩到 1024px 以内保存，只存在这台设备上。": "图片会自动缩到 1024px 以内保存，只存在这台设备上。",
+    "网络地址，例如 https://example.com/a.png": "网络地址，例如 https://example.com/a.png",
+    "图片地址直接预览，视频地址放播放器，其它地址显示成可点的链接。": "图片地址直接预览，视频地址放播放器，其它地址显示成可点的链接。",
+    "网络图片": "网络图片",
+    "留空 = 使用默认着色器代码": "留空 = 使用默认着色器代码",
+    "顶点着色器": "顶点着色器",
+    "片段着色器": "片段着色器",
+    "图片读取失败，换一张试试": "图片读取失败，换一张试试",
+    "这张图片打不开，换一张试试": "这张图片打不开，换一张试试",
+    "函数名，例如 ds_list_create": "函数名，例如 ds_list_create",
+    "脚本资源名，例如 scr_bag_init": "脚本资源名，例如 scr_bag_init",
+    "对象名，例如 obj_player": "对象名，例如 obj_player",
+    "这一步做了什么，例如：初始化背包列表": "这一步做了什么，例如：初始化背包列表",
+    "名称 / 说明": "名称 / 说明",
+    "今天": "今天",
+    "未填写": "未填写",
+    "用到的代码载体": "用到的代码载体",
+    "未添加代码载体": "未添加代码载体",
+    "编辑这条记录": "编辑这条记录",
+    "未选择图片": "未选择图片",
+    "未填写地址": "未填写地址",
+    "视频": "视频",
+    "链接": "链接",
+    "使用默认着色器代码": "使用默认着色器代码",
+    "一": "一",
+    "二": "二",
+    "三": "三",
+    "四": "四",
+    "五": "五",
+    "六": "六",
+    "周": "周",
+    "昨天": "昨天",
+    "前天": "前天",
+    "全部": "全部",
+    "还没有往期记录。<br>今天的打卡会留在「打卡明细」里，明天这里才有内容。": "还没有往期记录。<br>今天的打卡会留在「打卡明细」里，明天这里才有内容。",
+    "这一天没有往期记录。": "这一天没有往期记录。",
+    "按这一天筛选": "按这一天筛选",
+    "‹ 上一页": "‹ 上一页",
+    "下一页 ›": "下一页 ›",
+    "历史记录": "历史记录",
+    "练习记录": "练习记录",
+    "往期归档在这里": "往期归档在这里",
+    "点一次 = 一次打卡": "点一次 = 一次打卡",
+    "返回打卡明细": "返回打卡明细",
+    "回到今天的打卡明细": "回到今天的打卡明细",
+    "查看往期的打卡记录": "查看往期的打卡记录",
+    "放大查看": "放大查看",
+    "（未填代码）": "（未填代码）",
+    "（图片）": "（图片）",
+    "（视频）": "（视频）",
+    "先选一条记录，或点「打卡一次」新建一条": "先选一条记录，或点「打卡一次」新建一条",
+    "还没有生成截图": "还没有生成截图",
+    "本次练习": "本次练习",
+    "正在记录": "正在记录",
+    "选中练习": "选中练习",
+    "今日合计": "今日合计",
+    "已挑战次数": "已挑战次数",
+    "连续天数": "连续天数",
+    "要求": "要求",
+    "提示": "提示",
+    "今日挑战": "今日挑战",
+    "今天还没有挑战记录": "今天还没有挑战记录",
+    "还没有记录，先点「打卡一次」开始新的练习": "还没有记录，先点「打卡一次」开始新的练习",
+    "编辑昵称": "编辑昵称",
+    "输入昵称": "输入昵称",
+    "保存": "保存",
+    "取消": "取消",
+    "打开练习过程": "打开练习过程",
+    "记录卡": "记录卡",
+    "每日目标": "每日目标",
+    "每日目标次数": "每日目标次数",
+    "今日打卡明细": "今日打卡明细",
+    "点一下打开练习过程": "点一下打开练习过程",
+    "今天还没有记录。<br>点上面的按钮完成第一次打卡。": "今天还没有记录。<br>点上面的按钮完成第一次打卡。",
+    "按日期浏览": "按日期浏览",
+    "搜索练习名称": "搜索练习名称",
+    "搜索": "搜索",
+    "没有匹配的往期记录。": "没有匹配的往期记录。",
+    "API 库": "API 库",
+    "搜索 API 代码或参数说明": "搜索 API 代码或参数说明",
+    "API 库还是空的。<br>点右上角「新建 API」把常用 API 存进来，<br>练习时就能直接引用，不用重复写。": "API 库还是空的。<br>点右上角「新建 API」把常用 API 存进来，<br>练习时就能直接引用，不用重复写。",
+    "练习题要求的 API 和代码载体里的 api，都从库里引用。": "练习题要求的 API 和代码载体里的 api，都从库里引用。",
+    "挑战记录卡": "挑战记录卡",
+    "生成挑战记录卡": "生成挑战记录卡",
+    "昵称与记录只保存在这台设备的浏览器里，刷新后依然在。<br>别人首次打开时看到的是默认昵称和空白记录。": "昵称与记录只保存在这台设备的浏览器里，刷新后依然在。<br>别人首次打开时看到的是默认昵称和空白记录。",
+    "练习过程": "练习过程",
+    "截图": "截图",
+    "把这条练习过程生成一张图片": "把这条练习过程生成一张图片",
+    "挑战记录卡预览": "挑战记录卡预览",
+    "保存图片": "保存图片",
+    "重新生成": "重新生成",
+    "手机上也可以长按上面的图片，直接保存到相册。": "手机上也可以长按上面的图片，直接保存到相册。",
+    "参数说明（编号可自定义 + 简单描述）": "参数说明（编号可自定义 + 简单描述）",
+    "＋ 添加参数": "＋ 添加参数",
+    "保存到 API 库": "保存到 API 库",
+    "确定": "确定",
+    "搜索 API 代码": "搜索 API 代码",
+    "库里还没有 API，先去 API 库新建一个。": "库里还没有 API，先去 API 库新建一个。",
+    "练习截图": "练习截图",
+    "练习过程截图预览": "练习过程截图预览",
+    "API 代码": "API 代码",
+    "今天 ": "今天 ",
+    "天": "天",
+    "撤销": "撤销",
+    "撤销这条记录": "撤销这条记录",
+    "步骤 ": "步骤 ",
+    "这不是图片文件": "这不是图片文件",
+    "」还有 ": "」还有 ",
+    " 处练习在引用，先取消引用再删除": " 处练习在引用，先取消引用再删除",
+    "API 库还是空的。": "API 库还是空的。",
+    "今天还没有记录。": "今天还没有记录。",
+    "今日进度 0 / 5": "今日进度 0 / 5",
+    "共 0 个": "共 0 个",
+    "别人首次打开时看到的是默认昵称和空白记录。": "别人首次打开时看到的是默认昵称和空白记录。",
+    "打卡一次": "打卡一次",
+    "昵称与记录只保存在这台设备的浏览器里，刷新后依然在。": "昵称与记录只保存在这台设备的浏览器里，刷新后依然在。",
+    "次": "次",
+    "点上面的按钮完成第一次打卡。": "点上面的按钮完成第一次打卡。",
+    "点右上角「新建 API」把常用 API 存进来，": "点右上角「新建 API」把常用 API 存进来，",
+    "练习时就能直接引用，不用重复写。": "练习时就能直接引用，不用重复写。",
+    "今日进度": "今日进度",
+    "例如 ds_list_create(capacity, is_array)": "例如 ds_list_create(capacity, is_array)",
+    "固定头像 G": "固定头像 G",
+    "搜索 API": "搜索 API",
+    "搜索 API 库": "搜索 API 库",
+    date_long: "{y}年{m}月{d}日",
+    head_sub: "今日 {n} 次 · 已挑战 {m} 次",
+    lib_found: "搜到 {n} / {m} 个",
+    lib_total: "共 {n} 个",
+    lib_no_match: "没有匹配「{q}」的 API。",
+    ref_used: "{n} 处引用",
+    param_count: "参数 {n}",
+    aria_in_use: "{code} 正被 {n} 处练习引用，不能删除",
+    aria_del_api: "从 API 库删除 {code}",
+    title_locked: "还有 {n} 处引用，不能删除",
+    title_del_api: "从 API 库删除",
+    uses_head: "使用了这个 API 的练习（{n}）",
+    aria_var_row: "第 {n} 个变量的{label}",
+    aria_del_var: "删除第 {n} 个变量",
+    aria_param_no: "第 {n} 个参数的编号",
+    aria_param_desc: "第 {n} 个参数的说明",
+    aria_del_param: "删除第 {n} 个参数",
+    dup_api: "API 库里已经有「{code}」了",
+    api_in_use: "「{code}」还有 {n} 处练习在引用，先取消引用再删除",
+    ref_count: "已引用 {n} 个 API",
+    today_count: "{n}<small>次</small>",
+    total_count: "{n}<small>次</small>",
+    progress_text: "今日进度 {n} / {m} 次",
+    list_count: "共 {n} 条",
+    aria_del_code: "删除 {code}",
+    step_no: "步骤 {n}",
+    img_fail: "图片加载失败：{url}",
+    vid_fail: "视频加载失败：{url}",
+    today_prefix: "今天 ",
+    days_ago: "{n} 天前",
+    archived_count: "{n} 次",
+    day_card: "{day} · {rel} · {n} 次",
+    hist_filtered: "筛出 {n} 条 · 往期共 {d} 天 / {t} 次",
+    hist_total: "往期共 {d} 天 · {t} 次打卡",
+    hist_no_name: "没有名称含「{q}」的往期记录。",
+    hist_day_count: "{n} 次",
+    footer_line: "每一次练习都算数 · {site}",
+    card_apis: "{n} 个 API",
+    card_excerpt: "题：{text}",
+    card_hidden: "还有 {n} 条今日挑战未显示",
+    month_day: "{m}月{d}日",
+    week_prefix: "周",
+    img_tag: "（图片）",
+    vid_tag: "（视频）",
+  },
+  en: {
+    "Gml代码练习记录": "GML Practice Log",
+    "编程新手": "Newbie",
+    "浏览器存不下了：图片可能太大。删掉几张旧图片或换张小图再试。": "Browser storage is full - the image may be too large. Delete a few old images or try a smaller one.",
+    "搜到": "Found",
+    "共": "Total",
+    "没有被引用": "",
+    "未被引用": "Not referenced",
+    "参数": "Argument",
+    "无参数": "No params",
+    "编辑": "Edit",
+    "从 API 库删除": "Remove from API library",
+    "使用了这个 API 的练习（": "Practices using this API (",
+    "还没有练习引用它。": "No practice references it yet.",
+    "未命名练习": "Untitled practice",
+    "待填写": "To fill",
+    "编辑 API": "Edit API",
+    "新建 API": "New API",
+    "编号": "No.",
+    "说明：": "Desc: ",
+    "简单描述，例如：列表容量": "Short description, e.g. list capacity",
+    "先写一行 API 代码": "Write one line of API code first",
+    "API 已更新": "API updated",
+    "已加入 API 库": "Added to the API library",
+    "已从 API 库删除": "Removed from the API library",
+    "从 API 库选择": "Choose from the API library",
+    "无参数说明": "No parameter description",
+    "已引用": "Referenced",
+    "没有选择任何 API": "No API selected",
+    "对象名": "Object name",
+    "例如 obj_player": "e.g. obj_player",
+    "预定义变量表（每行一个变量）": "Predefined variable table (one variable per row)",
+    "变量名": "Variable name",
+    "说明": "Description",
+    "还没有预定义变量，点下面「＋ 添加一行」开始。": "No predefined variables yet. Click \"+ Add row\" below to start.",
+    "＋ 添加一行": "+ Add row",
+    "事件代码框": "Event code box",
+    "还没有事件，点下面「＋ 添加事件」开始。": "No events yet. Click \"+ Add event\" below to start.",
+    "事件名，例如 Create / Step / Draw": "Event name, e.g. Create / Step / Draw",
+    "删除这个事件": "Delete this event",
+    "// 这里写这个事件的代码": "// Write this event's code here",
+    "＋ 添加事件": "+ Add event",
+    "（未填写对象名）": "(object name not set)",
+    "预定义变量表": "Predefined variable table",
+    "（未填写）": "(not filled in)",
+    "没有预定义变量": "No predefined variables",
+    "事件": "Event",
+    "没有事件": "No events",
+    "已复制": "Copied",
+    "代码已复制": "Code copied",
+    "复制失败，请长按选中代码手动复制": "Copy failed - press and hold to select the code and copy it manually",
+    "代码": "Code",
+    "复制": "Copy",
+    "复制这段代码": "Copy this code",
+    "完成": "Done",
+    "清空": "Clear",
+    "关闭": "Close",
+    "填写本次练习内容 · 实时保存": "Fill in this practice - saves automatically",
+    "记录详情": "Record details",
+    "选择一条记录查看": "Select a record to view",
+    "点上面的「打卡一次」开始新的练习，<br>或点选已有记录查看它的完整过程。": "Click \"Check in\" above to start a new practice,<br>or pick an existing record to see its full process.",
+    "记录名称": "Record name",
+    "例如：用 ds_list 管理背包": "e.g. Manage an inventory with ds_list",
+    "练习题要求": "Challenge requirement",
+    "这题要做什么？写清楚目标与约束。": "What should this do? State the goal and constraints.",
+    "练习题提示": "Challenge hint",
+    "思路、卡住的地方、要注意的坑。": "Your approach, where you got stuck, pitfalls to watch.",
+    "练习题要求的 API": "APIs required by the challenge",
+    "＋ 从 API 库选择": "+ Choose from the API library",
+    "API 只能从 API 库里选；这里显示代码，完整参数说明在练习过程里。": "APIs can only be picked from the library; only the code is shown here - the full parameter docs live in the practice detail.",
+    "代码载体（模块化添加）": "Code carriers (added as modules)",
+    "＋ 从 API 库添加 api 载体": "+ Add an API carrier from the library",
+    "点上面的类型就加一个该类型的载体；类型定下后不能换，想换就删掉重加。": "Click a type above to add a carrier of that type. The type is fixed once added - delete and re-add to change it.",
+    "内容会实时保存，不用手动点保存。填完点上面的「完成」看效果。": "Content saves automatically - no manual save. Click \"Done\" above when you are finished.",
+    "（已从 API 库删除）": "(removed from the API library)",
+    "删除": "Delete",
+    "选择练习题要求的 API": "Choose the required APIs",
+    "还没有代码载体。<br>点下面的类型加一个，类型定下后不能换。": "No code carriers yet.<br>Click a type below to add one - the type cannot be changed later.",
+    "选择要引用的 API（api 载体）": "Choose an API to reference (API carrier)",
+    "删除这个步骤模块": "Delete this step module",
+    "这个 API 没有参数说明": "This API has no parameter description",
+    "（该 API 已从 API 库删除）": "(this API was removed from the library)",
+    "点下面的「更换 API」重新挑一个": "Click \"Change API\" below to pick another one",
+    "更换 API": "Change API",
+    "更换这个 api 载体": "Change this API carrier",
+    "换一张图片": "Swap image",
+    "选择图片": "Choose image",
+    "练习图片": "Practice image",
+    "移除这张图片": "Remove this image",
+    "图片会自动缩到 1024px 以内保存，只存在这台设备上。": "Images are scaled to fit within 1024px before saving, and stay on this device only.",
+    "网络地址，例如 https://example.com/a.png": "Web address, e.g. https://example.com/a.png",
+    "图片地址直接预览，视频地址放播放器，其它地址显示成可点的链接。": "Image URLs show a preview, video URLs show a player, anything else becomes a clickable link.",
+    "网络图片": "Web image",
+    "留空 = 使用默认着色器代码": "Leave empty = use the default shader code",
+    "顶点着色器": "Vertex shader",
+    "片段着色器": "Fragment shader",
+    "图片读取失败，换一张试试": "Could not read the image, try another one",
+    "这张图片打不开，换一张试试": "This image will not open, try another one",
+    "函数名，例如 ds_list_create": "Function name, e.g. ds_list_create",
+    "脚本资源名，例如 scr_bag_init": "Script resource name, e.g. scr_bag_init",
+    "对象名，例如 obj_player": "Object name, e.g. obj_player",
+    "这一步做了什么，例如：初始化背包列表": "What this step does, e.g. initialise the inventory list",
+    "名称 / 说明": "Name / Description",
+    "今天": "Today",
+    "未填写": "Not filled in",
+    "用到的代码载体": "Code carriers used",
+    "未添加代码载体": "No code carriers added",
+    "编辑这条记录": "Edit this record",
+    "未选择图片": "No image selected",
+    "未填写地址": "No address",
+    "视频": "Video",
+    "链接": "Link",
+    "使用默认着色器代码": "Using the default shader code",
+    "一": "Mon",
+    "二": "Tue",
+    "三": "Wed",
+    "四": "Thu",
+    "五": "Fri",
+    "六": "Sat",
+    "周": "Sun",
+    "昨天": "Yesterday",
+    "前天": "Day before yesterday",
+    "全部": "All",
+    "还没有往期记录。<br>今天的打卡会留在「打卡明细」里，明天这里才有内容。": "No earlier records yet.<br>Today's check-ins stay in the check-in log; this page fills up tomorrow.",
+    "这一天没有往期记录。": "No records on that day.",
+    "按这一天筛选": "Filter by this day",
+    "‹ 上一页": "< Previous",
+    "下一页 ›": "Next >",
+    "历史记录": "History",
+    "练习记录": "Practice records",
+    "往期归档在这里": "Past check-ins are archived here",
+    "点一次 = 一次打卡": "1 tap = 1 check-in",
+    "返回打卡明细": "Back to the check-in log",
+    "回到今天的打卡明细": "Back to today's check-in log",
+    "查看往期的打卡记录": "View earlier check-ins",
+    "放大查看": "Enlarge",
+    "（未填代码）": "(no code)",
+    "（图片）": "(image)",
+    "（视频）": "(video)",
+    "先选一条记录，或点「打卡一次」新建一条": "Pick a record, or click \"Check in\" to create one",
+    "还没有生成截图": "No screenshot yet",
+    "本次练习": "This practice",
+    "正在记录": "Recording",
+    "选中练习": "Selected practice",
+    "今日合计": "Today's total",
+    "已挑战次数": "Total practices",
+    "连续天数": "Streak",
+    "要求": "Requirement",
+    "提示": "Hint",
+    "今日挑战": "Today's challenges",
+    "今天还没有挑战记录": "No challenges today",
+    "还没有记录，先点「打卡一次」开始新的练习": "No records yet - click \"Check in\" to start a new practice",
+    "编辑昵称": "Edit",
+    "输入昵称": "Enter a nickname",
+    "保存": "Save",
+    "取消": "Cancel",
+    "打开练习过程": "Open practice detail",
+    "记录卡": "Card",
+    "每日目标": "Daily goal",
+    "每日目标次数": "Daily goal in practices",
+    "今日打卡明细": "Today's check-in log",
+    "点一下打开练习过程": "Tap a record to open its practice detail",
+    "今天还没有记录。<br>点上面的按钮完成第一次打卡。": "No records today.<br>Use the button above to make your first check-in.",
+    "按日期浏览": "Browse by date",
+    "搜索练习名称": "Search practice names",
+    "搜索": "Search",
+    "没有匹配的往期记录。": "No matching earlier records.",
+    "API 库": "API library",
+    "搜索 API 代码或参数说明": "Search API code or parameter docs",
+    "API 库还是空的。<br>点右上角「新建 API」把常用 API 存进来，<br>练习时就能直接引用，不用重复写。": "The API library is empty.<br>Click \"New API\" at the top right to save the APIs you use often,<br>then reference them in any practice instead of retyping them.",
+    "练习题要求的 API 和代码载体里的 api，都从库里引用。": "Both the required APIs and API carriers reference entries from this library.",
+    "挑战记录卡": "Challenge record card",
+    "生成挑战记录卡": "Generate the challenge record card",
+    "昵称与记录只保存在这台设备的浏览器里，刷新后依然在。<br>别人首次打开时看到的是默认昵称和空白记录。": "Your nickname and records are stored only in this browser on this device and survive a refresh.<br>Anyone else opening it sees the default nickname and no records.",
+    "练习过程": "Practice detail",
+    "截图": "Screenshot",
+    "把这条练习过程生成一张图片": "Turn this practice detail into an image",
+    "挑战记录卡预览": "Challenge record card preview",
+    "保存图片": "Save image",
+    "重新生成": "Regenerate",
+    "手机上也可以长按上面的图片，直接保存到相册。": "On a phone you can also press and hold the image above to save it to your gallery.",
+    "参数说明（编号可自定义 + 简单描述）": "Parameter docs (custom number + short description)",
+    "＋ 添加参数": "+ Add parameter",
+    "保存到 API 库": "Save to the API library",
+    "确定": "Confirm",
+    "搜索 API 代码": "Search API code",
+    "库里还没有 API，先去 API 库新建一个。": "No APIs yet - create one in the API library first.",
+    "练习截图": "Practice screenshot",
+    "练习过程截图预览": "Practice detail screenshot preview",
+    "API 代码": "API code",
+    "今天 ": "Today ",
+    "天": "days",
+    "撤销": "Undo",
+    "撤销这条记录": "Undo this record",
+    "步骤 ": "Step ",
+    "这不是图片文件": "This is not an image file",
+    "」还有 ": "\" still has ",
+    " 处练习在引用，先取消引用再删除": " practice records referencing it - unlink them first",
+    "API 库还是空的。": "The API library is empty.",
+    "今天还没有记录。": "No records today.",
+    "今日进度 0 / 5": "Today 0 / 5",
+    "共 0 个": "Total 0",
+    "别人首次打开时看到的是默认昵称和空白记录。": "Anyone else opening it sees the default nickname and no records.",
+    "打卡一次": "Check in",
+    "昵称与记录只保存在这台设备的浏览器里，刷新后依然在。": "Your nickname and records are stored only in this browser on this device and survive a refresh.",
+    "次": "times",
+    "点上面的按钮完成第一次打卡。": "Use the button above to make your first check-in.",
+    "点右上角「新建 API」把常用 API 存进来，": "Click \"New API\" at the top right to save the APIs you use often,",
+    "练习时就能直接引用，不用重复写。": "then reference them in any practice instead of retyping them.",
+    "今日进度": "Today progress",
+    "例如 ds_list_create(capacity, is_array)": "e.g. ds_list_create(capacity, is_array)",
+    "固定头像 G": "Fixed avatar G",
+    "搜索 API": "Search API",
+    "搜索 API 库": "Search the API library",
+    date_long: "{y}-{m}-{d}",
+    head_sub: "Today {n} - {m} total",
+    lib_found: "{n} of {m} found",
+    lib_total: "{n} total",
+    lib_no_match: "No API matches \"{q}\".",
+    ref_used: "{n} refs",
+    param_count: "{n} params",
+    aria_in_use: "{code} is used by {n} practice records and cannot be deleted",
+    aria_del_api: "Remove {code} from the API library",
+    title_locked: "{n} refs left - cannot delete",
+    title_del_api: "Remove from the API library",
+    uses_head: "Practices using this API ({n})",
+    aria_var_row: "Row {n}: {label}",
+    aria_del_var: "Delete variable {n}",
+    aria_param_no: "Parameter {n} number",
+    aria_param_desc: "Parameter {n} description",
+    aria_del_param: "Delete parameter {n}",
+    dup_api: "{code} is already in the API library",
+    api_in_use: "{code} is still referenced by {n} records - unlink them first",
+    ref_count: "{n} APIs referenced",
+    today_count: "{n}",
+    total_count: "{n}",
+    progress_text: "Today {n} of {m}",
+    list_count: "{n} records",
+    aria_del_code: "Delete {code}",
+    step_no: "Step {n}",
+    img_fail: "Image failed to load: {url}",
+    vid_fail: "Video failed to load: {url}",
+    today_prefix: "Today ",
+    days_ago: "{n} days ago",
+    archived_count: "{n}",
+    day_card: "{day} - {rel} - {n}",
+    hist_filtered: "{n} of {t} check-ins across {d} days",
+    hist_total: "{d} days - {t} check-ins",
+    hist_no_name: "No earlier record named \"{q}\".",
+    hist_day_count: "{n}",
+    footer_line: "Every practice counts - {site}",
+    card_apis: "{n} APIs",
+    card_excerpt: "Challenge: {text}",
+    card_hidden: "{n} more of today's challenges are not shown",
+    month_day: "{m}/{d}",
+    week_prefix: "Sun",
+    img_tag: "(image)",
+    vid_tag: "(video)",
+  }
+};
+var TYPE_LABELS = {"脚本": "Script", "对象": "Object", "操作描述": "Action Note", "图片": "Image", "超链接": "Hyperlink", "着色器": "Shader"};
+var __lang = 'zh';
+
+function typeLabel(t){
+  if(!t) return '';
+  if(t === 'api') return 'API';
+  if(__lang === 'en' && TYPE_LABELS[t]) return TYPE_LABELS[t];
+  return t;
+}
+function T(s){
+  if(s == null) return '';
+  var d = I18N[__lang] || I18N.zh;
+  return (d[s] != null) ? d[s] : s;
+}
+function TF(key, vars){
+  var tpl = T(key);
+  if(vars){
+    tpl = tpl.replace(/\{(\w+)\}/g, function(m, k){
+      return (vars[k] != null) ? vars[k] : '';
+    });
+  }
+  return tpl;
+}
+function detectLang(){
+  /* 优先级：用户手动选过的（localStorage） > URL 参数 > 浏览器语言 */
+  try{
+    var raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      var st = JSON.parse(raw);
+      if(st && (st.lang === 'zh' || st.lang === 'en')) return st.lang;
+    }
+  }catch(e){}
+  try{
+    var q = new URLSearchParams(location.search).get('lang');
+    if(q === 'zh' || q === 'en') return q;
+  }catch(e){}
+  var nav = (navigator.language || 'zh-CN').toLowerCase();
+  return (nav.indexOf('zh') === 0) ? 'zh' : 'en';
+}
+var __i18nRestore = [];
+function restoreI18nDOM(){
+  for(var i=__i18nRestore.length-1;i>=0;i--){
+    var r = __i18nRestore[i];
+    if(r.node){
+      if(r.node.isConnected) r.node.nodeValue = r.key;
+    }else if(r.el && r.el.isConnected){
+      r.el.setAttribute(r.attr, r.key);
+    }
+  }
+  __i18nRestore = [];
+}
+function applyI18nDOM(){
+  restoreI18nDOM();
+  if(__lang !== 'en') return;
+  var en = I18N.en;
+  /* 1) 文本节点：内容整体命中字典才替换（避免打断代码块等） */
+  var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+  var nodes = [];
+  while(walker.nextNode()) nodes.push(walker.currentNode);
+  for(var i=0;i<nodes.length;i++){
+    var n = nodes[i];
+    var raw = n.nodeValue;
+    if(!raw) continue;
+    var trimmed = raw.trim();
+    if(!trimmed) continue;
+    var v = en[trimmed];
+    if(v == null || v === trimmed) continue;
+    n.nodeValue = raw.replace(trimmed, v);
+    __i18nRestore.push({ node:n, key:trimmed });
+  }
+  /* 2) 属性：placeholder / title / aria-label */
+  var all = document.body.querySelectorAll('*');
+  for(var j=0;j<all.length;j++){
+    var el = all[j];
+    var attrs = ['placeholder','title','aria-label'];
+    for(var k=0;k<attrs.length;k++){
+      var a = attrs[k];
+      var av = el.getAttribute(a);
+      if(!av) continue;
+      var t2 = av.trim();
+      var v2 = en[t2];
+      if(v2 == null || v2 === t2) continue;
+      el.setAttribute(a, av.replace(t2, v2));
+      __i18nRestore.push({ el:el, attr:a, key:av });
+    }
+  }
+}
+function setI18nText(el, txt){
+  /* 只替换第一个直接文本子节点，保留元素内的其它子元素（如 label 里的 <span class="req">） */
+  var kids = el.childNodes;
+  for(var i=0;i<kids.length;i++){
+    if(kids[i].nodeType === 3){ kids[i].nodeValue = txt; return; }
+  }
+  el.textContent = txt;
+}
+function applyLang(){
+  __lang = state.lang;
+  document.documentElement.setAttribute('lang', __lang === 'en' ? 'en' : 'zh-CN');
+  document.title = T('Gml代码练习记录');
+  if(typeof SITE_NAME !== 'undefined') SITE_NAME = T('Gml代码练习记录');
+  var sw = document.querySelectorAll('.lang-sw button');
+  for(var i=0;i<sw.length;i++){
+    if(sw[i].getAttribute('data-lang') === __lang) sw[i].classList.add('on');
+    else sw[i].classList.remove('on');
+  }
+  try{
+    renderHeader();
+    renderRecords();
+    renderApiLib();
+    renderHistory();
+    renderProcess();
+  }catch(e){}
+  applyI18nDOM();
+}
+function setLang(l){
+  if(l !== 'zh' && l !== 'en') return;
+  state.lang = l;
+  save();
+  applyLang();
+}
+__lang = detectLang();
+
+(function(){
+  var sw = document.querySelectorAll('.lang-sw button');
+  for(var i=0;i<sw.length;i++){
+    (function(btn){
+      btn.addEventListener('click', function(){ setLang(btn.getAttribute('data-lang')); });
+    })(sw[i]);
+  }
+})();
+
+  var SITE_NAME = T('Gml代码练习记录');
+  var DEFAULT_NICK = T('编程新手');
+
+  
   var CARRIER_TYPES = ['脚本', '对象', '操作描述', '图片', '超链接', '着色器'];
   var DEFAULT_MODULE_TYPE = '脚本';
 
-  /* 载体配色池：同色系但互相可辨，首次出现随机取，同一载体永久同色 */
+  
   var CARRIER_PALETTE = [
-    '#4a90e2', /* GameMaker 蓝 */
-    '#2FD3B4', /* 青绿 */
-    '#FF8F42', /* 橙 */
-    '#C77DFF', /* 紫 */
-    '#F0C04A', /* 金 */
-    '#FF6060', /* 红 */
-    '#3FA9F5', /* 天蓝 */
-    '#7CC46B'  /* 绿 */
+    '#4a90e2', 
+    '#2FD3B4', 
+    '#FF8F42', 
+    '#C77DFF', 
+    '#F0C04A', 
+    '#FF6060', 
+    '#3FA9F5', 
+    '#7CC46B'  
   ];
 
   var $ = function(s){ return document.querySelector(s); };
@@ -1013,7 +1695,7 @@ textarea.field{resize:vertical;min-height:64px}
     });
   }
 
-  /* ================= 状态 ================= */
+  
   function defaultState(){
     return {
       nickname: DEFAULT_NICK,
@@ -1021,11 +1703,13 @@ textarea.field{resize:vertical;min-height:64px}
       records: [],
       carrierColors: {},
       customTypes: [],
-      apiLib: []
+      apiLib: [],
+      lang: ''
     };
   }
 
   var state = load();
+  state.lang = __lang;
   migrateApiLib();
   migrateObjects();
   migrateCarriers();
@@ -1054,13 +1738,13 @@ textarea.field{resize:vertical;min-height:64px}
     }catch(e){
       if(!quotaWarned){
         quotaWarned = true;
-        toast('浏览器存不下了：图片可能太大。删掉几张旧图片或换张小图再试。');
+        toast(T('浏览器存不下了：图片可能太大。删掉几张旧图片或换张小图再试。'));
       }
       return false;
     }
   }
 
-  /* 实时保存：输入即落盘（合并 250ms 内的连续输入，避免频繁写 localStorage） */
+  
   var saveTimer = null;
   function saveSoon(){
     if(saveTimer) clearTimeout(saveTimer);
@@ -1083,15 +1767,15 @@ textarea.field{resize:vertical;min-height:64px}
   function allTypes(){
     return CARRIER_TYPES.concat(state.customTypes || []);
   }
-  /* 模块的类型选项：api 不在其中，api 载体只能从 API 库引用 */
+  
   function moduleTypes(){
-    /* 只给内置类型（自定义类型功能已下线，老数据仍可查看编辑） */
+    
     return CARRIER_TYPES.slice();
   }
 
-  /* ================= API 库 ================= */
-  /* 库条目：{ id, code, params:[{no,desc}] } */
-  /* 记录里只存引用 id（rec.apis 与 type==='api' 的模块都存 refId） */
+  
+  
+  
 
   function apiItem(refId){
     var lib = state.apiLib || [];
@@ -1102,7 +1786,7 @@ textarea.field{resize:vertical;min-height:64px}
     var it = apiItem(refId);
     return it ? it.code : '';
   }
-  /* 哪些练习用了这个 API（要求区引用 + 载体引用都算） */
+  
   function apiUses(refId){
     var out = [];
     (state.records || []).forEach(function(rec){
@@ -1121,7 +1805,7 @@ textarea.field{resize:vertical;min-height:64px}
     for(var i=0;i<lib.length;i++) if(String(lib[i].code).trim().toLowerCase() === c) return lib[i];
     return null;
   }
-  /* 把库里某条 API 引用进一条记录（要求区 / 载体区共用） */
+  
   function linkApi(rec, refId, asModule){
     if(!rec || !refId) return false;
     var it = apiItem(refId);
@@ -1139,7 +1823,7 @@ textarea.field{resize:vertical;min-height:64px}
     return false;
   }
 
-  /* 老数据迁移：把散落在记录里的 api 代码收进 API 库，记录改成引用 */
+  
   function migrateApiLib(){
     var changed = false;
     var lib = state.apiLib = state.apiLib || [];
@@ -1149,11 +1833,7 @@ textarea.field{resize:vertical;min-height:64px}
       it.params = normParams(it.params);
     });
 
-    /* ---- 修复历史损坏 ----
-       老版迁移把记录里的「引用 id」误当成 API 代码，于是每次刷新都会新建一条
-       code = 旧 id 的假条目，引用也被改指向它 —— 表现就是「刷新一次 API 就变一次」。
-       特征：假条目的 code 长得像内部 uid，且库里存在另一条目的 id 正好等于它。
-       修法：把引用假条目的地方改回引用那条真条目，再删掉假条目。 */
+    
     var byId = {};
     lib.forEach(function(it){ byId[it.id] = it; });
     var remap = {}, garbage = [];
@@ -1195,21 +1875,21 @@ textarea.field{resize:vertical;min-height:64px}
     }
 
     (state.records || []).forEach(function(rec){
-      /* 要求区的 API：统一成「引用 id」 */
+      
       if(Array.isArray(rec.apis)){
         var refs = [];
         rec.apis.forEach(function(a){
           if(typeof a === 'string'){
-            /* ① 命中已有条目的 id → 这就是引用，保持不变（正常形态） */
+            
             var hitId = null;
             for(var i=0;i<lib.length;i++){ if(lib[i].id === a){ hitId = lib[i]; break; } }
             if(hitId){ if(refs.indexOf(hitId.id) === -1) refs.push(hitId.id); return; }
-            /* ② 命中已有条目的 code → 老数据形态，改成引用，不新建 */
+            
             var hitCode = libFindByCode(a);
             if(hitCode){ if(refs.indexOf(hitCode.id) === -1) refs.push(hitCode.id); return; }
-            /* ③ 长得像内部 id 但库里没有 → 悬挂引用，原样保留（页面显示「已从 API 库删除」） */
+            
             if(/^r[A-Za-z0-9]{6,}$/.test(a)){ if(refs.indexOf(a) === -1) refs.push(a); return; }
-            /* ④ 真的是一段 API 代码 → 收进库里 */
+            
             var it = ensure(a, null);
             if(it && refs.indexOf(it.id) === -1) refs.push(it.id);
           }else if(a && a.refId){
@@ -1224,7 +1904,7 @@ textarea.field{resize:vertical;min-height:64px}
         if(!same) changed = true;
         rec.apis = refs;
       }
-      /* 载体里的 api 模块：内容搬进库，模块只留引用 */
+      
       (rec.modules || []).forEach(function(m){
         if(m && m.type === 'api' && !m.refId){
           var it3 = ensure(m.value || m.code || '', m.params);
@@ -1241,8 +1921,8 @@ textarea.field{resize:vertical;min-height:64px}
     if(changed) save();
   }
 
-  /* 老数据迁移：对象载体补上变量表和事件框 */
-  /* 载体类型迁移：压缩包 → 超链接；着色器补 shader 字段 */
+  
+  
   function migrateCarriers(){
     var changed = false;
     (state.records || []).forEach(function(rec){
@@ -1275,7 +1955,7 @@ textarea.field{resize:vertical;min-height:64px}
     if(changed) save();
   }
 
-  /* ================= 工具 ================= */
+  
   function pad(n){ return n < 10 ? '0'+n : ''+n; }
   function dateKey(d){
     d = d || new Date();
@@ -1287,7 +1967,7 @@ textarea.field{resize:vertical;min-height:64px}
   }
   function longDate(d){
     d = d || new Date();
-    return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';
+    return TF('date_long', {y:d.getFullYear(), m:d.getMonth()+1, d:d.getDate()});
   }
   function todayKey(){ return dateKey(); }
   function recordsToday(){
@@ -1304,7 +1984,7 @@ textarea.field{resize:vertical;min-height:64px}
   }
   function uid(){ return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
-  /* 载体颜色：首次出现随机分配，之后固定不变 */
+  
   function carrierColor(name){
     if(!name) return '#4a90e2';
     if(state.carrierColors[name]) return state.carrierColors[name];
@@ -1355,16 +2035,16 @@ textarea.field{resize:vertical;min-height:64px}
     return out;
   }
 
-  /* ================= 渲染：顶栏 ================= */
+  
   function renderHeader(){
     $('#nickView').textContent = state.nickname || DEFAULT_NICK;
-    $('#headSub').textContent = '今日 ' + recordsToday().length + ' 次 · 已挑战 ' + state.records.length + ' 次';
+    $('#headSub').textContent = TF('head_sub', {n:recordsToday().length, m:state.records.length});
     if(document.activeElement !== $('#goalInput')) $('#goalInput').value = state.dailyGoal;
   }
 
-  /* ================= 渲染：API 库 ================= */
-  var libOpenId = null;    /* 展开中的库条目 */
-  var libQuery = '';       /* 搜索词 */
+  
+  var libOpenId = null;    
+  var libQuery = '';       
 
   function libMatches(it, q){
     if(!q) return true;
@@ -1385,14 +2065,11 @@ textarea.field{resize:vertical;min-height:64px}
     var q = libQuery.trim();
     var items = lib.filter(function(it){ return libMatches(it, q); });
 
-    $('#libHint').textContent = q
-      ? ('搜到 ' + items.length + ' / ' + lib.length + ' 个')
-      : ('共 ' + lib.length + ' 个');
+    $('#libHint').textContent = q ? TF('lib_found', {n:items.length, m:lib.length}) : TF('lib_total', {n:lib.length});
     $('#libEmpty').style.display = lib.length ? 'none' : '';
     $('#libNote').style.display = lib.length ? '' : 'none';
 
-    if(lib.length && !items.length){
-      list.appendChild(el('div', 'empty', '没有匹配「' + q + '」的 API。'));
+    if(lib.length && !items.length){ list.appendChild(el('div', 'empty', TF('lib_no_match', {q:q})));
       return;
     }
 
@@ -1407,14 +2084,14 @@ textarea.field{resize:vertical;min-height:64px}
       main.dataset.libopen = it.id;
       var top = el('div', 'rec-top');
       top.appendChild(el('span', 'rec-name code', it.code));
-      top.appendChild(el('span', 'rec-time', uses.length ? (uses.length + ' 处引用') : '未被引用'));
+      top.appendChild(el('span', 'rec-time', uses.length ? TF('ref_used', {n:uses.length}) : T('未被引用')));
       main.appendChild(top);
       var meta = el('div', 'rec-meta');
-      meta.appendChild(chipEl(ps.length ? ('参数 ' + ps.length) : '无参数', '#7a7a7a', true));
+      meta.appendChild(chipEl(ps.length ? TF('param_count', {n:ps.length}) : T('无参数'), '#7a7a7a', true));
       main.appendChild(meta);
       li.appendChild(main);
 
-      var edit = el('button', 'lib-edit', '编辑');
+      var edit = el('button', 'lib-edit', T('编辑'));
       edit.type = 'button';
       edit.dataset.libedit = it.id;
       li.appendChild(edit);
@@ -1422,18 +2099,16 @@ textarea.field{resize:vertical;min-height:64px}
       var del = el('button', 'del' + (uses.length ? ' locked' : ''), '×');
       del.type = 'button';
       del.dataset.libdel = it.id;
-      del.setAttribute('aria-label', uses.length
-        ? (it.code + ' 正被 ' + uses.length + ' 处练习引用，不能删除')
-        : ('从 API 库删除 ' + it.code));
-      del.title = uses.length ? ('还有 ' + uses.length + ' 处引用，不能删除') : '从 API 库删除';
+      del.setAttribute('aria-label', uses.length ? TF('aria_in_use', {code:it.code, n:uses.length}) : TF('aria_del_api', {code:it.code}));
+      del.title = uses.length ? TF('title_locked', {n:uses.length}) : T('从 API 库删除');
       li.appendChild(del);
 
-      /* 展开：使用了这个 API 的练习（复刻打卡明细的条目样式） */
+      
       if(libOpenId === it.id){
         var box = el('div', 'lib-uses');
-        box.appendChild(el('div', 'lib-uses-head', '使用了这个 API 的练习（' + uses.length + '）'));
+        box.appendChild(el('div', 'lib-uses-head', TF('uses_head', {n:uses.length})));
         if(!uses.length){
-          box.appendChild(el('div', 'empty', '还没有练习引用它。'));
+          box.appendChild(el('div', 'empty', T('还没有练习引用它。')));
         }else{
           uses.forEach(function(rec){
             var u = el('li', 'rec');
@@ -1441,16 +2116,16 @@ textarea.field{resize:vertical;min-height:64px}
             um.type = 'button';
             um.dataset.openrec = rec.id;
             var ut = el('div', 'rec-top');
-            ut.appendChild(el('span', 'rec-name', rec.name || '未命名练习'));
+            ut.appendChild(el('span', 'rec-name', rec.name || T('未命名练习')));
             ut.appendChild(el('span', 'rec-time',
               (dateKey(new Date(rec.ts)) === todayKey() ? '' : dateKey(new Date(rec.ts)).slice(5) + ' ') + timeText(rec.ts)));
             um.appendChild(ut);
             var umeta = el('div', 'rec-meta');
             var ts = recTypes(rec);
             if(!ts.length){
-              umeta.appendChild(chipEl('待填写', '#909090', true));
+              umeta.appendChild(chipEl(T('待填写'), '#909090', true));
             }else{
-              ts.forEach(function(t){ umeta.appendChild(chipEl(t, carrierColor(t), true)); });
+              ts.forEach(function(t){ umeta.appendChild(chipEl(typeLabel(t), carrierColor(t), true)); });
             }
             um.appendChild(umeta);
             u.appendChild(um);
@@ -1464,10 +2139,10 @@ textarea.field{resize:vertical;min-height:64px}
     });
   }
 
-  /* ================= 画布里的暗色代码框 ================= */
+  
   var CODE_FONT = '"JetBrains Mono","SF Mono",Menlo,monospace';
 
-  /* 量一段代码在画布上要占多高（含软换行） */
+  
   function measureCodeBlock(ctx, w, code, fs){
     fs = fs || 20;
     var rows = gmlLineTokens(code == null ? '' : code);
@@ -1480,12 +2155,12 @@ textarea.field{resize:vertical;min-height:64px}
     return { vis: vis, h: 16 + total*26 + 16, lines: rows };
   }
 
-  /* 画一个暗色代码框，返回高度 */
+  
   function drawCodeBlock(ctx, x, y, w, code, fs){
     fs = fs || 20;
     var meta = measureCodeBlock(ctx, w, code, fs);
     ctx.save();
-    roundRect(ctx, x, y, w, meta.h, 12); ctx.clip();   /* 超出框宽的文字被裁掉，不会溢到框外 */
+    roundRect(ctx, x, y, w, meta.h, 12); ctx.clip();   
     ctx.fillStyle = '#1e1e1e';
     roundRect(ctx, x, y, w, meta.h, 12); ctx.fill();
     ctx.strokeStyle = '#383838';
@@ -1517,7 +2192,7 @@ textarea.field{resize:vertical;min-height:64px}
       });
     });
     ctx.restore();
-    /* 记录布局数据，供自检脚本断言（逻辑行数 / 视觉行数 / 折行数 / 每段行号） */
+    
     var _vis = segs.length;
     if(window.__gml) (window.__gml.lastShotCodeRows = window.__gml.lastShotCodeRows || []).push({
       logical: meta.vis.length, visual: _vis, wrapped: _vis - meta.vis.length,
@@ -1527,8 +2202,8 @@ textarea.field{resize:vertical;min-height:64px}
     return meta.h;
   }
 
-  /* ================= 对象载体 ================= */
-  /* 结构：{ type:'对象', value:'对象名', fields:[{name,param,desc}], events:[{name,code}] } */
+  
+  
 
   function normFields(f){
     if(!Array.isArray(f)) return [];
@@ -1549,37 +2224,37 @@ textarea.field{resize:vertical;min-height:64px}
     });
   }
 
-  /* 表单里的对象编辑器：对象名 + 预定义变量表 + 事件代码框 */
+  
   function buildObjectField(m, refresh){
     var wrap = el('div', 'obj-field');
 
-    /* 1. 对象名 */
-    wrap.appendChild(el('div', 'sub-label', '对象名'));
+    
+    wrap.appendChild(el('div', 'sub-label', T('对象名')));
     var nameIn = el('input', 'field obj-name-input');
     nameIn.type = 'text';
-    nameIn.placeholder = '例如 obj_player';
+    nameIn.placeholder = T('例如 obj_player');
     nameIn.dataset.role = 'objectName';
     nameIn.value = m.value || '';
     nameIn.addEventListener('input', function(){ m.value = nameIn.value; saveSoon(); });
     wrap.appendChild(nameIn);
 
-    /* 2. 预定义变量表：每次加一列，每列 3 行（变量名 / 参数 / 说明） */
+    
     m.fields = normFields(m.fields);
-    wrap.appendChild(el('div', 'sub-label', '预定义变量表（每行一个变量）'));
+    wrap.appendChild(el('div', 'sub-label', T('预定义变量表（每行一个变量）')));
     var tableWrap = el('div', 'obj-table-wrap');
     var table = el('div', 'obj-table');
 
-    /* 每行一个变量，行里 3 列：变量名 / 参数 / 说明 */
+    
     var COLS = [
-      { key:'name',  label:'变量名', flex:'1.1' },
-      { key:'param', label:'参数',   flex:'1' },
-      { key:'desc',  label:'说明',   flex:'1.5' }
+      { key:'name',  label:T('变量名'), flex:'1.1' },
+      { key:'param', label:T('参数'),   flex:'1' },
+      { key:'desc',  label:T('说明'),   flex:'1.5' }
     ];
 
     function renderTable(){
       table.innerHTML = '';
       if(!m.fields.length){
-        table.appendChild(el('div', 'obj-table-empty', '还没有预定义变量，点下面「＋ 添加一行」开始。'));
+        table.appendChild(el('div', 'obj-table-empty', T('还没有预定义变量，点下面「＋ 添加一行」开始。')));
         return;
       }
       var head = el('div', 'obj-tr obj-th');
@@ -1599,7 +2274,7 @@ textarea.field{resize:vertical;min-height:64px}
           var inp = el('input', 'obj-cell-input');
           inp.type = 'text';
           inp.value = f[c.key] || '';
-          inp.setAttribute('aria-label', '第 ' + (ri+1) + ' 个变量的' + c.label);
+          inp.setAttribute('aria-label', TF('aria_var_row', {n:ri+1, label:T(c.label)}));
           inp.addEventListener('input', function(){ f[c.key] = inp.value; saveSoon(); });
           td.appendChild(inp);
           tr.appendChild(td);
@@ -1607,7 +2282,7 @@ textarea.field{resize:vertical;min-height:64px}
         var delTd = el('div', 'obj-td obj-td-del');
         var del = el('button', 'obj-row-del', '×');
         del.type = 'button';
-        del.setAttribute('aria-label', '删除第 ' + (ri+1) + ' 个变量');
+        del.setAttribute('aria-label', TF('aria_del_var', {n:ri+1}));
         del.addEventListener('click', function(){
           m.fields.splice(ri, 1);
           saveSoon();
@@ -1622,7 +2297,7 @@ textarea.field{resize:vertical;min-height:64px}
     tableWrap.appendChild(table);
     wrap.appendChild(tableWrap);
 
-    var addField = el('button', 'add-arg', '＋ 添加一行');
+    var addField = el('button', 'add-arg', T('＋ 添加一行'));
     addField.type = 'button';
     addField.addEventListener('click', function(){
       m.fields.push({ name:'', param:'', desc:'' });
@@ -1631,15 +2306,15 @@ textarea.field{resize:vertical;min-height:64px}
     });
     wrap.appendChild(addField);
 
-    /* 3. 事件代码框 */
+    
     m.events = normEvents(m.events);
-    wrap.appendChild(el('div', 'sub-label', '事件代码框'));
+    wrap.appendChild(el('div', 'sub-label', T('事件代码框')));
     var evWrap = el('div', 'obj-events');
 
     function renderEvents(){
       evWrap.innerHTML = '';
       if(!m.events.length){
-        evWrap.appendChild(el('div', 'hint-line', '还没有事件，点下面「＋ 添加事件」开始。'));
+        evWrap.appendChild(el('div', 'hint-line', T('还没有事件，点下面「＋ 添加事件」开始。')));
         return;
       }
       m.events.forEach(function(ev, i){
@@ -1647,14 +2322,14 @@ textarea.field{resize:vertical;min-height:64px}
         var head = el('div', 'obj-event-head');
         var evName = el('input', 'field obj-event-name');
         evName.type = 'text';
-        evName.placeholder = '事件名，例如 Create / Step / Draw';
+        evName.placeholder = T('事件名，例如 Create / Step / Draw');
         evName.dataset.role = 'eventName';
         evName.value = ev.name || '';
         evName.addEventListener('input', function(){ ev.name = evName.value; saveSoon(); });
         head.appendChild(evName);
         var del = el('button', 'mod-del', '×');
         del.type = 'button';
-        del.setAttribute('aria-label', '删除这个事件');
+        del.setAttribute('aria-label', T('删除这个事件'));
         del.addEventListener('click', function(){
           m.events.splice(i, 1);
           saveSoon();
@@ -1666,7 +2341,7 @@ textarea.field{resize:vertical;min-height:64px}
         var codeIn = el('textarea', 'field code-field');
         codeIn.rows = 4;
         codeIn.dataset.role = 'eventCode';
-        codeIn.placeholder = '// 这里写这个事件的代码';
+        codeIn.placeholder = T('// 这里写这个事件的代码');
         codeIn.value = ev.code || '';
         codeIn.addEventListener('input', function(){ ev.code = codeIn.value; saveSoon(); });
         box.appendChild(codeIn);
@@ -1677,7 +2352,7 @@ textarea.field{resize:vertical;min-height:64px}
     renderEvents();
     wrap.appendChild(evWrap);
 
-    var addEvent = el('button', 'add-arg', '＋ 添加事件');
+    var addEvent = el('button', 'add-arg', T('＋ 添加事件'));
     addEvent.type = 'button';
     addEvent.addEventListener('click', function(){
       m.events.push({ name:'', code:'' });
@@ -1689,55 +2364,55 @@ textarea.field{resize:vertical;min-height:64px}
     return wrap;
   }
 
-  /* 详情里的对象展示：对象名 + 变量表 + 事件代码框 */
+  
   function buildObjectDetail(m){
     var box = el('div', 'obj-detail');
-    box.appendChild(el('div', 'obj-detail-name', m.value || '（未填写对象名）'));
+    box.appendChild(el('div', 'obj-detail-name', m.value || T('（未填写对象名）')));
 
     var fSec = el('div');
-    fSec.appendChild(el('div', 'sub-label', '预定义变量表'));
+    fSec.appendChild(el('div', 'sub-label', T('预定义变量表')));
     var fields = normFields(m.fields);
     if(fields.length){
       var t = el('table', 'obj-detail-table');
       var thead = el('thead');
       var trh = el('tr');
-      trh.appendChild(el('th', null, '变量名'));
-      trh.appendChild(el('th', null, '参数'));
-      trh.appendChild(el('th', null, '说明'));
+      trh.appendChild(el('th', null, T('变量名')));
+      trh.appendChild(el('th', null, T('参数')));
+      trh.appendChild(el('th', null, T('说明')));
       thead.appendChild(trh);
       t.appendChild(thead);
       var tbody = el('tbody');
       fields.forEach(function(f){
         var tr = el('tr');
-        tr.appendChild(el('td', null, f.name || '（未填写）'));
-        tr.appendChild(el('td', null, f.param || '（未填写）'));
-        tr.appendChild(el('td', null, f.desc || '（未填写）'));
+        tr.appendChild(el('td', null, f.name || T('（未填写）')));
+        tr.appendChild(el('td', null, f.param || T('（未填写）')));
+        tr.appendChild(el('td', null, f.desc || T('（未填写）')));
         tbody.appendChild(tr);
       });
       t.appendChild(tbody);
       fSec.appendChild(t);
     }else{
-      fSec.appendChild(el('div', 'obj-detail-empty', '没有预定义变量'));
+      fSec.appendChild(el('div', 'obj-detail-empty', T('没有预定义变量')));
     }
     box.appendChild(fSec);
 
     var eSec = el('div');
-    eSec.appendChild(el('div', 'sub-label', '事件代码框'));
+    eSec.appendChild(el('div', 'sub-label', T('事件代码框')));
     var events = normEvents(m.events);
     if(events.length){
       events.forEach(function(ev){
-        eSec.appendChild(buildCodeBox(ev.code || '', ev.name || '事件'));
+        eSec.appendChild(buildCodeBox(ev.code || '', ev.name || T('事件')));
       });
     }else{
-      eSec.appendChild(el('div', 'obj-detail-empty', '没有事件'));
+      eSec.appendChild(el('div', 'obj-detail-empty', T('没有事件')));
     }
     box.appendChild(eSec);
 
     return box;
   }
 
-  /* ================= 暗色代码框 ================= */
-  /* GML 保留字 */
+  
+  
   var GM_KEYWORDS = {
     'begin':1,'break':1,'case':1,'constructor':1,'continue':1,'default':1,'delete':1,
     'div':1,'do':1,'else':1,'end':1,'enum':1,'exit':1,'for':1,'function':1,'globalvar':1,
@@ -1747,7 +2422,7 @@ textarea.field{resize:vertical;min-height:64px}
   };
   var GM_CONSTS = {'true':1,'false':1,'undefined':1,'NaN':1,'infinity':1,'global':1};
 
-  /* 极简 GML 分词器：注释 / 字符串 / 数字 / 关键字 / 函数 / 常量 / 标识符 / 标点 */
+  
   function tokenizeGml(src, state){
     state = state || { inBlock:false };
     var out = [];
@@ -1810,15 +2485,12 @@ textarea.field{resize:vertical;min-height:64px}
       out.push({ t:'pun', s:src.slice(i, p) });
       i = p;
     }
-    /* 注意：这里**不改写**原文的 tab —— 内容必须与源码逐字一致（长按复制要拿到原文）。
-       「tab 显示成 1 个空格宽」由排版层负责：
-         网页端 = CSS tab-size:1（.codebox-body / textarea）
-         canvas 端 = layoutCodeLine 绘制时把 tab 按 1 空格宽画 */
+    
     return { tokens: out, state: state };
   }
 
-  /* 逐行上色（块注释状态跨行延续）；返回每行的 HTML */
-  /* 代码分行：末尾的换行不额外算一行（否则代码框底部会多出一条空白行 + 一个行号） */
+  
+  
   function splitCodeLines(src){
     var lines = String(src == null ? '' : src).split('\n');
     if(lines.length > 1 && lines[lines.length-1] === '') lines.pop();
@@ -1839,7 +2511,7 @@ textarea.field{resize:vertical;min-height:64px}
     return html;
   }
 
-  /* 逐行取 token（截图里 canvas 用） */
+  
   function gmlLineTokens(src){
     var lines = splitCodeLines(src);
     var state = { inBlock:false };
@@ -1856,16 +2528,16 @@ textarea.field{resize:vertical;min-height:64px}
     fn:'#dcdcaa', cn:'#c586c0', id:'#d4d4d4', pun:'#808a99', ws:'#d4d4d4'
   };
 
-  /* canvas 里按像素宽度做软换行：返回每个逻辑行拆成的若干视觉行 */
+  
   function layoutCodeLine(ctx, tokens, maxW){
     var rows = [[]];
     var w = 0;
     tokens.forEach(function(tk){
       if(tk.t === 'ws'){
-        /* 画的时候 tab 按 1 个空格宽（原文的 tab 不改写，只在绘制层折算） */
+        
         var ws = tk.s.indexOf('\t') >= 0 ? tk.s.replace(/\t/g, ' ') : tk.s;
         if(!rows[rows.length-1].length){
-          /* 行首缩进要保留 */
+          
           rows[rows.length-1].push({ t:tk.t, s:ws });
           w += ctx.measureText(ws).width;
           return;
@@ -1892,16 +2564,16 @@ textarea.field{resize:vertical;min-height:64px}
     return rows;
   }
 
-  /* 复制到剪贴板：clipboard API 不可用时（本地文件打开）回退到 execCommand */
+  
   function copyText(text, btn){
     var done = function(){
       if(btn){
         var old = btn.textContent;
-        btn.textContent = '已复制';
+        btn.textContent = T('已复制');
         btn.classList.add('done');
         setTimeout(function(){ btn.textContent = old; btn.classList.remove('done'); }, 1500);
       }
-      toast('代码已复制');
+      toast(T('代码已复制'));
     };
     var fallback = function(){
       var ta = document.createElement('textarea');
@@ -1916,7 +2588,7 @@ textarea.field{resize:vertical;min-height:64px}
       try{ ok = document.execCommand('copy'); }catch(e){ ok = false; }
       document.body.removeChild(ta);
       if(ok) done();
-      else toast('复制失败，请长按选中代码手动复制');
+      else toast(T('复制失败，请长按选中代码手动复制'));
     };
     if(navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(text).then(done, fallback);
@@ -1925,14 +2597,14 @@ textarea.field{resize:vertical;min-height:64px}
     }
   }
 
-  /* 暗色代码框：行号 + 自动换行（折行不增加行号）+ 简单上色 + 快速复制 */
+  
   function buildCodeBox(text, name){
     var box = el('div', 'codebox');
     var bar = el('div', 'codebox-bar');
-    bar.appendChild(el('span', 'codebox-name', name || '代码'));
-    var copy = el('button', 'code-copy', '复制');
+    bar.appendChild(el('span', 'codebox-name', name || T('代码')));
+    var copy = el('button', 'code-copy', T('复制'));
     copy.type = 'button';
-    copy.setAttribute('aria-label', '复制这段代码');
+    copy.setAttribute('aria-label', T('复制这段代码'));
     copy.addEventListener('click', function(){ copyText(text, copy); });
     bar.appendChild(copy);
     box.appendChild(bar);
@@ -1951,15 +2623,15 @@ textarea.field{resize:vertical;min-height:64px}
     return box;
   }
 
-  /* 代码类载体（脚本 / 对象 / 自定义代码类型）用暗色代码框 */
+  
   var CODE_CARRIERS = ['脚本'];
   function isCodeCarrier(type){
     return CODE_CARRIERS.indexOf(type) >= 0;
   }
 
-  /* ================= API 编辑弹层 ================= */
-  var apiEditing = null;   /* 正在编辑的库条目 */
-  var apiDraft = null;     /* 草稿 { code, params } */
+  
+  var apiEditing = null;   
+  var apiDraft = null;     
 
   function openApiModal(item){
     apiEditing = item || null;
@@ -1968,7 +2640,7 @@ textarea.field{resize:vertical;min-height:64px}
       params: item ? normParams(item.params).map(function(p){ return { no:p.no, desc:p.desc }; })
                    : [{ no:'1', desc:'' }]
     };
-    $('#apiModalTitle').textContent = item ? '编辑 API' : '新建 API';
+    $('#apiModalTitle').textContent = item ? T('编辑 API') : T('新建 API');
     $('#apiCodeInput').value = apiDraft.code;
     renderApiModalArgs();
     $('#apiModal').classList.add('open');
@@ -1988,21 +2660,21 @@ textarea.field{resize:vertical;min-height:64px}
 
       var noIn = el('input', 'field api-no-input');
       noIn.type = 'text'; noIn.maxLength = 5;
-      noIn.placeholder = '编号'; noIn.value = p.no || '';
-      noIn.setAttribute('aria-label', '第 ' + (i+1) + ' 个参数的编号');
+      noIn.placeholder = T('编号'); noIn.value = p.no || '';
+      noIn.setAttribute('aria-label', TF('aria_param_no', {n:i+1}));
       noIn.addEventListener('input', function(){ p.no = noIn.value; });
 
       var inp = el('input', 'field api-desc-input');
       inp.type = 'text';
       var hints = codeArgs($('#apiCodeInput').value);
-      inp.placeholder = hints[i] ? ('说明：' + hints[i]) : '简单描述，例如：列表容量';
+      inp.placeholder = hints[i] ? (T('说明：') + hints[i]) : T('简单描述，例如：列表容量');
       inp.value = p.desc || '';
-      inp.setAttribute('aria-label', '第 ' + (i+1) + ' 个参数的说明');
+      inp.setAttribute('aria-label', TF('aria_param_desc', {n:i+1}));
       inp.addEventListener('input', function(){ p.desc = inp.value; });
 
       var x = el('button', 'api-arg-del', '×');
       x.type = 'button';
-      x.setAttribute('aria-label', '删除第 ' + (i+1) + ' 个参数');
+      x.setAttribute('aria-label', TF('aria_del_param', {n:i+1}));
       x.addEventListener('click', function(){
         apiDraft.params.splice(i, 1);
         renderApiModalArgs();
@@ -2014,14 +2686,13 @@ textarea.field{resize:vertical;min-height:64px}
   }
   function saveApiModal(){
     var code = $('#apiCodeInput').value.trim();
-    if(!code){ toast('先写一行 API 代码'); return; }
+    if(!code){ toast(T('先写一行 API 代码')); return; }
     var dup = libFindByCode(code);
-    if(dup && (!apiEditing || dup.id !== apiEditing.id)){
-      toast('API 库里已经有「' + code + '」了');
+    if(dup && (!apiEditing || dup.id !== apiEditing.id)){ toast(TF('dup_api', {code:code}));
       return;
     }
     var params = apiDraft.params
-      /* 只保留写了描述的参数：编号 + 描述成对才有意义 */
+      
       .filter(function(p){ return (p.desc || '').trim(); })
       .map(function(p){ return { no:(p.no || '').trim() || '1', desc:(p.desc || '').trim() }; });
     var wasEdit = !!apiEditing;
@@ -2034,15 +2705,13 @@ textarea.field{resize:vertical;min-height:64px}
     save();
     closeApiModal();
     renderApiLib();
-    toast(wasEdit ? 'API 已更新' : '已加入 API 库');
+    toast(wasEdit ? T('API 已更新') : T('已加入 API 库'));
   }
   function deleteApiItem(id){
     var it = apiItem(id);
     if(!it) return;
     var uses = apiUses(id);
-    if(uses.length){
-      /* 被引用的 API 不给删：先取消引用 */
-      toast('「' + it.code + '」还有 ' + uses.length + ' 处练习在引用，先取消引用再删除');
+    if(uses.length){  toast(TF('api_in_use', {code:it.code, n:uses.length}));
       return;
     }
     state.apiLib = state.apiLib.filter(function(x){ return x.id !== id; });
@@ -2050,14 +2719,14 @@ textarea.field{resize:vertical;min-height:64px}
     save();
     renderApiLib();
     renderAll();
-    toast('已从 API 库删除');
+    toast(T('已从 API 库删除'));
   }
 
-  /* ================= API 选择弹层 ================= */
-  var pickerMode = null;     /* 'apis' | 'module' | 'one' */
-  var pickerRec = null;      /* 目标记录 */
-  var pickerMod = null;      /* 目标模块（mode='one'） */
-  var pickerSel = [];        /* 选中的 refId */
+  
+  var pickerMode = null;     
+  var pickerRec = null;      
+  var pickerMod = null;      
+  var pickerSel = [];        
 
   function openApiPicker(mode, rec, mod, title){
     pickerMode = mode;
@@ -2071,7 +2740,7 @@ textarea.field{resize:vertical;min-height:64px}
     }else if(mode === 'one' && mod){
       if(mod.refId) pickerSel.push(mod.refId);
     }
-    $('#apiPickerTitle').textContent = title || '从 API 库选择';
+    $('#apiPickerTitle').textContent = title || T('从 API 库选择');
     $('#apiPickerSearch').value = '';
     renderApiPicker();
     $('#apiPicker').classList.add('open');
@@ -2089,8 +2758,7 @@ textarea.field{resize:vertical;min-height:64px}
     var lib = state.apiLib || [];
     var items = lib.filter(function(it){ return libMatches(it, q); });
     $('#apiPickerEmpty').style.display = lib.length ? 'none' : '';
-    if(lib.length && !items.length){
-      list.appendChild(el('div', 'empty', '没有匹配「' + q + '」的 API。'));
+    if(lib.length && !items.length){ list.appendChild(el('div', 'empty', TF('lib_no_match', {q:q})));
       return;
     }
     items.forEach(function(it){
@@ -2104,7 +2772,7 @@ textarea.field{resize:vertical;min-height:64px}
       var ps = normParams(it.params);
       var sub = ps.length
         ? ps.map(function(p){ return (p.no || '') + ' ' + (p.desc || ''); }).join(' · ')
-        : '无参数说明';
+        : T('无参数说明');
       box.appendChild(el('div', 'pk-sub', sub));
       row.appendChild(box);
       row.addEventListener('click', function(){
@@ -2131,25 +2799,25 @@ textarea.field{resize:vertical;min-height:64px}
     renderApiLib();
     renderRecords();
     renderProcess();
-    toast(n ? ('已引用 ' + n + ' 个 API') : '没有选择任何 API');
+    toast(n ? TF('ref_count', {n:n}) : T('没有选择任何 API'));
   }
 
-  /* ================= 渲染：练习记录 ================= */
+  
   function renderRecords(){
     var today = recordsToday().length;
     var goal = Math.max(1, state.dailyGoal);
     var pct = Math.min(100, today / goal * 100);
 
-    $('#todayCount').innerHTML = today + '<small>次</small>';
-    $('#totalCount').innerHTML = state.records.length + '<small>次</small>';
+    $('#todayCount').innerHTML = TF('today_count', {n:today});
+    $('#totalCount').innerHTML = TF('total_count', {n:state.records.length});
     $('#progressBar').style.width = pct + '%';
     $('#progressBar').classList.toggle('full', today >= goal);
-    $('#progressText').textContent = '今日进度 ' + today + ' / ' + goal + ' 次';
+    $('#progressText').textContent = TF('progress_text', {n:today, m:goal});
 
     var list = $('#recordList');
     list.innerHTML = '';
 
-    /* 打卡明细只显示今天的记录，往期归档在「历史记录」里 */
+    
     var sorted = recordsToday().slice().sort(function(a,b){ return b.ts - a.ts; });
     sorted.forEach(function(rec){
       var types = recTypes(rec);
@@ -2163,7 +2831,7 @@ textarea.field{resize:vertical;min-height:64px}
       main.dataset.select = rec.id;
 
       var top = el('div', 'rec-top');
-      var nm = el('span', 'rec-name', rec.name || '未命名练习');
+      var nm = el('span', 'rec-name', rec.name || T('未命名练习'));
       var tm = el('span', 'rec-time', timeText(rec.ts));
       top.appendChild(nm); top.appendChild(tm);
       main.appendChild(top);
@@ -2174,7 +2842,7 @@ textarea.field{resize:vertical;min-height:64px}
         c0.style.setProperty('--chip-fg', '#909090');
         c0.style.setProperty('--chip-bg', '#2b2b2b');
         c0.style.setProperty('--chip-bd', '#383838');
-        c0.textContent = '待填写';
+        c0.textContent = T('待填写');
         meta.appendChild(c0);
       }else{
         types.forEach(function(t){ meta.appendChild(chipEl(t, carrierColor(t), true)); });
@@ -2193,22 +2861,22 @@ textarea.field{resize:vertical;min-height:64px}
       var del = el('button', 'del', '×');
       del.type = 'button';
       del.dataset.del = rec.id;
-      del.setAttribute('aria-label', '撤销这条记录');
-      del.title = '撤销';
+      del.setAttribute('aria-label', T('撤销这条记录'));
+      del.title = T('撤销');
 
       li.appendChild(main);
       li.appendChild(del);
       list.appendChild(li);
 
-      /* 左侧色条：用首个载体的颜色 */
+      
       li.style.borderLeft = '3px solid ' + hexA(mainColor, 0.85);
     });
 
     $('#emptyTip').style.display = sorted.length ? 'none' : '';
-    $('#listCount').textContent = sorted.length ? ('共 ' + sorted.length + ' 条') : '';
+    $('#listCount').textContent = sorted.length ? TF('list_count', {n:sorted.length}) : '';
   }
 
-  /* 实时保存后同步列表里的名称（只改文字，不重建 DOM） */
+  
   function syncNamesUI(){
     var byId = {};
     state.records.forEach(function(r){ byId[r.id] = r; });
@@ -2216,20 +2884,20 @@ textarea.field{resize:vertical;min-height:64px}
       var r = byId[li.dataset.recId];
       if(!r) return;
       var nm = li.querySelector('.rec-name');
-      if(nm) nm.textContent = r.name || '未命名练习';
+      if(nm) nm.textContent = r.name || T('未命名练习');
     });
     document.querySelectorAll('#histList .hist-item').forEach(function(item){
       var r = byId[item.dataset.histId];
       if(!r) return;
       var nm = item.querySelector('.hist-name');
-      if(nm) nm.textContent = r.name || '未命名练习';
+      if(nm) nm.textContent = r.name || T('未命名练习');
     });
   }
 
-  /* ================= 渲染：练习过程 ================= */
-  var selectedId = null;   /* 选中的历史记录 */
-  var editingId = null;    /* 正在编辑的记录 */
-  var formRecId = null;    /* 当前渲染出来的表单属于哪条记录 */
+  
+  var selectedId = null;   
+  var editingId = null;    
+  var formRecId = null;    
 
   function findRec(id){
     for(var i=0;i<state.records.length;i++) if(state.records[i].id === id) return state.records[i];
@@ -2239,100 +2907,100 @@ textarea.field{resize:vertical;min-height:64px}
   function renderProcess(){
     var box = $('#processBody');
 
-    /* 清空 DOM 之前，先把输入框里没保存的内容存回记录（否则重建表单会丢失） */
+    
     var editingRec = editingId ? findRec(editingId) : null;
     if(editingId && !editingRec){ editingId = null; editingRec = null; }
     if(editingRec) syncFormValues();
 
     box.innerHTML = '';
 
-    $('#processClose').textContent = editingRec ? '完成' : (isWide() ? '清空' : '关闭');
+    $('#processClose').textContent = editingRec ? T('完成') : (isWide() ? T('清空') : T('关闭'));
     if(editingRec){
-      $('#processHint').textContent = '填写本次练习内容 · 实时保存';
+      $('#processHint').textContent = T('填写本次练习内容 · 实时保存');
       box.appendChild(buildForm(editingRec));
       return;
     }
 
     var sel = selectedId ? findRec(selectedId) : null;
     if(sel){
-      $('#processHint').textContent = '记录详情';
+      $('#processHint').textContent = T('记录详情');
       box.appendChild(buildDetail(sel));
       return;
     }
 
-    $('#processHint').textContent = '选择一条记录查看';
+    $('#processHint').textContent = T('选择一条记录查看');
     var ph = el('div', 'empty');
-    ph.innerHTML = '点上面的「打卡一次」开始新的练习，<br>或点选已有记录查看它的完整过程。';
+    ph.innerHTML = T('点上面的「打卡一次」开始新的练习，<br>或点选已有记录查看它的完整过程。');
     box.appendChild(ph);
   }
 
-  /* ---- 表单 ---- */
+  
   function buildForm(rec){
     var form = el('form', 'form');
     formRecId = rec.id;
     form.addEventListener('submit', function(e){ e.preventDefault(); });
 
-    /* 记录名称 */
+    
     var b1 = el('div', 'form-block');
     var l1 = el('label');
-    l1.appendChild(document.createTextNode('记录名称'));
+    l1.appendChild(document.createTextNode(T('记录名称')));
     l1.appendChild(el('span', 'req', ' *'));
     var nameIn = el('input', 'field');
     nameIn.type = 'text'; nameIn.maxLength = 40;
-    nameIn.placeholder = '例如：用 ds_list 管理背包';
+    nameIn.placeholder = T('例如：用 ds_list 管理背包');
     nameIn.value = rec.name || '';
     nameIn.dataset.field = 'name';
     nameIn.addEventListener('input', function(){ rec.name = nameIn.value; saveSoon(); });
     b1.appendChild(l1); b1.appendChild(nameIn);
     form.appendChild(b1);
 
-    /* 练习题要求 */
+    
     var b2 = el('div', 'form-block');
     var l2 = el('label');
-    l2.appendChild(document.createTextNode('练习题要求'));
+    l2.appendChild(document.createTextNode(T('练习题要求')));
     l2.appendChild(el('span', 'req', ' *'));
     var reqIn = el('textarea', 'field');
     reqIn.rows = 3;
-    reqIn.placeholder = '这题要做什么？写清楚目标与约束。';
+    reqIn.placeholder = T('这题要做什么？写清楚目标与约束。');
     reqIn.value = rec.requirement || '';
     reqIn.dataset.field = 'requirement';
     reqIn.addEventListener('input', function(){ rec.requirement = reqIn.value; saveSoon(); });
     b2.appendChild(l2); b2.appendChild(reqIn);
     form.appendChild(b2);
 
-    /* 练习题提示 */
+    
     var b3 = el('div', 'form-block');
-    var l3 = el('label', null, '练习题提示');
+    var l3 = el('label', null, T('练习题提示'));
     var hintIn = el('textarea', 'field');
     hintIn.rows = 2;
-    hintIn.placeholder = '思路、卡住的地方、要注意的坑。';
+    hintIn.placeholder = T('思路、卡住的地方、要注意的坑。');
     hintIn.value = rec.hint || '';
     hintIn.dataset.field = 'hint';
     hintIn.addEventListener('input', function(){ rec.hint = hintIn.value; saveSoon(); });
     b3.appendChild(l3); b3.appendChild(hintIn);
     form.appendChild(b3);
 
-    /* 练习题要求的 API（只能引用 API 库） */
+    
     var b4 = el('div', 'form-block');
-    var l4 = el('label', null, '练习题要求的 API');
+    var l4 = el('label', null, T('练习题要求的 API'));
     var tagWrap = el('div', 'api-tags');
-    var pickBtn = el('button', 'lib-pick', '＋ 从 API 库选择');
+    var pickBtn = el('button', 'lib-pick', T('＋ 从 API 库选择'));
     pickBtn.type = 'button';
     b4.appendChild(l4); b4.appendChild(tagWrap); b4.appendChild(pickBtn);
-    var hintLine = el('div', 'hint-line', 'API 只能从 API 库里选；这里显示代码，完整参数说明在练习过程里。');
+    var hintLine = el('div', 'hint-line', T('API 只能从 API 库里选；这里显示代码，完整参数说明在练习过程里。'));
     b4.appendChild(hintLine);
     form.appendChild(b4);
 
-    /* 代码载体（模块化） */
+    
     var b5 = el('div', 'form-block');
-    var l5 = el('label', null, '代码载体（模块化添加）');
+    var l5 = el('label', null, T('代码载体（模块化添加）'));
     var mods = el('div', 'mods');
     b5.appendChild(l5); b5.appendChild(mods);
 
-    /* 点类型就加一个该类型的模块：类型定下后不能换 */
+    
     var picker = el('div', 'type-tabs type-picker');
     moduleTypes().forEach(function(t){
-      var b = el('button', 'type-tab', '＋ ' + t);
+      var b = el('button', 'type-tab', '＋ ' + typeLabel(t));
       b.type = 'button';
       b.style.setProperty('--c', carrierColor(t));
       b.addEventListener('click', function(){ addModule(t); });
@@ -2340,25 +3008,25 @@ textarea.field{resize:vertical;min-height:64px}
     });
     b5.appendChild(picker);
 
-    var addApiBtn = el('button', 'add-module', '＋ 从 API 库添加 api 载体');
+    var addApiBtn = el('button', 'add-module', T('＋ 从 API 库添加 api 载体'));
     addApiBtn.type = 'button';
     b5.appendChild(addApiBtn);
-    b5.appendChild(el('div', 'hint-line', '点上面的类型就加一个该类型的载体；类型定下后不能换，想换就删掉重加。'));
+    b5.appendChild(el('div', 'hint-line', T('点上面的类型就加一个该类型的载体；类型定下后不能换，想换就删掉重加。')));
     form.appendChild(b5);
 
-    /* 内容实时保存，不需要「保存」按钮 */
-    form.appendChild(el('div', 'form-note', '内容会实时保存，不用手动点保存。填完点上面的「完成」看效果。'));
+    
+    form.appendChild(el('div', 'form-note', T('内容会实时保存，不用手动点保存。填完点上面的「完成」看效果。')));
 
-    /* API 标签渲染（只显示代码） */
+    
     function renderApiTags(){
       tagWrap.innerHTML = '';
       (rec.apis || []).forEach(function(a, i){
-        var code = apiCode(a) || '（已从 API 库删除）';
+        var code = apiCode(a) || T('（已从 API 库删除）');
         var tag = el('span', 'api-tag');
         tag.appendChild(document.createTextNode(code));
         var x = el('button', null, '×');
         x.type = 'button';
-        x.setAttribute('aria-label', '删除 ' + code);
+        x.setAttribute('aria-label', TF('aria_del_code', {code:code}));
         x.addEventListener('click', function(){
           rec.apis.splice(i, 1);
           saveSoon();
@@ -2371,23 +3039,23 @@ textarea.field{resize:vertical;min-height:64px}
     renderApiTags();
 
     pickBtn.addEventListener('click', function(){
-      openApiPicker('apis', rec, null, '选择练习题要求的 API');
+      openApiPicker('apis', rec, null, T('选择练习题要求的 API'));
     });
 
-    /* 载体模块 */
+    
     rec.modules = rec.modules || [];
 
     function renderModules(){
       mods.innerHTML = '';
       if(!rec.modules.length){
         var modsEmpty = el('div', 'empty');
-        modsEmpty.innerHTML = '还没有代码载体。<br>点下面的类型加一个，类型定下后不能换。';
+        modsEmpty.innerHTML = T('还没有代码载体。<br>点下面的类型加一个，类型定下后不能换。');
         mods.appendChild(modsEmpty);
         return;
       }
       rec.modules.forEach(function(m, i){
         mods.appendChild(buildModule(m, i, renderModules, function(){
-          rec.modules.splice(i, 1);   /* 同时删掉数据，刷新后不会回来 */
+          rec.modules.splice(i, 1);   
           saveSoon();
           renderModules();
         }, rec));
@@ -2402,7 +3070,7 @@ textarea.field{resize:vertical;min-height:64px}
     }
 
     addApiBtn.addEventListener('click', function(){
-      openApiPicker('module', rec, null, '选择要引用的 API（api 载体）');
+      openApiPicker('module', rec, null, T('选择要引用的 API（api 载体）'));
     });
 
     return form;
@@ -2414,35 +3082,35 @@ textarea.field{resize:vertical;min-height:64px}
     box.style.setProperty('--carrier-color', color);
 
     var head = el('div', 'module-head');
-    head.appendChild(el('span', 'idx', '步骤 ' + (idx+1)));
-    head.appendChild(chipEl(m.type, color, true));
+    head.appendChild(el('span', 'idx', TF('step_no', {n:idx+1})));
+    head.appendChild(chipEl(typeLabel(m.type), color, true));
     var del = el('button', 'mod-del', '×');
     del.type = 'button';
-    del.setAttribute('aria-label', '删除这个步骤模块');
+    del.setAttribute('aria-label', T('删除这个步骤模块'));
     del.addEventListener('click', function(){ remove(); });
     head.appendChild(del);
     box.appendChild(head);
 
-    /* 载体类型在添加时就定死：这里不再提供类型切换 tab */
+    
 
     if(m.type === 'api'){
-      /* api 载体：只引用 API 库里的条目，内容在库里维护 */      var ref = apiItem(m.refId);
+            var ref = apiItem(m.refId);
       var refBox = el('div', 'api-ref');
       if(ref){
         refBox.appendChild(el('div', 'ref-code', ref.code));
         var rps = normParams(ref.params);
         refBox.appendChild(el('div', 'ref-meta', rps.length
           ? rps.map(function(p){ return (p.no || '') + ' ' + (p.desc || ''); }).join('   ·   ')
-          : '这个 API 没有参数说明'));
+          : T('这个 API 没有参数说明')));
       }else{
-        refBox.appendChild(el('div', 'ref-code ref-gone', '（该 API 已从 API 库删除）'));
-        refBox.appendChild(el('div', 'ref-meta', '点下面的「更换 API」重新挑一个'));
+        refBox.appendChild(el('div', 'ref-code ref-gone', T('（该 API 已从 API 库删除）')));
+        refBox.appendChild(el('div', 'ref-meta', T('点下面的「更换 API」重新挑一个')));
       }
       box.appendChild(refBox);
-      var chg = el('button', 'lib-pick', '更换 API');
+      var chg = el('button', 'lib-pick', T('更换 API'));
       chg.type = 'button';
       chg.addEventListener('click', function(){
-        openApiPicker('one', rec, m, '更换这个 api 载体');
+        openApiPicker('one', rec, m, T('更换这个 api 载体'));
       });
       box.appendChild(chg);
     }else if(m.type === '图片'){
@@ -2466,7 +3134,7 @@ textarea.field{resize:vertical;min-height:64px}
     return box;
   }
 
-  /* ---- api 载体：一行代码 + 参数说明（编号 + 简单描述） ---- */
+  
   function codeArgs(code){
     var s = (code || '').trim();
     var i = s.indexOf('(');
@@ -2477,7 +3145,7 @@ textarea.field{resize:vertical;min-height:64px}
             .filter(function(x){ return x; });
   }
 
-  /* 参数结构归一：兼容旧的纯字符串数组 */
+  
   function normParams(p){
     if(!Array.isArray(p)) return [];
     return p.map(function(x, i){
@@ -2489,13 +3157,13 @@ textarea.field{resize:vertical;min-height:64px}
   }
 
 
-  /* ---- 图片载体 ---- */
+  
   function buildImageField(m, refresh){
     var wrap = el('div', 'mod-media');
 
     var pick = el('label', 'mod-pick');
     pick.appendChild(svgIcon('M3 5.5A1.5 1.5 0 0 1 4.5 4h15A1.5 1.5 0 0 1 21 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z M3 15.5l4.5-4.5 3 3 5-5L21 13'));
-    pick.appendChild(document.createTextNode(m.value ? '换一张图片' : '选择图片'));
+    pick.appendChild(document.createTextNode(m.value ? T('换一张图片') : T('选择图片')));
     var file = el('input', 'hidden-file');
     file.type = 'file';
     file.accept = 'image/*';
@@ -2506,11 +3174,11 @@ textarea.field{resize:vertical;min-height:64px}
       var box = el('div', 'mod-preview');
       var img = document.createElement('img');
       img.src = m.value;
-      img.alt = m.fileName || '练习图片';
+      img.alt = m.fileName || T('练习图片');
       box.appendChild(img);
       if(m.fileName) box.appendChild(el('div', 'mod-file', m.fileName));
       wrap.appendChild(box);
-      var clr = el('button', 'mod-clear', '移除这张图片');
+      var clr = el('button', 'mod-clear', T('移除这张图片'));
       clr.type = 'button';
       clr.addEventListener('click', function(){
         m.value = ''; m.fileName = ''; m.fileSize = 0;
@@ -2519,7 +3187,7 @@ textarea.field{resize:vertical;min-height:64px}
       });
       wrap.appendChild(clr);
     }else{
-      wrap.appendChild(el('div', 'hint-line', '图片会自动缩到 1024px 以内保存，只存在这台设备上。'));
+      wrap.appendChild(el('div', 'hint-line', T('图片会自动缩到 1024px 以内保存，只存在这台设备上。')));
     }
 
     file.addEventListener('change', function(){
@@ -2537,7 +3205,7 @@ textarea.field{resize:vertical;min-height:64px}
     return wrap;
   }
 
-  /* ---- 网络地址类型判断：图片 / 视频 / 普通链接 ---- */
+  
   function mediaKind(url){
     var t = String(url == null ? '' : url).trim().toLowerCase();
     if(!t) return 'none';
@@ -2546,19 +3214,19 @@ textarea.field{resize:vertical;min-height:64px}
     return 'link';
   }
 
-  /* ---- 超链接载体：网络图片预览 / 网络视频播放器 / 普通链接 ---- */
+  
   function buildLinkField(m, refresh){
     var wrap = el('div', 'mod-media');
 
     var inp = el('input', 'field');
     inp.type = 'text';
     inp.inputMode = 'url';
-    inp.placeholder = '网络地址，例如 https://example.com/a.png';
+    inp.placeholder = T('网络地址，例如 https://example.com/a.png');
     inp.dataset.role = 'moduleValue';
     inp.value = m.value || '';
     wrap.appendChild(inp);
 
-    /* 预览单独放一个容器：改地址时只重绘预览，不动输入框（避免丢焦点） */
+    
     var pvHost = el('div', 'link-preview-host');
     function paintPreview(){
       pvHost.innerHTML = '';
@@ -2574,11 +3242,11 @@ textarea.field{resize:vertical;min-height:64px}
       saveSoon();
     });
 
-    wrap.appendChild(el('div', 'hint-line', '图片地址直接预览，视频地址放播放器，其它地址显示成可点的链接。'));
+    wrap.appendChild(el('div', 'hint-line', T('图片地址直接预览，视频地址放播放器，其它地址显示成可点的链接。')));
     return wrap;
   }
 
-  /* 网络媒体预览：图片 → 图，视频 → 播放器，其它 → 空 */
+  
   function linkMedia(m){
     var url = String(m.value || '').trim();
     if(!url) return null;
@@ -2587,12 +3255,12 @@ textarea.field{resize:vertical;min-height:64px}
       var box = el('div', 'mod-preview link-media');
       var img = document.createElement('img');
       img.src = url;
-      img.alt = '网络图片';
+      img.alt = T('网络图片');
       img.loading = 'lazy';
       img.onerror = function(){
         if(img.getAttribute('data-failed')) return;
         img.setAttribute('data-failed', '1');
-        box.appendChild(el('div', 'mod-file', '图片加载失败：' + url));
+        box.appendChild(el('div', 'mod-file', TF('img_fail', {url:url})));
       };
       box.appendChild(img);
       box.appendChild(el('div', 'mod-file', url));
@@ -2608,7 +3276,7 @@ textarea.field{resize:vertical;min-height:64px}
       v.onerror = function(){
         if(v.getAttribute('data-failed')) return;
         v.setAttribute('data-failed', '1');
-        vb.appendChild(el('div', 'mod-file', '视频加载失败：' + url));
+        vb.appendChild(el('div', 'mod-file', TF('vid_fail', {url:url})));
       };
       vb.appendChild(v);
       vb.appendChild(el('div', 'mod-file', url));
@@ -2617,7 +3285,7 @@ textarea.field{resize:vertical;min-height:64px}
     return null;
   }
 
-  /* ---- 着色器载体：顶点着色器 + 片段着色器 两个代码框 ---- */
+  
   function normShader(m){
     var s = (m && m.shader) || {};
     return {
@@ -2645,24 +3313,24 @@ textarea.field{resize:vertical;min-height:64px}
       });
       p.appendChild(ta);
       if(!sh[key].trim()){
-        p.appendChild(el('div', 'hint-line', '留空 = 使用默认着色器代码'));
+        p.appendChild(el('div', 'hint-line', T('留空 = 使用默认着色器代码')));
       }
       return p;
     }
 
-    wrap.appendChild(part('顶点着色器', 'vertex', 'varying vec2 v_texcoord;   // 顶点着色器'));
-    wrap.appendChild(part('片段着色器', 'fragment', 'uniform sampler2D u_texture;   // 片段着色器'));
+    wrap.appendChild(part(T('顶点着色器'), 'vertex', 'varying vec2 v_texcoord;   // 顶点着色器'));
+    wrap.appendChild(part(T('片段着色器'), 'fragment', 'uniform sampler2D u_texture;   // 片段着色器'));
     return wrap;
   }
 
-  /* ---- 图片压缩：最长边 1024px，转 webp/jpeg ---- */
+  
   function shrinkImage(file, cb){
-    if(!/^image\//.test(file.type)){ toast('这不是图片文件'); return; }
+    if(!/^image\//.test(file.type)){ toast(T('这不是图片文件')); return; }
     var reader = new FileReader();
-    reader.onerror = function(){ toast('图片读取失败，换一张试试'); };
+    reader.onerror = function(){ toast(T('图片读取失败，换一张试试')); };
     reader.onload = function(){
       var img = new Image();
-      img.onerror = function(){ toast('这张图片打不开，换一张试试'); };
+      img.onerror = function(){ toast(T('这张图片打不开，换一张试试')); };
       img.onload = function(){
         var MAX = 1024;
         var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
@@ -2711,51 +3379,51 @@ textarea.field{resize:vertical;min-height:64px}
   }
 
   function placeholderFor(type){
-    if(type === 'api') return '函数名，例如 ds_list_create';
-    if(type === '脚本') return '脚本资源名，例如 scr_bag_init';
-    if(type === '对象') return '对象名，例如 obj_player';
-    if(type === '操作描述') return '这一步做了什么，例如：初始化背包列表';
-    if(type === '超链接') return '网络地址，例如 https://example.com/a.png';
+    if(type === 'api') return T('函数名，例如 ds_list_create');
+    if(type === '脚本') return T('脚本资源名，例如 scr_bag_init');
+    if(type === '对象') return T('对象名，例如 obj_player');
+    if(type === '操作描述') return T('这一步做了什么，例如：初始化背包列表');
+    if(type === '超链接') return T('网络地址，例如 https://example.com/a.png');
     if(type === '着色器') return '';
-    return '名称 / 说明';
+    return T('名称 / 说明');
   }
 
-  /* ---- 详情 ---- */
+  
   function buildDetail(rec){
     var box = el('div');
 
-    var h = el('h3', 'detail-title', rec.name || '未命名练习');
+    var h = el('h3', 'detail-title', rec.name || T('未命名练习'));
     box.appendChild(h);
     var t = el('div', 'detail-time',
-      (dateKey(new Date(rec.ts)) === todayKey() ? '今天 ' : dateKey(new Date(rec.ts)) + ' ') + timeText(rec.ts));
+      (dateKey(new Date(rec.ts)) === todayKey() ? T('今天 ') : dateKey(new Date(rec.ts)) + ' ') + timeText(rec.ts));
     box.appendChild(t);
 
-    box.appendChild(detailSec('练习题要求', rec.requirement));
-    box.appendChild(detailSec('练习题提示', rec.hint));
+    box.appendChild(detailSec(T('练习题要求'), rec.requirement));
+    box.appendChild(detailSec(T('练习题提示'), rec.hint));
 
-    /* API（只展示 API 的代码） */
+    
     var apiSec = el('div', 'detail-sec');
-    apiSec.appendChild(el('h4', null, '练习题要求的 API'));
+    apiSec.appendChild(el('h4', null, T('练习题要求的 API')));
     if(rec.apis && rec.apis.length){
       var al = el('div', 'api-list');
       rec.apis.forEach(function(r){
         var code = apiCode(r);
         var s = el('span', 'api-tag');
-        s.appendChild(document.createTextNode(code || '（已从 API 库删除）'));
+        s.appendChild(document.createTextNode(code || T('（已从 API 库删除）')));
         al.appendChild(s);
       });
       apiSec.appendChild(al);
     }else{
-      apiSec.appendChild(el('div', 'detail-body empty-text', '未填写'));
+      apiSec.appendChild(el('div', 'detail-body empty-text', T('未填写')));
     }
     box.appendChild(apiSec);
 
-    /* 代码载体 */
+    
     var cSec = el('div', 'detail-sec');
-    cSec.appendChild(el('h4', null, '用到的代码载体'));
+    cSec.appendChild(el('h4', null, T('用到的代码载体')));
     var mods = rec.modules || [];
     if(mods.length){
-      /* 按创建顺序展示：一步一块，块头标「步骤 N」+ 类型名（不按类型合并） */
+      
       var step = 0;
       mods.forEach(function(m){
         if(!m || !m.type) return;
@@ -2768,17 +3436,17 @@ textarea.field{resize:vertical;min-height:64px}
         var dot = el('span');
         dot.style.cssText = 'width:9px;height:9px;border-radius:50%;background:'+color+';flex:0 0 9px;';
         h2.appendChild(dot);
-        h2.appendChild(el('span', 'stp', '步骤 ' + step));
-        var nm = el('span', 'nm', m.type);
+        h2.appendChild(el('span', 'stp', T('步骤 ') + step));
+        var nm = el('span', 'nm', typeLabel(m.type));
         nm.style.setProperty('--c', color);
         h2.appendChild(nm);
         wrap.appendChild(h2);
         var body = el('div', 'carrier-group-body');
         {
           if(m.type === 'api'){
-            /* api 载体：完整展示（代码 + 参数说明），内容来自 API 库 */
+            
             var ref = apiItem(m.refId);
-            var code = ref ? ref.code : '（该 API 已从 API 库删除）';
+            var code = ref ? ref.code : T('（该 API 已从 API 库删除）');
             body.appendChild(el('div', 'api-code' + (ref ? '' : ' empty'), code));
             var params = ref ? normParams(ref.params) : [];
             if(params.length){
@@ -2786,7 +3454,7 @@ textarea.field{resize:vertical;min-height:64px}
               params.forEach(function(p, i){
                 var row = el('div', 'api-param');
                 row.appendChild(el('span', 'no', p.no || String(i+1)));
-                row.appendChild(el('span', 'txt' + (p.desc ? '' : ' empty'), p.desc || '（未填写）'));
+                row.appendChild(el('span', 'txt' + (p.desc ? '' : ' empty'), p.desc || T('（未填写）')));
                 pl.appendChild(row);
               });
               body.appendChild(pl);
@@ -2798,19 +3466,17 @@ textarea.field{resize:vertical;min-height:64px}
           }else if(m.type === '着色器'){
             body.appendChild(shaderDetail(m, color));
           }else if(m.type === '对象'){
-            /* 对象：对象名 + 预定义变量表 + 事件代码框 */
+            
             body.appendChild(buildObjectDetail(m));
           }else if(isCodeCarrier(m.type)){
-            /* 脚本：暗色代码框（行号 + 自动换行 + 上色 + 复制）；空的不画空框 */
+            
             if((m.value || '').trim()){
               body.appendChild(buildCodeBox(m.value, m.type));
             }else{
-              var emptyItem = el('div', 'carrier-item', '（未填写）');
+              var emptyItem = el('div', 'carrier-item', T('（未填写）'));
               emptyItem.style.setProperty('--c', color);
               body.appendChild(emptyItem);
-            }
-          }else{
-            var it = el('div', 'carrier-item' + (m.type === '操作描述' ? ' plain' : ''), m.value || '（未填写）');
+            } }else{ var it = el('div', 'carrier-item' + (m.type === '操作描述' ? ' plain' : ''), m.value || T('（未填写）'));
             it.style.setProperty('--c', color);
             body.appendChild(it);
           }
@@ -2819,12 +3485,12 @@ textarea.field{resize:vertical;min-height:64px}
         cSec.appendChild(wrap);
       });
     }else{
-      cSec.appendChild(el('div', 'detail-body empty-text', '未添加代码载体'));
+      cSec.appendChild(el('div', 'detail-body empty-text', T('未添加代码载体')));
     }
     box.appendChild(cSec);
 
     var acts = el('div', 'detail-actions');
-    var edit = el('button', 'btn btn-ghost', '编辑这条记录');
+    var edit = el('button', 'btn btn-ghost', T('编辑这条记录'));
     edit.type = 'button';
     edit.addEventListener('click', function(){
       selectedId = null;
@@ -2837,29 +3503,29 @@ textarea.field{resize:vertical;min-height:64px}
     return box;
   }
 
-  /* 详情里的图片预览（按原比例缩放，不裁切不变形） */
+  
   function imagePreview(m, color){
     var box = el('div', 'mod-preview');
     box.style.setProperty('--c', color);
     if(m.value && /^data:image\//.test(m.value)){
       var img = document.createElement('img');
       img.src = m.value;
-      img.alt = m.fileName || '练习图片';
+      img.alt = m.fileName || T('练习图片');
       box.appendChild(img);
       if(m.fileName) box.appendChild(el('div', 'mod-file', m.fileName));
     }else{
-      box.appendChild(el('div', 'mod-file', '未选择图片'));
+      box.appendChild(el('div', 'mod-file', T('未选择图片')));
     }
     return box;
   }
 
-  /* 详情里的超链接：图标 + 地址（网络图片/视频另附预览） */
+  
   function linkRow(m, color){
     var wrap = el('div', 'link-item');
     wrap.style.setProperty('--c', color);
     var url = String(m.value || '').trim();
     if(!url){
-      wrap.appendChild(el('div', 'mod-file', '未填写地址'));
+      wrap.appendChild(el('div', 'mod-file', T('未填写地址')));
       return wrap;
     }
     var kind = mediaKind(url);
@@ -2877,25 +3543,25 @@ textarea.field{resize:vertical;min-height:64px}
     }else{
       row.appendChild(el('span', 'url-plain', url));
     }
-    row.appendChild(el('span', 'link-tag', kind === 'image' ? '图片' : kind === 'video' ? '视频' : '链接'));
+    row.appendChild(el('span', 'link-tag', kind === 'image' ? '图片' : kind === 'video' ? T('视频') : T('链接')));
     wrap.appendChild(row);
     var pv = linkMedia(m);
     if(pv) wrap.appendChild(pv);
     return wrap;
   }
 
-  /* 详情里的着色器：顶点 + 片段 两个代码框，空的写「使用默认着色器代码」 */
+  
   function shaderDetail(m, color){
     var wrap = el('div', 'shader-detail');
     wrap.style.setProperty('--c', color);
     var sh = normShader(m);
-    [['顶点着色器', sh.vertex], ['片段着色器', sh.fragment]].forEach(function(p){
+    [[T('顶点着色器'), sh.vertex], [T('片段着色器'), sh.fragment]].forEach(function(p){
       var blk = el('div', 'shader-part');
       blk.appendChild(el('div', 'shader-part-title', p[0]));
       if(String(p[1] || '').trim()){
         blk.appendChild(buildCodeBox(p[1], 'GLSL'));
       }else{
-        blk.appendChild(el('div', 'carrier-item', '使用默认着色器代码'));
+        blk.appendChild(el('div', 'carrier-item', T('使用默认着色器代码')));
       }
       wrap.appendChild(blk);
     });
@@ -2905,11 +3571,11 @@ textarea.field{resize:vertical;min-height:64px}
   function detailSec(title, val){
     var d = el('div', 'detail-sec');
     d.appendChild(el('h4', null, title));
-    d.appendChild(el('div', 'detail-body' + (val ? '' : ' empty-text'), val || '未填写'));
+    d.appendChild(el('div', 'detail-body' + (val ? '' : ' empty-text'), val || T('未填写')));
     return d;
   }
 
-  /* ================= 交互 ================= */
+  
   function doCheckin(){
     var rec = {
       id: uid(),
@@ -2930,8 +3596,8 @@ textarea.field{resize:vertical;min-height:64px}
     if(nameIn) setTimeout(function(){ nameIn.focus(); }, 320);
   }
 
-  /* ---- 练习过程：二级界面（默认不显示） ---- */
-  /* 宽屏（≥1000px）：分屏模式，练习过程变成右半边的独立应用 */
+  
+  
   var WIDE_MQ = window.matchMedia('(min-width: 1000px)');
   function isWide(){ return WIDE_MQ.matches; }
 
@@ -2943,13 +3609,13 @@ textarea.field{resize:vertical;min-height:64px}
     if(box) box.scrollTop = 0;
   }
   function closeProcess(){
-    /* 编辑中关闭：内容已实时保存，状态落定到详情 */
+    
     if(editingId){
       var rec = findRec(editingId);
       if(rec){ editingId = null; formRecId = null; selectedId = rec.id; save(); renderAll(); }
     }
     if(isWide()){
-      /* 宽屏：面板常驻，关闭 = 清空当前选中，回到空态 */
+      
       selectedId = null; editingId = null; formRecId = null;
       save(); renderAll();
       return;
@@ -2959,7 +3625,7 @@ textarea.field{resize:vertical;min-height:64px}
       document.body.style.overflow = '';
     }
   }
-  /* 编辑态点「完成」：不关弹层，切到详情 */
+  
   function finishEditing(){
     var rec = findRec(editingId);
     if(!rec) return;
@@ -2969,7 +3635,7 @@ textarea.field{resize:vertical;min-height:64px}
     save();
     renderAll();
   }
-  /* 其它弹层关闭时，练习过程还开着就别解锁页面滚动（宽屏面板不占遮罩，不锁） */
+  
   function syncBodyLock(){
     var overlay = $('#shotModal').classList.contains('open') || $('#cardModal').classList.contains('open');
     var proc = !isWide() && $('#processCard').classList.contains('open');
@@ -3013,16 +3679,18 @@ textarea.field{resize:vertical;min-height:64px}
     renderHistory();
   }
 
-  /* ================= 历史记录 ================= */
-  /* 按日期分组展示往期打卡，点某条直接跳到该练习过程 */
+  
+  
   function monthDay(key){
     var p = key.split('-');
-    return (+p[1]) + '月' + (+p[2]) + '日';
+    return TF('month_day', {m:+p[1], d:+p[2]});
   }
+  var WEEK_ZH = ['日','一','二','三','四','五','六'];
+  var WEEK_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   function weekName(key){
     var p = key.split('-');
-    var w = ['日','一','二','三','四','五','六'][new Date(+p[0], +p[1]-1, +p[2]).getDay()];
-    return '周' + w;
+    var i = new Date(+p[0], +p[1]-1, +p[2]).getDay();
+    return state.lang === 'en' ? WEEK_EN[i] : ('周' + WEEK_ZH[i]);
   }
   function daysAgo(key){
     var p = key.split('-');
@@ -3032,28 +3700,28 @@ textarea.field{resize:vertical;min-height:64px}
   }
   function relativeDay(key){
     var n = daysAgo(key);
-    if(n === 0) return '今天';
-    if(n === 1) return '昨天';
-    if(n === 2) return '前天';
-    if(n > 2 && n <= 30) return n + ' 天前';
+    if(n === 0) return T('今天');
+    if(n === 1) return T('昨天');
+    if(n === 2) return T('前天');
+    if(n > 2 && n <= 30) return TF('days_ago', {n:n});
     return '';
   }
 
-  /* ---- 历史记录视图：往期归档 + 日期卡片 + 名称搜索 + 分页 ---- */
-  var HIST_PAGE_SIZE = 10;      /* 每页 10 条 */
-  var histQuery = '';           /* 已提交的名称搜索词（点「搜索」才生效） */
-  var histDate = null;          /* 选中的日期 key，null = 全部日期 */
-  var histPage = 0;             /* 当前页（0 起） */
-  var recView = 'today';        /* 当前卡片视图：today | history */
+  
+  var HIST_PAGE_SIZE = 10;      
+  var histQuery = '';           
+  var histDate = null;          
+  var histPage = 0;             
+  var recView = 'today';        
 
-  /* 往期记录 = 除今天以外的全部记录 */
+  
   function archivedRecords(){
     var k = todayKey();
     return state.records.filter(function(r){ return dateKey(new Date(r.ts)) !== k; })
       .sort(function(a,b){ return b.ts - a.ts; });
   }
 
-  /* 日期卡片条：只列实际打过卡的日期，可左右滑动浏览 */
+  
   function renderHistDates(){
     var box = $('#histDates');
     if(!box) return;
@@ -3067,12 +3735,12 @@ textarea.field{resize:vertical;min-height:64px}
       counts[k]++;
     });
 
-    /* 全部 */
+    
     var all = el('button', 'date-card all' + (histDate === null ? ' active' : ''));
     all.type = 'button';
     all.dataset.hdate = '';
-    all.appendChild(el('span', 'dc-d', '全部'));
-    all.appendChild(el('span', 'dc-m', archivedRecords().length + ' 次'));
+    all.appendChild(el('span', 'dc-d', T('全部')));
+    all.appendChild(el('span', 'dc-m', TF('archived_count', {n:archivedRecords().length})));
     box.appendChild(all);
 
     order.forEach(function(k){
@@ -3081,7 +3749,7 @@ textarea.field{resize:vertical;min-height:64px}
       c.type = 'button';
       c.dataset.hdate = k;
       c.appendChild(el('span', 'dc-d', monthDay(k)));
-      c.appendChild(el('span', 'dc-m', weekName(k) + (rel ? ' · ' + rel : '') + ' · ' + counts[k] + ' 次'));
+      c.appendChild(el('span', 'dc-m', TF('day_card', {day:weekName(k), rel:rel||'', n:counts[k]})));
       box.appendChild(c);
     });
 
@@ -3096,7 +3764,7 @@ textarea.field{resize:vertical;min-height:64px}
     var all = archivedRecords();
     renderHistDates();
 
-    /* 筛选：名称（已提交） + 日期卡片（选中） */
+    
     var q = histQuery.trim().toLowerCase();
     var list = all.filter(function(rec){
       if(histDate && dateKey(new Date(rec.ts)) !== histDate) return false;
@@ -3110,24 +3778,19 @@ textarea.field{resize:vertical;min-height:64px}
     var start = histPage * HIST_PAGE_SIZE;
     var pageRecs = list.slice(start, start + HIST_PAGE_SIZE);
 
-    /* 统计 */
+    
     var dayCount = {}, d;
     all.forEach(function(rec){ dayCount[dateKey(new Date(rec.ts))] = 1; });
     var filtering = !!q || !!histDate;
-    $('#histSub').textContent = filtering
-      ? ('筛出 ' + list.length + ' 条 · 往期共 ' + Object.keys(dayCount).length + ' 天 / ' + all.length + ' 次')
-      : ('往期共 ' + Object.keys(dayCount).length + ' 天 · ' + all.length + ' 次打卡');
+    $('#histSub').textContent = filtering ? TF('hist_filtered', {n:list.length, d:Object.keys(dayCount).length, t:all.length}) : TF('hist_total', {d:Object.keys(dayCount).length, t:all.length});
 
-    /* 空态：没有往期记录 vs 筛选无结果 */
+    
     var noHist = all.length === 0;
     var noMatch = !noHist && list.length === 0;
     $('#histEmpty').style.display = (noHist || noMatch) ? '' : 'none';
-    $('#histEmpty').innerHTML = noHist
-      ? '还没有往期记录。<br>今天的打卡会留在「打卡明细」里，明天这里才有内容。'
-      : (q ? ('没有名称含「' + histQuery.trim() + '」的往期记录。')
-            : '这一天没有往期记录。');
+    $('#histEmpty').innerHTML = noHist ? T('还没有往期记录。<br>今天的打卡会留在「打卡明细」里，明天这里才有内容。') : (q ? TF('hist_no_name', {q:histQuery.trim()}) : T('这一天没有往期记录。'));
 
-    /* 按日期分组渲染当前页 */
+    
     var groups = {}, order = [];
     pageRecs.forEach(function(rec){
       d = dateKey(new Date(rec.ts));
@@ -3141,12 +3804,12 @@ textarea.field{resize:vertical;min-height:64px}
 
       var head = el('div', 'hist-day-head');
       var dateEl = el('span', 'hist-day-date', monthDay(k) + ' ' + weekName(k));
-      dateEl.title = '按这一天筛选';
+      dateEl.title = T('按这一天筛选');
       dateEl.dataset.hday = k;
       head.appendChild(dateEl);
       var rel = relativeDay(k);
       if(rel) head.appendChild(el('span', 'hist-day-tag', rel));
-      head.appendChild(el('span', 'hist-day-n', recs.length + ' 次'));
+      head.appendChild(el('span', 'hist-day-n', TF('hist_day_count', {n:recs.length})));
       day.appendChild(head);
 
       recs.forEach(function(rec){
@@ -3156,7 +3819,7 @@ textarea.field{resize:vertical;min-height:64px}
         main.type = 'button';
         main.dataset.hselect = rec.id;
         main.appendChild(el('span', 'hist-time', timeText(rec.ts)));
-        main.appendChild(el('span', 'hist-name', rec.name || '未命名练习'));
+        main.appendChild(el('span', 'hist-name', rec.name || T('未命名练习')));
 
         var meta = el('div', 'hist-meta');
         var types = recTypes(rec);
@@ -3165,7 +3828,7 @@ textarea.field{resize:vertical;min-height:64px}
           c0.style.setProperty('--chip-fg', '#909090');
           c0.style.setProperty('--chip-bg', '#2b2b2b');
           c0.style.setProperty('--chip-bd', '#383838');
-          c0.textContent = '待填写';
+          c0.textContent = T('待填写');
           meta.appendChild(c0);
         }else{
           types.forEach(function(t){ meta.appendChild(chipEl(t, carrierColor(t), true)); });
@@ -3185,8 +3848,8 @@ textarea.field{resize:vertical;min-height:64px}
         var del = el('button', 'del', '×');
         del.type = 'button';
         del.dataset.hdel = rec.id;
-        del.setAttribute('aria-label', '撤销这条记录');
-        del.title = '撤销';
+        del.setAttribute('aria-label', T('撤销这条记录'));
+        del.title = T('撤销');
         item.appendChild(del);
 
         day.appendChild(item);
@@ -3195,11 +3858,11 @@ textarea.field{resize:vertical;min-height:64px}
       box.appendChild(day);
     });
 
-    /* 分页条 */
+    
     var pager = $('#histPager');
     pager.innerHTML = '';
     if(pages > 1){
-      var prev = el('button', '', '‹ 上一页');
+      var prev = el('button', '', T('‹ 上一页'));
       prev.type = 'button';
       prev.disabled = histPage === 0;
       prev.addEventListener('click', function(){ histPage--; renderHistory(); });
@@ -3207,7 +3870,7 @@ textarea.field{resize:vertical;min-height:64px}
 
       pager.appendChild(el('span', 'pg-now', (histPage + 1) + ' / ' + pages));
 
-      var next = el('button', '', '下一页 ›');
+      var next = el('button', '', T('下一页 ›'));
       next.type = 'button';
       next.disabled = histPage >= pages - 1;
       next.addEventListener('click', function(){ histPage++; renderHistory(); });
@@ -3215,19 +3878,19 @@ textarea.field{resize:vertical;min-height:64px}
     }
   }
 
-  /* 切换「练习记录」卡片视图 */
+  
   function switchRecView(v){
     recView = (v === 'history') ? 'history' : 'today';
     var isHist = recView === 'history';
     $('#todayPane').style.display = isHist ? 'none' : '';
     $('#historyPane').style.display = isHist ? '' : 'none';
-    $('#recCardTitle').textContent = isHist ? '历史记录' : '练习记录';
-    $('#recCardHint').textContent = isHist ? '往期归档在这里' : '点一次 = 一次打卡';
-    $('#histBtnText').textContent = isHist ? '返回打卡明细' : '历史记录';
+    $('#recCardTitle').textContent = isHist ? T('历史记录') : T('练习记录');
+    $('#recCardHint').textContent = isHist ? T('往期归档在这里') : T('点一次 = 一次打卡');
+    $('#histBtnText').textContent = isHist ? T('返回打卡明细') : T('历史记录');
     $('#histBtnIcon').innerHTML = isHist
       ? '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>'
       : '<path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/>';
-    $('#histBtn').title = isHist ? '回到今天的打卡明细' : '查看往期的打卡记录';
+    $('#histBtn').title = isHist ? T('回到今天的打卡明细') : T('查看往期的打卡记录');
     if(isHist) renderHistory();
   }
 
@@ -3235,7 +3898,7 @@ textarea.field{resize:vertical;min-height:64px}
     switchRecView(recView === 'history' ? 'today' : 'history');
   });
 
-  /* 名称搜索：输入不自动生效，点「搜索」（或回车）才提交 */
+  
   function submitHistSearch(){
     histQuery = $('#histSearch').value;
     histPage = 0;
@@ -3246,7 +3909,7 @@ textarea.field{resize:vertical;min-height:64px}
     if(e.key === 'Enter'){ e.preventDefault(); submitHistSearch(); }
   });
 
-  /* 日期卡片：点一下才按那天筛选 */
+  
   $('#histDates').addEventListener('click', function(e){
     var card = e.target.closest ? e.target.closest('[data-hdate]') : null;
     if(!card) return;
@@ -3260,7 +3923,7 @@ textarea.field{resize:vertical;min-height:64px}
     var dayEl = e.target.closest ? e.target.closest('[data-hday]') : null;
     if(dayEl){
       var k = dayEl.getAttribute('data-hday');
-      histDate = (histDate === k) ? null : k;   /* 再点一次取消筛选 */
+      histDate = (histDate === k) ? null : k;   
       histPage = 0;
       renderHistory();
       return;
@@ -3278,7 +3941,7 @@ textarea.field{resize:vertical;min-height:64px}
     }
   });
 
-  /* ---- API 库：搜索 / 新建 / 展开 / 引用 ---- */
+  
   $('#libSearch').addEventListener('input', function(){
     libQuery = this.value;
     renderApiLib();
@@ -3288,7 +3951,7 @@ textarea.field{resize:vertical;min-height:64px}
   document.addEventListener('click', function(e){
     var t = e.target;
 
-    /* 库条目：展开 / 收起「使用了这个 API 的练习」 */
+    
     var openBtn = t.closest ? t.closest('[data-libopen]') : null;
     if(openBtn){
       var id = openBtn.getAttribute('data-libopen');
@@ -3306,7 +3969,7 @@ textarea.field{resize:vertical;min-height:64px}
       deleteApiItem(delBtn2.getAttribute('data-libdel'));
       return;
     }
-    /* 库条目里点某条练习 → 打开它的练习过程 */
+    
     var openRecBtn = t.closest ? t.closest('[data-openrec]') : null;
     if(openRecBtn){
       selectedId = openRecBtn.getAttribute('data-openrec');
@@ -3318,7 +3981,7 @@ textarea.field{resize:vertical;min-height:64px}
     }
   });
 
-  /* ---- API 编辑弹层 ---- */
+  
   $('#apiModalClose').addEventListener('click', closeApiModal);
   $('#apiModalCancel').addEventListener('click', closeApiModal);
   $('#apiModalSave').addEventListener('click', saveApiModal);
@@ -3333,7 +3996,7 @@ textarea.field{resize:vertical;min-height:64px}
     if(e.target === this) closeApiModal();
   });
 
-  /* ---- API 选择弹层 ---- */
+  
   $('#apiPickerClose').addEventListener('click', closeApiPicker);
   $('#apiPickerCancel').addEventListener('click', closeApiPicker);
   $('#apiPickerOk').addEventListener('click', confirmApiPicker);
@@ -3347,7 +4010,7 @@ textarea.field{resize:vertical;min-height:64px}
   document.addEventListener('click', function(e){
     var t = e.target;
 
-    /* 详情里的图片：点一下全屏看大图 */
+    
     var bigImg = t.closest ? t.closest('#processBody .mod-preview img') : null;
     if(bigImg){ openLightbox(bigImg.src, bigImg.alt); return; }
 
@@ -3372,7 +4035,7 @@ textarea.field{resize:vertical;min-height:64px}
     renderRecords();
   });
 
-  /* 昵称编辑 */
+  
   function openNick(){
     $('#nickEdit').style.display = 'flex';
     $('#nickInput').value = state.nickname;
@@ -3397,10 +4060,10 @@ textarea.field{resize:vertical;min-height:64px}
     if(e.key === 'Enter'){ e.preventDefault(); $('#nickSave').click(); }
   });
 
-  /* ================= 图片放大 ================= */
+  
   function openLightbox(src, alt){
     $('#lightboxImg').src = src;
-    $('#lightboxImg').alt = alt || '放大查看';
+    $('#lightboxImg').alt = alt || T('放大查看');
     $('#lightbox').classList.add('open');
     document.body.style.overflow = 'hidden';
   }
@@ -3416,7 +4079,7 @@ textarea.field{resize:vertical;min-height:64px}
     if(e.key === 'Escape') closeLightbox();
   });
 
-  /* ================= 练习过程截图 ================= */
+  
   function loadImage(src){
     return new Promise(function(resolve){
       var im = new Image();
@@ -3436,7 +4099,7 @@ textarea.field{resize:vertical;min-height:64px}
     if(window.__gml) window.__gml.lastShotCodeRows = [];
 
     return (async function(){
-      /* 预加载图片载体（要等解码完才能画） */
+      
       var imgMap = {};
       var mods = rec.modules || [];
       for(var i=0;i<mods.length;i++){
@@ -3451,23 +4114,23 @@ textarea.field{resize:vertical;min-height:64px}
       mcv.width = W; mcv.height = 10;
       var mctx = mcv.getContext('2d');
 
-      /* ---- 头部：名称 + 时间 ---- */
+      
       blocks.push({ h:134, draw:function(ctx, y){
         ctx.fillStyle = '#8f8f8f'; ctx.font = '400 24px ' + FF;
         var head = SITE_NAME + ' · ' + longDate();
         ctx.fillText(head, X, y+24); texts.push(head);
         ctx.fillStyle = '#f0f0f0'; ctx.font = '700 46px ' + FF;
-        var nm = truncate(ctx, rec.name || '未命名练习', CW);
+        var nm = truncate(ctx, rec.name || T('未命名练习'), CW);
         ctx.fillText(nm, X, y+86); texts.push(nm);
         ctx.fillStyle = '#a0a0a0'; ctx.font = '400 24px ' + FF;
-        var tm = (dateKey(new Date(rec.ts)) === todayKey() ? '今天 ' : dateKey(new Date(rec.ts)) + ' ') + timeText(rec.ts);
+        var tm = (dateKey(new Date(rec.ts)) === todayKey() ? T('今天 ') : dateKey(new Date(rec.ts)) + ' ') + timeText(rec.ts);
         ctx.fillText(tm, X, y+124); texts.push(tm);
       }});
 
-      /* ---- 练习题要求 / 练习题提示 ---- */
+      
       [
-        { title:'练习题要求', body:rec.requirement, size:26, lines:6, color:'#c0c0c0', weight:'500' },
-        { title:'练习题提示', body:rec.hint,     size:24, lines:4, color:'#909090', weight:'400' }
+        { title:T('练习题要求'), body:rec.requirement, size:26, lines:6, color:'#c0c0c0', weight:'500' },
+        { title:T('练习题提示'), body:rec.hint,     size:24, lines:4, color:'#909090', weight:'400' }
       ].forEach(function(sec){
         mctx.font = sec.weight + ' ' + sec.size + 'px ' + FF;
         var lines = sec.body ? wrapText(mctx, sec.body, CW-36, sec.lines) : [];
@@ -3486,8 +4149,8 @@ textarea.field{resize:vertical;min-height:64px}
         });
       });
 
-      /* ---- 练习题要求的 API ---- */
-      var apiChips = (rec.apis || []).map(function(r){ return apiCode(r) || '（已从 API 库删除）'; });
+      
+      var apiChips = (rec.apis || []).map(function(r){ return apiCode(r) || T('（已从 API 库删除）'); });
       if(apiChips.length){
         mctx.font = '500 22px ' + MF;
         var apiRows = [], cur = [], curW = 0;
@@ -3500,7 +4163,7 @@ textarea.field{resize:vertical;min-height:64px}
         if(cur.length) apiRows.push(cur);
         blocks.push({ h:30 + apiRows.length*52, draw:function(ctx, y){
           ctx.fillStyle = '#8f8f8f'; ctx.font = '600 23px ' + FF;
-          ctx.fillText('练习题要求的 API', X, y+22); texts.push('练习题要求的 API');
+          ctx.fillText(T('练习题要求的 API'), X, y+22); texts.push(T('练习题要求的 API'));
           var ry = y+38;
           apiRows.forEach(function(row){
             var rx = X;
@@ -3516,12 +4179,12 @@ textarea.field{resize:vertical;min-height:64px}
         }});
       }
 
-      /* ---- 用到的代码载体（按创建顺序，一步一块） ---- */
+      
       var stpNo = 0;
       mods.forEach(function(m){
         if(!m || !m.type) return;
         stpNo++;
-        /* 画布是最后统一绘制的，步号必须在这里存快照，否则所有块都画最后一个号 */
+        
         var stepNo = stpNo;
         var color = carrierColor(m.type);
         var inner = [];
@@ -3537,7 +4200,7 @@ textarea.field{resize:vertical;min-height:64px}
             inner.push({ kind:'img', m:m, im:im, w:iw, h:ih });
           }else if(m.type === 'api'){
             var ref = apiItem(m.refId);
-            inner.push({ kind:'api', m:m, code: ref ? ref.code : '（该 API 已从 API 库删除）',
+            inner.push({ kind:'api', m:m, code: ref ? ref.code : T('（该 API 已从 API 库删除）'),
                          params: ref ? normParams(ref.params) : [] });
           }else if(m.type === '超链接'){
             inner.push({ kind:'link', m:m, url:String(m.value || '').trim(),
@@ -3561,10 +4224,10 @@ textarea.field{resize:vertical;min-height:64px}
           else if(it.kind === 'api') it.rowH = 32 + it.params.length*28 + 12;
           else if(it.kind === 'link') it.rowH = 46;
           else if(it.kind === 'shader'){
-            /* 着色器：顶点 + 片段 两个代码框，空的写「使用默认着色器代码」 */
+            
             it.parts = [];
             var shH = 0;
-            [['顶点着色器', it.vertex], ['片段着色器', it.fragment]].forEach(function(p){
+            [[T('顶点着色器'), it.vertex], [T('片段着色器'), it.fragment]].forEach(function(p){
               if(String(p[1] || '').trim()){
                 var mm = measureCodeBlock(mctx, CW-36, p[1], 22);
                 it.parts.push({ title:p[0], meta:mm, code:p[1] });
@@ -3577,7 +4240,7 @@ textarea.field{resize:vertical;min-height:64px}
             it.rowH = shH;
           }
           else if(it.kind === 'code'){
-            /* 暗色代码框：按像素宽度软换行，行号只标在逻辑行首；空的不画空框 */
+            
             if((it.m.value || '').trim()){
               it.meta = measureCodeBlock(mctx, CW-36, it.m.value || '', 22);
               it.rowH = it.meta.h;
@@ -3587,7 +4250,7 @@ textarea.field{resize:vertical;min-height:64px}
             }
           }
           else if(it.kind === 'object'){
-            /* 对象：对象名 + 预定义变量表 + 事件代码框 */
+            
             var oh = 40;
             if(it.fields.length) oh += 34*(it.fields.length + 1) + 16;
             it.evMeta = [];
@@ -3610,11 +4273,11 @@ textarea.field{resize:vertical;min-height:64px}
           ctx.fillStyle = color;
           ctx.beginPath(); ctx.arc(X+28, y+30, 7, 0, Math.PI*2); ctx.fill();
           ctx.fillStyle = color; ctx.font = '700 24px ' + FF;
-          var typeW = ctx.measureText(m.type).width;
-          ctx.fillText(m.type, X+46, y+38); texts.push(m.type);
+          var typeW = ctx.measureText(typeLabel(m.type)).width;
+          ctx.fillText(typeLabel(m.type), X+46, y+38); texts.push(typeLabel(m.type));
           ctx.fillStyle = '#8f8f8f'; ctx.font = '600 21px ' + FF;
-          ctx.fillText('步骤 ' + stepNo, X+46 + typeW + 14, y+38);
-          texts.push('步骤 ' + stepNo);
+          ctx.fillText(TF('step_no', {n:stepNo}), X+46 + typeW + 14, y+38);
+          texts.push(TF('step_no', {n:stepNo}));
 
           var iy = y+46;
           inner.forEach(function(it){
@@ -3630,18 +4293,18 @@ textarea.field{resize:vertical;min-height:64px}
               }
             }else if(it.kind === 'api'){
               ctx.fillStyle = '#f0f0f0'; ctx.font = '500 22px ' + MF;
-              var code = it.code || '（未填代码）';
+              var code = it.code || T('（未填代码）');
               ctx.fillText(truncate(ctx, code, CW-60), X+26, iy+24); texts.push(code);
               it.params.forEach(function(p, pi){
                 var noTxt = p.no || String(pi+1);
                 ctx.fillStyle = color; ctx.font = '700 18px ' + FF;
                 ctx.fillText(noTxt, X+26, iy+54+pi*28);
-                /* 编号宽度按实际文字量，描述跟着往后挪，避免长编号压住描述 */
+                
                 var noW = ctx.measureText(noTxt).width;
                 var dx = Math.max(X+74, X+26 + noW + 14);
                 ctx.fillStyle = '#909090'; ctx.font = '400 20px ' + FF;
-                ctx.fillText(truncate(ctx, p.desc || '（未填写）', (X+CW-24) - dx), dx, iy+54+pi*28);
-                texts.push(p.desc || '（未填写）');
+                ctx.fillText(truncate(ctx, p.desc || T('（未填写）'), (X+CW-24) - dx), dx, iy+54+pi*28);
+                texts.push(p.desc || T('（未填写）'));
               });
             }else if(it.kind === 'link'){
               ctx.strokeStyle = color; ctx.lineWidth = 2;
@@ -3650,11 +4313,11 @@ textarea.field{resize:vertical;min-height:64px}
               ctx.moveTo(X+26, iy+15); ctx.lineTo(X+54, iy+15);
               ctx.stroke();
               ctx.fillStyle = '#909090'; ctx.font = '400 22px ' + MF;
-              var zn = it.url || '未填写地址';
-              var ztag = it.linkKind === 'image' ? '（图片）' : it.linkKind === 'video' ? '（视频）' : '';
+              var zn = it.url || T('未填写地址');
+              var ztag = it.linkKind === 'image' ? T('（图片）') : it.linkKind === 'video' ? T('（视频）') : '';
               ctx.fillText(truncate(ctx, zn + ztag, CW-150), X+68, iy+28); texts.push(zn + ztag);
             }else if(it.kind === 'shader'){
-              /* 着色器：顶点 + 片段 两个代码框 */
+              
               var sxb = X+18, swb = CW-36, soy = iy;
               it.parts.forEach(function(p){
                 ctx.font = '600 18px ' + FF;
@@ -3665,8 +4328,8 @@ textarea.field{resize:vertical;min-height:64px}
                 if(p.empty){
                   ctx.font = '400 21px ' + FF;
                   ctx.fillStyle = '#8f8f8f';
-                  ctx.fillText('使用默认着色器代码', sxb+10, soy+24);
-                  texts.push('使用默认着色器代码');
+                  ctx.fillText(T('使用默认着色器代码'), sxb+10, soy+24);
+                  texts.push(T('使用默认着色器代码'));
                   soy += 34 + 12;
                 }else{
                   var ehh = drawCodeBlock(ctx, sxb, soy, swb, p.code, 22);
@@ -3675,36 +4338,36 @@ textarea.field{resize:vertical;min-height:64px}
                 }
               });
             }else if(it.kind === 'code'){
-              /* 暗色代码框 + 行号 + 上色（折行不增加行号） */
+              
               if(it.empty){
                 ctx.font = '400 21px ' + FF;
                 ctx.fillStyle = '#8f8f8f';
-                ctx.fillText('（未填写）', X+26, iy+26);
-                texts.push('（未填写）');
+                ctx.fillText(T('（未填写）'), X+26, iy+26);
+                texts.push(T('（未填写）'));
               }else{
                 it.lines.forEach(function(ln){ texts.push(ln); });
                 drawCodeBlock(ctx, X+18, iy, CW-36, it.m.value || '', 22);
               }
             }else if(it.kind === 'object'){
-              /* 对象：对象名 + 变量表 + 事件代码框 */
+              
               var bx = X+18, bw = CW-36;
               ctx.font = '600 22px ' + MF;
               ctx.fillStyle = '#f0f0f0';
-              var onm = it.m.value || '（未填写对象名）';
+              var onm = it.m.value || T('（未填写对象名）');
               ctx.fillText(truncate(ctx, onm, bw), bx, iy+24);
               texts.push(onm);
               var oy = iy + 40;
               if(it.fields.length){
-                /* 行式：表头一行（变量名 | 参数 | 说明），下面每行一个变量 */
+                
                 var rowH = 34;
                 var colX = [0, 0.30, 0.56];
                 var tW = bw;
                 ctx.font = '500 18px ' + FF;
                 ctx.fillStyle = '#8f8f8f';
-                ['变量名','参数','说明'].forEach(function(lab, ci){
+                [T('变量名'),T('参数'),T('说明')].forEach(function(lab, ci){
                   ctx.fillText(lab, bx + tW*colX[ci] + 10, oy + 22);
                 });
-                /* 表头底 + 网格线 */
+                
                 ctx.strokeStyle = '#3f3f3f';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(bx+0.5, oy+0.5, tW-1, rowH*(it.fields.length+1)-1);
@@ -3723,8 +4386,8 @@ textarea.field{resize:vertical;min-height:64px}
               it.events.forEach(function(ev, ei){
                 ctx.font = '600 18px ' + FF;
                 ctx.fillStyle = '#8f8f8f';
-                ctx.fillText(ev.name || '事件', bx, oy+14);
-                texts.push(ev.name || '事件');
+                ctx.fillText(ev.name || T('事件'), bx, oy+14);
+                texts.push(ev.name || T('事件'));
                 oy += 26;
                 var eh = drawCodeBlock(ctx, bx, oy, bw, ev.code || '', 22);
                 (ev.code || '').split('\n').forEach(function(ln){ texts.push(ln); });
@@ -3734,7 +4397,7 @@ textarea.field{resize:vertical;min-height:64px}
               var plain = (m.type === '操作描述');
               ctx.fillStyle = '#c0c0c0';
               ctx.font = (plain?'400 ':'500 ') + '22px ' + (plain?FF:MF);
-              var tv = it.m.value || '（未填写）';
+              var tv = it.m.value || T('（未填写）');
               ctx.fillText(truncate(ctx, tv, CW-60), X+26, iy+28); texts.push(tv);
             }
             iy += it.rowH;
@@ -3742,7 +4405,7 @@ textarea.field{resize:vertical;min-height:64px}
         }});
       });
 
-      /* ---- 底部 ---- */
+      
       blocks.push({ h:96, draw:function(ctx, y){
         ctx.strokeStyle = '#2e2e2e'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(X, y+8); ctx.lineTo(X+CW, y+8); ctx.stroke();
@@ -3753,13 +4416,13 @@ textarea.field{resize:vertical;min-height:64px}
         ctx.fillText('G', X+17, y+48);
         ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
         ctx.fillStyle = '#8f8f8f'; ctx.font = '400 22px ' + FF;
-        ctx.fillText('每一次练习都算数 · ' + SITE_NAME, X+48, y+54);
+        ctx.fillText(TF('footer_line', {site:SITE_NAME}), X+48, y+54);
         ctx.textAlign = 'right';
         ctx.fillText(state.nickname || DEFAULT_NICK, X+CW, y+54);
         ctx.textAlign = 'left';
       }});
 
-      /* ---- 画布 ---- */
+      
       var H = PAD*2;
       blocks.forEach(function(b){ H += b.h + GAP; });
       var cv = document.createElement('canvas');
@@ -3808,10 +4471,10 @@ textarea.field{resize:vertical;min-height:64px}
     return null;
   }
 
-  /* 编辑中：把输入框当前的值同步到记录（只改内存，不落盘），保证截图跟看到的一致 */
+  
   function syncFormValues(){
     if(!editingId) return;
-    if(formRecId !== editingId) return;   /* 表单不是这条记录的，别乱写 */
+    if(formRecId !== editingId) return;   
     var rec = findRec(editingId);
     if(!rec) return;
     var nameIn = $('[data-field="name"]');
@@ -3824,7 +4487,7 @@ textarea.field{resize:vertical;min-height:64px}
 
   function refreshShot(){
     var rec = currentShotRec();
-    if(!rec){ toast('先选一条记录，或点「打卡一次」新建一条'); return Promise.resolve(false); }
+    if(!rec){ toast(T('先选一条记录，或点「打卡一次」新建一条')); return Promise.resolve(false); }
     syncFormValues();
     return buildPracticeShot(rec).then(function(cv){
       shotCanvas.width = cv.width;
@@ -3854,16 +4517,16 @@ textarea.field{resize:vertical;min-height:64px}
   });
   $('#shotSave').addEventListener('click', function(){
     var url = shotCanvas.toDataURL('image/png');
-    if(!url || url.length < 100){ toast('还没有生成截图'); return; }
+    if(!url || url.length < 100){ toast(T('还没有生成截图')); return; }
     var a = document.createElement('a');
     a.href = url;
-    a.download = 'gml-练习过程-' + todayKey() + '.png';
+    a.download = 'gml-practice-' + todayKey() + '.png';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
   });
 
-  /* ================= 挑战记录卡 ================= */
+  
   function roundRect(ctx,x,y,w,h,r){
     ctx.beginPath();
     ctx.moveTo(x+r,y);
@@ -3879,7 +4542,7 @@ textarea.field{resize:vertical;min-height:64px}
     while(s.length > 1 && ctx.measureText(s+'…').width > maxW) s = s.slice(0,-1);
     return s + '…';
   }
-  /* 按像素宽度折行，最多 maxLines 行，超出加省略号 */
+  
   function wrapText(ctx, text, maxW, maxLines){
     var lines = [];
     var s = String(text == null ? '' : text).replace(/\r/g, '').trim();
@@ -3923,11 +4586,11 @@ textarea.field{resize:vertical;min-height:64px}
     var statsTop = headerBottom + 44;
     var statsH = 108;
 
-    /* 焦点记录：正在编辑 > 今天最近的一道有题面的 > 选中的 > 今天最后一条 */
-    var focus = null, focusLabel = '本次练习';
+    
+    var focus = null, focusLabel = T('本次练习');
     if(editingId){
       focus = findRec(editingId);
-      if(focus) focusLabel = '正在记录';
+      if(focus) focusLabel = T('正在记录');
     }
     if(!focus){
       for(var fi=shown.length-1; fi>=0; fi--){
@@ -3936,7 +4599,7 @@ textarea.field{resize:vertical;min-height:64px}
     }
     if(!focus && selectedId){
       focus = findRec(selectedId);
-      if(focus) focusLabel = '选中练习';
+      if(focus) focusLabel = T('选中练习');
     }
     if(!focus && shown.length) focus = shown[shown.length-1];
 
@@ -3966,7 +4629,7 @@ textarea.field{resize:vertical;min-height:64px}
     var listTitleTop = sectionTop;
     var rowsTop = listTitleTop + 62;
 
-    /* 记录行：带练习题摘录的行更高 */
+    
     var rowInfo = shown.map(function(rec){
       var excerpt = rec.requirement || rec.hint || '';
       return { rec: rec, excerpt: excerpt, h: excerpt ? 122 : 84 };
@@ -3977,9 +4640,9 @@ textarea.field{resize:vertical;min-height:64px}
     var cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     var ctx = cv.getContext('2d');
-    var texts = [];   /* 画进卡片里的文字，供自检断言用 */
+    var texts = [];   
 
-    /* 背景 */
+    
     var g = ctx.createLinearGradient(0,0,W,H);
     g.addColorStop(0, '#2f3a48');
     g.addColorStop(0.55, '#26303c');
@@ -3987,7 +4650,7 @@ textarea.field{resize:vertical;min-height:64px}
     ctx.fillStyle = g;
     ctx.fillRect(0,0,W,H);
 
-    /* 白卡 */
+    
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,.30)';
     ctx.shadowBlur = 46;
@@ -3997,7 +4660,7 @@ textarea.field{resize:vertical;min-height:64px}
     ctx.fill();
     ctx.restore();
 
-    /* 头部：G 头像 */
+    
     ctx.save();
     ctx.shadowColor = 'rgba(74,144,226,.50)';
     ctx.shadowBlur = 20;
@@ -4029,11 +4692,11 @@ textarea.field{resize:vertical;min-height:64px}
     ctx.lineTo(W-X, headerBottom);
     ctx.stroke();
 
-    /* 统计三格 */
+    
     var tiles = [
-      { k:'今日合计', v:String(today.length), u:'次' },
-      { k:'已挑战次数', v:String(state.records.length), u:'次' },
-      { k:'连续天数', v:String(streakDays()), u:'天' }
+      { k:T('今日合计'), v:String(today.length), u:T('次') },
+      { k:T('已挑战次数'), v:String(state.records.length), u:T('次') },
+      { k:T('连续天数'), v:String(streakDays()), u:T('天') }
     ];
     var tw = (CW - 18*2)/3;
     tiles.forEach(function(t, i){
@@ -4049,14 +4712,14 @@ textarea.field{resize:vertical;min-height:64px}
       ctx.font = '700 38px ' + FF;
       ctx.textAlign = 'center';
       ctx.fillText(t.v, x+tw/2, statsTop+82);
-      var vw = ctx.measureText(t.v).width;   /* 在数字字号下量宽，再画单位 */
+      var vw = ctx.measureText(t.v).width;   
       ctx.fillStyle = '#7e7e7e';
       ctx.font = '400 19px ' + FF;
       ctx.fillText(t.u, x+tw/2 + vw/2 + 9, statsTop+82);
     });
     ctx.textAlign = 'left';
 
-    /* 本次练习：把练习题完整截取进卡片 */
+    
     if(focusBox){
       var f = focusBox;
       var fy = statsTop + statsH + 40;
@@ -4077,7 +4740,7 @@ textarea.field{resize:vertical;min-height:64px}
 
       ctx.fillStyle = '#f0f0f0';
       ctx.font = '700 28px ' + FF;
-      var fName = truncate(ctx, f.rec.name || '未命名练习', f.textW + f.labelW);
+      var fName = truncate(ctx, f.rec.name || T('未命名练习'), f.textW + f.labelW);
       ctx.fillText(fName, tx, ty+52);
       texts.push(fName);
 
@@ -4086,7 +4749,7 @@ textarea.field{resize:vertical;min-height:64px}
         ly += 10;
         ctx.fillStyle = '#8f8f8f';
         ctx.font = '600 22px ' + FF;
-        ctx.fillText('要求', tx, ly+22);
+        ctx.fillText(T('要求'), tx, ly+22);
         ctx.fillStyle = '#c0c0c0';
         ctx.font = '500 24px ' + FF;
         f.req.forEach(function(line, i){
@@ -4099,7 +4762,7 @@ textarea.field{resize:vertical;min-height:64px}
         ly += 10;
         ctx.fillStyle = '#8f8f8f';
         ctx.font = '600 22px ' + FF;
-        ctx.fillText('提示', tx, ly+22);
+        ctx.fillText(T('提示'), tx, ly+22);
         ctx.fillStyle = '#909090';
         ctx.font = '400 22px ' + FF;
         f.hint.forEach(function(line, i){
@@ -4109,10 +4772,10 @@ textarea.field{resize:vertical;min-height:64px}
       }
     }
 
-    /* 今日挑战 */
+    
     ctx.fillStyle = '#f0f0f0';
     ctx.font = '700 32px ' + FF;
-    ctx.fillText('今日挑战', X, listTitleTop+38);
+    ctx.fillText(T('今日挑战'), X, listTitleTop+38);
     ctx.strokeStyle = '#2e2e2e';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -4120,7 +4783,7 @@ textarea.field{resize:vertical;min-height:64px}
     ctx.lineTo(W-X, listTitleTop+62);
     ctx.stroke();
 
-    /* 记录行 */
+    
     if(!rowInfo.length){
       ctx.fillStyle = '#333333';
       roundRect(ctx, X, rowsTop, CW, 76, 16);
@@ -4128,7 +4791,7 @@ textarea.field{resize:vertical;min-height:64px}
       ctx.fillStyle = '#8f8f8f';
       ctx.font = '400 26px ' + FF;
       ctx.textAlign = 'center';
-      ctx.fillText('今天还没有挑战记录', W/2, rowsTop+47);
+      ctx.fillText(T('今天还没有挑战记录'), W/2, rowsTop+47);
       ctx.textAlign = 'left';
     }else{
       var ry = rowsTop;
@@ -4148,7 +4811,7 @@ textarea.field{resize:vertical;min-height:64px}
 
         ctx.fillStyle = '#f0f0f0';
         ctx.font = '600 28px ' + FF;
-        var rowName = truncate(ctx, rec.name || '未命名练习', CW-330);
+        var rowName = truncate(ctx, rec.name || T('未命名练习'), CW-330);
         ctx.fillText(rowName, X+26, y+42);
         texts.push(rowName);
 
@@ -4156,8 +4819,8 @@ textarea.field{resize:vertical;min-height:64px}
         ctx.font = '400 23px ' + FF;
         ctx.fillText(timeText(rec.ts), X+26, y+70);
 
-        /* 右侧：载体类型名（各用自己的颜色）+ API 数 */
-        var labels = types.length ? types : ['待填写'];
+        
+        var labels = types.length ? types : [T('待填写')];
         var rx = W - X - 26;
         ctx.textAlign = 'right';
         var shownTypes = labels.slice(0, 3);
@@ -4177,15 +4840,15 @@ textarea.field{resize:vertical;min-height:64px}
         if(apiN){
           ctx.fillStyle = '#a0a0a0';
           ctx.font = '400 21px ' + FF;
-          ctx.fillText(apiN + ' 个 API', W-X-26, y+70);
+          ctx.fillText(TF('card_apis', {n:apiN}), W-X-26, y+70);
         }
         ctx.textAlign = 'left';
 
-        /* 练习题摘录 */
+        
         if(info.excerpt){
           ctx.fillStyle = '#8f8f8f';
           ctx.font = '400 21px ' + FF;
-          var exLine = truncate(ctx, '题：' + info.excerpt.replace(/\s+/g, ' '), CW-62);
+          var exLine = truncate(ctx, TF('card_excerpt', {text:info.excerpt.replace(/\s+/g, ' ')}), CW-62);
           ctx.fillText(exLine, X+26, y+100);
           texts.push(exLine);
         }
@@ -4196,11 +4859,11 @@ textarea.field{resize:vertical;min-height:64px}
       if(hidden > 0){
         ctx.fillStyle = '#a0a0a0';
         ctx.font = '400 23px ' + FF;
-        ctx.fillText('还有 ' + hidden + ' 条今日挑战未显示', X+26, rowsTop + rowsH + 26);
+        ctx.fillText(TF('card_hidden', {n:hidden}), X+26, rowsTop + rowsH + 26);
       }
     }
 
-    /* 页脚 */
+    
     var fy = H - 150;
     ctx.strokeStyle = '#2e2e2e';
     ctx.lineWidth = 2;
@@ -4222,7 +4885,7 @@ textarea.field{resize:vertical;min-height:64px}
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = '#8f8f8f';
     ctx.font = '400 24px ' + FF;
-    ctx.fillText('每一次练习都算数 · ' + SITE_NAME, X+48, fy+54);
+    ctx.fillText(TF('footer_line', {site:SITE_NAME}), X+48, fy+54);
     ctx.textAlign = 'right';
     ctx.fillText(longDate(), W-X, fy+54);
 
@@ -4252,9 +4915,9 @@ textarea.field{resize:vertical;min-height:64px}
   $('#exportBtn').addEventListener('click', openCard);
   $('#openCardBtn').addEventListener('click', openCard);
   $('#openProcessBtn').addEventListener('click', function(){
-    if(!state.records.length){ toast('还没有记录，先点「打卡一次」开始新的练习'); return; }
+    if(!state.records.length){ toast(T('还没有记录，先点「打卡一次」开始新的练习')); return; }
     if(!selectedId || !findRec(selectedId)){
-      /* 默认打开最近一条 */
+      
       var sorted = state.records.slice().sort(function(a,b){ return b.ts - a.ts; });
       selectedId = sorted[0].id;
       editingId = null;
@@ -4267,19 +4930,19 @@ textarea.field{resize:vertical;min-height:64px}
     else closeProcess();
   });
   $('#processCard').addEventListener('click', function(e){
-    if(isWide()) return;          /* 宽屏下这是常驻面板，点面板本身不关闭 */
+    if(isWide()) return;          
     if(e.target === this) closeProcess();
   });
   document.addEventListener('keydown', function(e){
     if(e.key === 'Escape'){
-      if($('#shotModal').classList.contains('open')) return;   /* 截图弹层自己处理 */
+      if($('#shotModal').classList.contains('open')) return;   
       if(!isWide() && $('#processCard').classList.contains('open')) closeProcess();
     }
   });
-  /* 宽窄切换：宽屏是常驻右栏，窄屏是遮罩弹层 */
+  
   function syncWideMode(){
     if(isWide()){
-      $('#processCard').classList.add('open');   /* 右栏常驻（CSS 里也强制显示） */
+      $('#processCard').classList.add('open');   
     }else{
       if(selectedId || editingId) $('#processCard').classList.add('open');
       else $('#processCard').classList.remove('open');
@@ -4294,18 +4957,19 @@ textarea.field{resize:vertical;min-height:64px}
     if(e.target === this) closeCard();
   });
   $('#saveCardBtn').addEventListener('click', function(){
-    /* 与预览同一个 canvas 源，PNG 与预览完全一致 */
+    
     var url = cardCanvas.toDataURL('image/png');
     var a = document.createElement('a');
     a.href = url;
-    a.download = 'gml-挑战记录卡-' + todayKey() + '.png';
+    a.download = 'gml-challenge-card-' + todayKey() + '.png';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
   });
 
-  /* ================= 启动 ================= */
+  
   renderAll();
+  applyLang();
   window.__gml = { state: state, render: renderAll };
 })();
 </script>
