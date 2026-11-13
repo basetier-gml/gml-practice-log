@@ -8341,49 +8341,65 @@ __lang = detectLang();
       /* 二维码固定在图片「开头」：分享链接要提前算好，头部块才知道留多大位置 */
       var share = await buildShareLink(rec);
       var QR_SIZE = share.url ? (share.size || QR_WIDTH) : 0;
-      var HEAD_H = QR_SIZE ? (QR_SIZE + 142) : 134;
+      var LEFT_W = QR_SIZE ? (CW - QR_SIZE - 24) : CW;   /* 左边文字区宽度（右边留给二维码） */
       if(window.__gml) window.__gml.lastShotQr = null;
+
+      /* 左边的「练习题要求」先按左边宽度折行，好算出头部该有多高 */
+      mctx.font = '500 26px ' + FF;
+      var reqLines = rec.requirement ? wrapText(mctx, rec.requirement, LEFT_W - 36, 20) : [];
+      var reqStep = 26 + 14;
+      var reqBlockH = reqLines.length ? (26 + 30 + (reqLines.length - 1) * reqStep + 12) : 0;
+      var leftH = 134 + reqBlockH;
+      /* 区域高度：最小 = 二维码高度，最大 = 左边文字高度 */
+      var HEAD_H = Math.max(leftH, QR_SIZE) + 80;
 
       
       blocks.push({ h:HEAD_H, draw:function(ctx, y){
-        var leftW = QR_SIZE ? (CW - QR_SIZE - 48) : CW;
-        var top = y + Math.max(0, (HEAD_H - 134) / 2);
+        var top = y + 40;                       /* 文字和二维码都从这一行开始 */
         ctx.fillStyle = '#8f8f8f'; ctx.font = '400 24px ' + FF;
         var head = SITE_NAME + ' · ' + longDate();
         ctx.fillText(head, X, top+24); texts.push(head);
         ctx.fillStyle = '#f0f0f0'; ctx.font = '700 46px ' + FF;
-        var nm = truncate(ctx, rec.name || T('未命名练习'), leftW);
+        var nm = truncate(ctx, rec.name || T('未命名练习'), LEFT_W);
         ctx.fillText(nm, X, top+86); texts.push(nm);
         ctx.fillStyle = '#a0a0a0'; ctx.font = '400 24px ' + FF;
         var tm = (dateKey(new Date(rec.ts)) === todayKey() ? T('今天 ') : dateKey(new Date(rec.ts)) + ' ') + timeText(rec.ts);
         ctx.fillText(tm, X, top+124); texts.push(tm);
+        if(reqLines.length){
+          ctx.fillStyle = '#8f8f8f'; ctx.font = '600 23px ' + FF;
+          ctx.fillText(T('练习题要求'), X, top+160); texts.push(T('练习题要求'));
+          ctx.fillStyle = '#c0c0c0'; ctx.font = '500 26px ' + FF;
+          reqLines.forEach(function(line, i){
+            ctx.fillText(line, X, top+190+i*reqStep);
+            texts.push(line);
+          });
+        }
 
         if(QR_SIZE){
-          /* 码在右上角，说明文字在码的上下两行（跟标题不打架） */
-          var qx = X + CW - QR_SIZE, qy = y + 74;
+          /* 码在右上角，说明文字放在二维码上方（不占内容区） */
+          var qx = X + CW - QR_SIZE, qy = top;
           if(window.__gml) window.__gml.lastShotQr = { x:qx, y:qy, size:QR_SIZE, version:share.version, url:share.url };
           ctx.fillStyle = '#8f8f8f'; ctx.font = '600 18px ' + FF;
           ctx.textAlign = 'right';
-          ctx.fillText(T('GML 练习存档 · 扫码导入'), qx + QR_SIZE, y+58);
+          ctx.fillText(T('GML 练习存档 · 扫码导入'), qx + QR_SIZE, y+24);
           ctx.textAlign = 'left';
           drawQrOnCanvas(ctx, share.url, qx, qy, QR_SIZE, share.version);
           ctx.fillStyle = '#8f8f8f'; ctx.font = '400 16px ' + FF;
           ctx.textAlign = 'right';
-          ctx.fillText(T('换个设备也能接着练'), qx + QR_SIZE, qy + QR_SIZE + 28);
+          ctx.fillText(T('换个设备也能接着练'), qx + QR_SIZE, qy + QR_SIZE + 26);
           ctx.textAlign = 'left';
         }else if(share.tooLong){
           ctx.fillStyle = '#8f8f8f'; ctx.font = '400 18px ' + FF;
           ctx.textAlign = 'right';
-          ctx.fillText(T('这条练习太长，二维码放不下'), X + CW, y + 58);
-          ctx.fillText(T('请用「存读档」导出成文件'), X + CW, y + 86);
+          ctx.fillText(T('这条练习太长，二维码放不下'), X + CW, y + 64);
+          ctx.fillText(T('请用「存读档」导出成文件'), X + CW, y + 92);
           ctx.textAlign = 'left';
         }
       }});
 
       
       [
-        { title:T('练习题要求'), body:rec.requirement, size:26, lines:6, color:'#c0c0c0', weight:'500' },
-        { title:T('练习题提示'), body:rec.hint,     size:24, lines:4, color:'#909090', weight:'400' }
+        { title:T('练习题提示'), body:rec.hint, size:24, lines:12, color:'#909090', weight:'400' }
       ].forEach(function(sec){
         mctx.font = sec.weight + ' ' + sec.size + 'px ' + FF;
         var lines = sec.body ? wrapText(mctx, sec.body, CW-36, sec.lines) : [];
