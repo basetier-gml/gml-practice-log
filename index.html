@@ -775,14 +775,71 @@ textarea.field{resize:vertical;min-height:64px}
 .process-sheet .sheet-head h3{white-space:nowrap}
 /* 弹层标题栏空间紧：切换器做得更小 */
 .process-sheet .lang-sw button{font-size:11px;padding:4px 7px}
-/* 语言切换条：放在默认界面最下面 */
-.lang-bar{
-  display:flex;justify-content:center;
-  margin:2px 0 6px;
+/* ---------- 底部工具条：存档备份 + 语言切换（默认界面最下面） ---------- */
+.foot-bar{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  margin:4px 0 6px;
   padding-bottom:env(safe-area-inset-bottom);
 }
-.lang-bar .lang-sw{opacity:.85}
-.lang-bar .lang-sw:hover{opacity:1}
+.foot-row{
+  display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
+}
+/* 存档按钮组：和语言切换一样的胶囊外形 */
+.foot-group{
+  display:inline-flex;align-items:center;overflow:hidden;
+  border:1px solid #4a4a4a;border-radius:999px;background:#2f2f2f;
+}
+.foot-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  border:0;background:transparent;color:var(--ink-3);
+  font-size:12px;font-weight:600;padding:6px 11px;cursor:pointer;line-height:1.4;
+  transition:background .15s ease,color .15s ease;
+}
+.foot-btn + .foot-btn{border-left:1px solid #4a4a4a}
+.foot-btn:hover{color:var(--gm-deep);background:var(--gm-soft)}
+.foot-btn svg{width:13px;height:13px;flex:0 0 auto}
+.foot-note{
+  margin:0;max-width:440px;text-align:center;
+  font-size:11.5px;color:var(--ink-3);line-height:1.6;
+}
+.foot-bar .lang-sw{opacity:.85}
+.foot-bar .lang-sw:hover{opacity:1}
+/* ---------- 导入存档弹层 ---------- */
+.import-line{font-size:13.5px;color:var(--ink-2);line-height:1.7;margin:0 0 5px}
+.import-ops{display:flex;gap:9px;margin-top:12px}
+.import-ops .btn{flex:1;padding:12px 0;font-size:14px}
+.import-ops .btn.armed{background:#5a3030;color:#fff}
+.import-ops .btn.armed:hover{background:#6b3a3a}
+/* ---------- 单条练习：存读档 ---------- */
+#practiceBackup{z-index:60}   /* 要盖在「练习过程」弹层上面 */
+.pb-note{font-size:12px;color:var(--ink-3);line-height:1.7;margin:0 0 4px}
+.pb-api{
+  border:1px solid var(--line-soft);border-radius:9px;background:#2e2e2e;
+  padding:9px 11px;margin-bottom:8px;
+}
+.pb-api-head{display:flex;align-items:flex-start;gap:8px}
+.pb-api-code{
+  font-family:var(--mono);font-size:12.5px;color:var(--ink);word-break:break-all;
+  flex:1;min-width:0;line-height:1.5;
+}
+.pb-tag{
+  flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap;
+}
+.pb-tag.new{background:rgba(74,144,226,.16);color:var(--gm-deep)}
+.pb-tag.dup{background:rgba(240,192,74,.16);color:#f0c04a}
+.pb-ops{display:flex;gap:7px;margin-top:9px}
+.pb-opt{
+  flex:1;border:1px solid #4a4a4a;background:#333333;color:var(--ink-2);
+  font-size:12.5px;font-weight:600;padding:8px 6px;border-radius:8px;cursor:pointer;
+  line-height:1.4;transition:background .15s ease,color .15s ease,border-color .15s ease;
+}
+.pb-opt:hover{background:#3f3f3f}
+.pb-opt.on{background:var(--gm);border-color:var(--gm);color:#fff}
+.btn:disabled{opacity:.42;cursor:not-allowed;box-shadow:none}
+/* 标题栏挤不下时，按钮整组换行（不拆散） */
+.sheet-head{flex-wrap:wrap}
+.head-actions{display:flex;align-items:center;gap:10px;margin-left:auto;flex:0 0 auto}
+.head-actions .close{margin-left:0}
 </style>
 </head>
 <body>
@@ -903,13 +960,28 @@ textarea.field{resize:vertical;min-height:64px}
     <p class="note">昵称与记录只保存在这台设备的浏览器里，刷新后依然在。<br>别人首次打开时看到的是默认昵称和空白记录。</p>
   </section>
 
-<div class="lang-bar">
-<div class="lang-sw" id="langSwBottom" role="group" aria-label="Language">
-<button type="button" data-lang="zh">中文</button>
-<button type="button" data-lang="en">EN</button>
-</div>
+<!-- ============ 底部工具条：存档备份 + 语言切换 ============ -->
+<div class="foot-bar">
+  <div class="foot-row">
+    <div class="foot-group" role="group" aria-label="存档备份">
+      <button type="button" class="foot-btn" id="exportBackupBtn" title="把全部记录导出成一个备份文件">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"/><path d="M7.5 10.5 12 15l4.5-4.5"/><path d="M4 20h16"/></svg>
+        导出存档
+      </button>
+      <button type="button" class="foot-btn" id="importBackupBtn" title="从备份文件恢复记录">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/><path d="M4 20h16"/></svg>
+        导入存档
+      </button>
+    </div>
+    <div class="lang-sw" id="langSwBottom" role="group" aria-label="Language">
+      <button type="button" data-lang="zh">中文</button>
+      <button type="button" data-lang="en">EN</button>
+    </div>
+  </div>
+  <p class="foot-note">存档只存在这台设备的浏览器里。换设备或清缓存前，先导出备份。</p>
 </div>
 </main>
+<input type="file" id="backupFile" accept="application/json,.json" class="hidden-file">
 
 <!-- ============ 练习过程（二级界面，默认不显示） ============ -->
 <div class="modal" id="processCard">
@@ -917,11 +989,17 @@ textarea.field{resize:vertical;min-height:64px}
     <div class="sheet-head">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gm-deep);flex:0 0 auto"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       <h3>练习过程</h3>
-      <button class="shot-btn" id="shotBtn" type="button" title="把这条练习过程生成一张图片">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.3-2h8l1.3 2h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z"/><circle cx="12" cy="13" r="3.2"/></svg>
-        截图
-      </button>
-      <button class="btn btn-ghost close" id="processClose" type="button" style="flex:0 0 auto;padding:6px 14px;font-size:13px">关闭</button>
+      <div class="head-actions">
+        <button class="shot-btn" id="pbBtn" type="button" title="导出这一条练习 / 导入一条练习">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"/><path d="M7.5 10.5 12 15l4.5-4.5"/><path d="M4 20h16"/></svg>
+          存读档
+        </button>
+        <button class="shot-btn" id="shotBtn" type="button" title="把这条练习过程生成一张图片">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.3-2h8l1.3 2h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z"/><circle cx="12" cy="13" r="3.2"/></svg>
+          截图
+        </button>
+        <button class="btn btn-ghost close" id="processClose" type="button" style="flex:0 0 auto;padding:6px 14px;font-size:13px">关闭</button>
+      </div>
     </div>
     <div class="process-hint" id="processHint">选择一条记录查看</div>
     <div id="processBody"></div>
@@ -986,6 +1064,22 @@ textarea.field{resize:vertical;min-height:64px}
   </div>
 </div>
 
+<!-- ============ 导入存档弹层 ============ -->
+<div class="modal" id="importModal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3>导入存档</h3>
+      <button class="btn btn-ghost close" id="importClose" type="button" style="flex:0 0 auto;padding:6px 14px;font-size:13px">关闭</button>
+    </div>
+    <p class="import-line" id="importSummary">这个存档里有 0 条记录、0 个 API。</p>
+    <p class="import-line" id="importLocal">当前设备上有 0 条记录、0 个 API。</p>
+    <div class="import-ops">
+      <button class="btn btn-primary" id="importReplaceBtn" type="button">覆盖现有数据</button>
+    </div>
+    <p class="note">覆盖：清空当前全部数据，只用存档里的。</p>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <div class="lightbox" id="lightbox">
@@ -1007,6 +1101,36 @@ textarea.field{resize:vertical;min-height:64px}
     <p class="note">手机上也可以长按上面的图片，直接保存到相册。</p>
   </div>
 </div>
+
+<!-- ============ 单条练习：存读档弹层 ============ -->
+<div class="modal" id="practiceBackup">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3 id="pbTitle">存读档</h3>
+      <button class="btn btn-ghost close" id="pbClose" type="button" style="flex:0 0 auto;padding:6px 14px;font-size:13px">关闭</button>
+    </div>
+
+    <div id="pbMenu">
+      <p class="import-line" id="pbMenuInfo">把这一条练习（连同它引用的 API）存成文件，或从文件读回一条练习。</p>
+      <div class="import-ops">
+        <button class="btn btn-primary" id="pbExportBtn" type="button">导出这一条</button>
+        <button class="btn btn-ghost" id="pbImportBtn" type="button">导入一条</button>
+      </div>
+    </div>
+
+    <div id="pbImport" style="display:none">
+      <p class="import-line" id="pbRecInfo">练习：</p>
+      <p class="import-line" id="pbApiInfo">它引用了 0 个 API。</p>
+      <div id="pbApiList"></div>
+      <p class="pb-note" id="pbHint">库里已有同名的 API，逐个选一下：用存档里的，还是保留库里现在的。</p>
+      <div class="import-ops">
+        <button class="btn btn-ghost" id="pbCancelBtn" type="button">取消</button>
+        <button class="btn btn-primary" id="pbConfirmBtn" type="button">确认导入</button>
+      </div>
+    </div>
+  </div>
+</div>
+<input type="file" id="practiceFile" accept="application/json,.json" class="hidden-file">
 
 <script>
 (function(){
@@ -1233,7 +1357,48 @@ var I18N = {
     "固定头像 G": "固定头像 G",
     "搜索 API": "搜索 API",
     "搜索 API 库": "搜索 API 库",
+    "导出存档": "导出存档",
+    "导入存档": "导入存档",
+    "存档备份": "存档备份",
+    "把全部记录导出成一个备份文件": "把全部记录导出成一个备份文件",
+    "从备份文件恢复记录": "从备份文件恢复记录",
+    "覆盖现有数据": "覆盖现有数据",
+    "再点一次确认覆盖": "再点一次确认覆盖",
+    "覆盖：清空当前全部数据，只用存档里的。": "覆盖：清空当前全部数据，只用存档里的。",
+    "存档只存在这台设备的浏览器里。换设备或清缓存前，先导出备份。": "存档只存在这台设备的浏览器里。换设备或清缓存前，先导出备份。",
+    "这个存档里有 0 条记录、0 个 API。": "这个存档里有 0 条记录、0 个 API。",
+    "当前设备上有 0 条记录、0 个 API。": "当前设备上有 0 条记录、0 个 API。",
+    "存档导出失败": "存档导出失败",
+    "这个文件不是有效的存档": "这个文件不是有效的存档",
+    "读不出这个文件": "读不出这个文件",
+    "这个存档是空的": "这个存档是空的",
     date_long: "{y}年{m}月{d}日",
+    backup_in_file: "这个存档里有 {r} 条记录、{a} 个 API。",
+    backup_in_local: "当前设备上有 {r} 条记录、{a} 个 API。",
+    backup_exported: "存档已导出（{r} 条记录）",
+    backup_replaced: "覆盖完成：现在是 {r} 条记录、{a} 个 API",
+    "存读档": "存读档",
+    "导出这一条练习 / 导入一条练习": "导出这一条练习 / 导入一条练习",
+    "把这一条练习（连同它引用的 API）存成文件，或从文件读回一条练习。": "把这一条练习（连同它引用的 API）存成文件，或从文件读回一条练习。",
+    "导出这一条": "导出这一条",
+    "导入一条": "导入一条",
+    "确认导入": "确认导入",
+    "新增": "新增",
+    "库里已有同名": "库里已有同名",
+    "用存档里的（更新）": "用存档里的（更新）",
+    "保留库里现有的": "保留库里现有的",
+    "它没有引用任何 API。": "它没有引用任何 API。",
+    "库里已有同名的 API，逐个选一下：用存档里的，还是保留库里现在的。": "库里已有同名的 API，逐个选一下：用存档里的，还是保留库里现在的。",
+    "这个文件不是有效的练习存档": "这个文件不是有效的练习存档",
+    "这是整站存档，请用底部的「导入存档」": "这是整站存档，请用底部的「导入存档」",
+    "先选一条记录，再存读档": "先选一条记录，再存读档",
+    "还有同名 API 没决定要不要更新": "还有同名 API 没决定要不要更新",
+    "已导出这一条练习": "已导出这一条练习",
+    practice_rec_info: "练习：{name}",
+    practice_apis_count: "它引用了 {n} 个 API。",
+    practice_added: "已导入新练习：{name}",
+    practice_updated: "已覆盖同名练习：{name}",
+    practice_api_counts: "新增 {a} 个 API，更新 {u} 个 API。",
     head_sub: "今日 {n} 次 · 已挑战 {m} 次",
     lib_found: "搜到 {n} / {m} 个",
     lib_total: "共 {n} 个",
@@ -1492,7 +1657,48 @@ var I18N = {
     "固定头像 G": "Fixed avatar G",
     "搜索 API": "Search API",
     "搜索 API 库": "Search the API library",
+    "导出存档": "Export backup",
+    "导入存档": "Import backup",
+    "存档备份": "Backup",
+    "把全部记录导出成一个备份文件": "Export all records as a backup file",
+    "从备份文件恢复记录": "Restore records from a backup file",
+    "覆盖现有数据": "Replace current data",
+    "再点一次确认覆盖": "Click again to confirm",
+    "覆盖：清空当前全部数据，只用存档里的。": "Replace: wipe all current data and use only the backup.",
+    "存档只存在这台设备的浏览器里。换设备或清缓存前，先导出备份。": "Your data lives only in this browser on this device. Export a backup before switching devices or clearing the cache.",
+    "这个存档里有 0 条记录、0 个 API。": "This backup has 0 records and 0 APIs.",
+    "当前设备上有 0 条记录、0 个 API。": "This device currently has 0 records and 0 APIs.",
+    "存档导出失败": "Backup export failed",
+    "这个文件不是有效的存档": "This file is not a valid backup",
+    "读不出这个文件": "Could not read this file",
+    "这个存档是空的": "This backup is empty",
     date_long: "{y}-{m}-{d}",
+    backup_in_file: "In this backup - records: {r}, APIs: {a}",
+    backup_in_local: "On this device - records: {r}, APIs: {a}",
+    backup_exported: "Backup exported - records: {r}",
+    backup_replaced: "Replaced - records: {r}, APIs: {a}",
+    "存读档": "Save/Load",
+    "导出这一条练习 / 导入一条练习": "Export this practice / Import a practice",
+    "把这一条练习（连同它引用的 API）存成文件，或从文件读回一条练习。": "Save this practice (with the APIs it references) to a file, or read a practice back from a file.",
+    "导出这一条": "Export this one",
+    "导入一条": "Import one",
+    "确认导入": "Confirm import",
+    "新增": "New",
+    "库里已有同名": "Same code exists",
+    "用存档里的（更新）": "Use the backup's version",
+    "保留库里现有的": "Keep the library's version",
+    "它没有引用任何 API。": "It does not reference any APIs.",
+    "库里已有同名的 API，逐个选一下：用存档里的，还是保留库里现在的。": "For each API that already exists in the library, choose: use the backup's version, or keep the library's.",
+    "这个文件不是有效的练习存档": "This file is not a valid practice backup",
+    "这是整站存档，请用底部的「导入存档」": "This is a full-site backup - use \"Import backup\" at the bottom",
+    "先选一条记录，再存读档": "Pick a record first",
+    "还有同名 API 没决定要不要更新": "Decide for each matching API first",
+    "已导出这一条练习": "Practice exported",
+    practice_rec_info: "Practice: {name}",
+    practice_apis_count: "It references {n} APIs.",
+    practice_added: "New practice imported: {name}",
+    practice_updated: "Existing practice updated: {name}",
+    practice_api_counts: "Added {a} APIs, updated {u} APIs.",
     head_sub: "Today {n} - {m} total",
     lib_found: "{n} of {m} found",
     lib_total: "{n} total",
@@ -1649,6 +1855,7 @@ function applyLang(){
     renderApiLib();
     renderHistory();
     renderProcess();
+    updateImportSummary();
   }catch(e){}
   applyI18nDOM();
 }
@@ -1768,6 +1975,317 @@ __lang = detectLang();
     t.classList.add('show');
     clearTimeout(t._timer);
     t._timer = setTimeout(function(){ t.classList.remove('show'); }, 3200);
+  }
+
+  /* ============================================================
+     存档导出 / 导入
+     导出：把浏览器里存的全部内容写成一个 JSON 文件带走
+     导入：读回这个文件，覆盖当前数据（只有这一种方式）
+     ============================================================ */
+  var BACKUP_APP = 'gml-practice-log';
+  var BACKUP_VERSION = 2;
+  var pendingImport = null;   /* 待确认的存档数据 */
+  var replaceArmed = false;    /* 覆盖是破坏性的，要点两次 */
+  var replaceTimer = null;
+
+  function backupData(){
+    return {
+      nickname: state.nickname,
+      dailyGoal: state.dailyGoal,
+      records: state.records || [],
+      carrierColors: state.carrierColors || {},
+      customTypes: state.customTypes || [],
+      apiLib: state.apiLib || []
+    };
+  }
+  function exportBackup(){
+    try{
+      var data = backupData();
+      var payload = {
+        app: BACKUP_APP,
+        version: BACKUP_VERSION,
+        exportedAt: new Date().toISOString(),
+        counts: { records: data.records.length, apiLib: data.apiLib.length },
+        data: data
+      };
+      var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'gml-practice-log-backup-' + todayKey() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} }, 5000);
+      toast(TF('backup_exported', {r:data.records.length}));
+      return true;
+    }catch(e){
+      toast(T('存档导出失败'));
+      return false;
+    }
+  }
+  function parseBackup(text){
+    var obj = JSON.parse(text);
+    if(!obj || typeof obj !== 'object') throw new Error('bad');
+    var d = (obj.data && typeof obj.data === 'object') ? obj.data : obj;
+    return {
+      nickname: (typeof d.nickname === 'string') ? d.nickname : '',
+      dailyGoal: (typeof d.dailyGoal === 'number' && d.dailyGoal > 0) ? d.dailyGoal : 5,
+      records: Array.isArray(d.records) ? d.records : [],
+      carrierColors: (d.carrierColors && typeof d.carrierColors === 'object') ? d.carrierColors : {},
+      customTypes: Array.isArray(d.customTypes) ? d.customTypes : [],
+      apiLib: Array.isArray(d.apiLib) ? d.apiLib : []
+    };
+  }
+  function openImportModal(data){
+    pendingImport = data;
+    replaceArmed = false;
+    $('#importReplaceBtn').classList.remove('armed');
+    setI18nText($('#importReplaceBtn'), T('覆盖现有数据'));
+    updateImportSummary();
+    $('#importModal').classList.add('open');
+  }
+  function updateImportSummary(){
+    if(!pendingImport) return;
+    var d = pendingImport;
+    $('#importSummary').textContent = TF('backup_in_file', {r:d.records.length, a:d.apiLib.length});
+    $('#importLocal').textContent = TF('backup_in_local', {r:(state.records||[]).length, a:(state.apiLib||[]).length});
+  }
+  function closeImportModal(){
+    pendingImport = null;
+    replaceArmed = false;
+    clearTimeout(replaceTimer);
+    $('#importReplaceBtn').classList.remove('armed');
+    setI18nText($('#importReplaceBtn'), T('覆盖现有数据'));
+    $('#importModal').classList.remove('open');
+  }
+  function handleBackupFile(file){
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var data = null;
+      try{
+        data = parseBackup(String(reader.result || ''));
+      }catch(e){
+        toast(T('这个文件不是有效的存档'));
+        return;
+      }
+      if(!data.records.length && !data.apiLib.length){
+        toast(T('这个存档是空的'));
+        return;
+      }
+      openImportModal(data);
+    };
+    reader.onerror = function(){ toast(T('读不出这个文件')); };
+    reader.readAsText(file);
+  }
+  /* 覆盖：清掉当前数据，只留存档里的 */
+  function replaceBackup(incoming){
+    state.nickname = incoming.nickname || DEFAULT_NICK;
+    state.dailyGoal = incoming.dailyGoal || 5;
+    state.records = incoming.records || [];
+    state.carrierColors = incoming.carrierColors || {};
+    state.customTypes = incoming.customTypes || [];
+    state.apiLib = incoming.apiLib || [];
+  }
+  function finishImport(){
+    if(!pendingImport) return;
+    var d = pendingImport;
+    replaceBackup(d);
+    migrateApiLib(); migrateObjects(); migrateCarriers();
+    state.lang = __lang;
+    save();
+    renderAll(); applyLang();
+    closeImportModal();
+    toast(TF('backup_replaced', {r:(state.records||[]).length, a:(state.apiLib||[]).length}));
+  }
+
+  /* ============================================================
+     单条练习的存读档
+     导出：这一条练习 + 它引用的 API（连参数说明一起）
+     导入：库里没有的 API 直接加上；库里已有同名的，逐个问要不要更新
+     ============================================================ */
+  var pendingPractice = null;   /* 待确认导入的一条练习 */
+
+  function currentPracticeRec(){
+    if(editingId) return findRec(editingId);
+    if(selectedId) return findRec(selectedId);
+    return null;
+  }
+  function practiceApiIds(rec){
+    var ids = [];
+    (rec.apis || []).forEach(function(id){ if(ids.indexOf(id) < 0) ids.push(id); });
+    (rec.modules || []).forEach(function(m){
+      if(m && m.type === 'api' && m.refId && ids.indexOf(m.refId) < 0) ids.push(m.refId);
+    });
+    return ids;
+  }
+  function safeFileName(s){
+    var t = String(s == null ? '' : s).replace(/[\\/:*?"<>|\r\n\t]/g, '_').trim();
+    if(!t) t = 'practice';
+    return t.slice(0, 24);
+  }
+  function exportPractice(){
+    var rec = currentPracticeRec();
+    if(!rec){ toast(T('先选一条记录，再存读档')); return; }
+    var apis = [];
+    practiceApiIds(rec).forEach(function(id){
+      var it = apiItem(id);
+      if(it) apis.push({id:it.id, code:it.code, params:it.params});
+    });
+    var payload = {
+      app: 'gml-practice-log',
+      version: 2,
+      kind: 'practice',
+      exportedAt: new Date().toISOString(),
+      record: JSON.parse(JSON.stringify(rec)),
+      apis: apis
+    };
+    try{
+      var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'gml-practice-' + safeFileName(rec.name) + '-' + todayKey() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} }, 5000);
+      toast(T('已导出这一条练习'));
+    }catch(e){
+      toast(T('存档导出失败'));
+    }
+  }
+  function parsePracticeFile(text){
+    var obj = JSON.parse(text);
+    if(!obj || typeof obj !== 'object') throw new Error('bad');
+    if(obj.record && typeof obj.record === 'object'){
+      var rec = obj.record;
+      if(!Array.isArray(rec.apis)) rec.apis = [];
+      if(!Array.isArray(rec.modules)) rec.modules = [];
+      return {
+        record: rec,
+        apis: Array.isArray(obj.apis) ? obj.apis.filter(function(x){ return x && x.code; }) : [],
+        exportedAt: obj.exportedAt || ''
+      };
+    }
+    if(obj.data && Array.isArray(obj.data.records)) return {fullBackup:true};
+    throw new Error('bad');
+  }
+  function openPracticeImport(data){
+    pendingPractice = {
+      record: data.record,
+      adds: [],
+      conflicts: [],
+      exportedAt: data.exportedAt
+    };
+    /* 按代码（同名）比对：库里没有 → 直接加；有 → 逐条问 */
+    data.apis.forEach(function(a){
+      var local = libFindByCode(a.code);
+      if(!local) pendingPractice.adds.push({file:a});
+      else pendingPractice.conflicts.push({file:a, local:local, choice:null});
+    });
+    renderPracticeImport();
+    $('#pbMenu').style.display = 'none';
+    $('#pbImport').style.display = '';
+    $('#practiceBackup').classList.add('open');
+  }
+  function renderPracticeImport(){
+    var p = pendingPractice;
+    if(!p) return;
+    $('#pbRecInfo').textContent = TF('practice_rec_info', {name:p.record.name || T('未命名练习')});
+    var total = p.adds.length + p.conflicts.length;
+    $('#pbApiInfo').textContent = total ? TF('practice_apis_count', {n:total}) : T('它没有引用任何 API。');
+
+    var box = $('#pbApiList');
+    box.innerHTML = '';
+    p.adds.forEach(function(item){
+      var d = el('div', 'pb-api');
+      var head = el('div', 'pb-api-head');
+      head.appendChild(el('code', 'pb-api-code', item.file.code));
+      head.appendChild(el('span', 'pb-tag new', T('新增')));
+      d.appendChild(head);
+      box.appendChild(d);
+    });
+    p.conflicts.forEach(function(c){
+      var d = el('div', 'pb-api');
+      var head = el('div', 'pb-api-head');
+      head.appendChild(el('code', 'pb-api-code', c.file.code));
+      head.appendChild(el('span', 'pb-tag dup', T('库里已有同名')));
+      d.appendChild(head);
+      var ops = el('div', 'pb-ops');
+      var bUp = el('button', 'pb-opt' + (c.choice === 'update' ? ' on' : ''), T('用存档里的（更新）'));
+      bUp.type = 'button';
+      bUp.addEventListener('click', function(){ c.choice = 'update'; renderPracticeImport(); });
+      var bKeep = el('button', 'pb-opt' + (c.choice === 'keep' ? ' on' : ''), T('保留库里现有的'));
+      bKeep.type = 'button';
+      bKeep.addEventListener('click', function(){ c.choice = 'keep'; renderPracticeImport(); });
+      ops.appendChild(bUp);
+      ops.appendChild(bKeep);
+      d.appendChild(ops);
+      box.appendChild(d);
+    });
+
+    var allChosen = true;
+    p.conflicts.forEach(function(c){ if(!c.choice) allChosen = false; });
+    $('#pbConfirmBtn').disabled = !allChosen;
+    $('#pbHint').style.display = p.conflicts.length ? '' : 'none';
+  }
+  function closePracticeBackup(){
+    pendingPractice = null;
+    $('#pbMenu').style.display = '';
+    $('#pbImport').style.display = 'none';
+    $('#practiceBackup').classList.remove('open');
+  }
+  function applyPracticeImport(){
+    var p = pendingPractice;
+    if(!p) return;
+    var undone = false;
+    p.conflicts.forEach(function(c){ if(!c.choice) undone = true; });
+    if(undone){ toast(T('还有同名 API 没决定要不要更新')); return; }
+
+    var map = {};          /* 存档里的 api id → 本地 api id */
+    var addedApi = 0, updatedApi = 0;
+    var lib = state.apiLib = state.apiLib || [];
+    p.adds.forEach(function(item){
+      var it = {id:uid(), code:item.file.code, params:normParams(item.file.params)};
+      lib.push(it);
+      if(item.file.id) map[item.file.id] = it.id;
+      addedApi++;
+    });
+    p.conflicts.forEach(function(c){
+      if(c.choice === 'update'){
+        c.local.code = c.file.code;
+        c.local.params = normParams(c.file.params);
+        updatedApi++;
+      }
+      if(c.file.id) map[c.file.id] = c.local.id;
+    });
+
+    var rec = JSON.parse(JSON.stringify(p.record));
+    rec.apis = (rec.apis || []).map(function(id){ return map[id] || id; });
+    rec.modules = (rec.modules || []).map(function(m){
+      if(m && m.type === 'api' && m.refId && map[m.refId]) m.refId = map[m.refId];
+      return m;
+    });
+
+    var recs = state.records = state.records || [];
+    var idx = -1;
+    for(var i=0;i<recs.length;i++){ if(recs[i] && recs[i].id === rec.id){ idx = i; break; } }
+    var isNew = idx < 0;
+    if(isNew) recs.push(rec);
+    else recs[idx] = rec;
+
+    migrateApiLib(); migrateObjects(); migrateCarriers();
+    state.lang = __lang;
+    save();
+    selectedId = rec.id;
+    editingId = null;
+    renderAll(); applyLang();
+    closePracticeBackup();
+    var msg = TF(isNew ? 'practice_added' : 'practice_updated', {name:rec.name || T('未命名练习')});
+    if(addedApi || updatedApi) msg += ' ' + TF('practice_api_counts', {a:addedApi, u:updatedApi});
+    toast(msg);
   }
 
   function allTypes(){
@@ -4941,7 +5459,8 @@ __lang = detectLang();
   });
   document.addEventListener('keydown', function(e){
     if(e.key === 'Escape'){
-      if($('#shotModal').classList.contains('open')) return;   
+      if($('#shotModal').classList.contains('open')) return;
+      if($('#importModal').classList.contains('open')){ closeImportModal(); return; }
       if(!isWide() && $('#processCard').classList.contains('open')) closeProcess();
     }
   });
@@ -4963,7 +5482,7 @@ __lang = detectLang();
     if(e.target === this) closeCard();
   });
   $('#saveCardBtn').addEventListener('click', function(){
-    
+
     var url = cardCanvas.toDataURL('image/png');
     var a = document.createElement('a');
     a.href = url;
@@ -4973,7 +5492,79 @@ __lang = detectLang();
     document.body.removeChild(a);
   });
 
+  /* ---------- 存档导出 / 导入 ---------- */
+  $('#exportBackupBtn').addEventListener('click', exportBackup);
+  $('#importBackupBtn').addEventListener('click', function(){ $('#backupFile').click(); });
+  $('#backupFile').addEventListener('change', function(){
+    var f = this.files && this.files[0];
+    this.value = '';           /* 允许连续选同一个文件 */
+    handleBackupFile(f);
+  });
+  $('#importClose').addEventListener('click', closeImportModal);
+  $('#importModal').addEventListener('click', function(e){
+    if(e.target === this) closeImportModal();
+  });
+  $('#importReplaceBtn').addEventListener('click', function(){
+    /* 覆盖会清掉现有数据：要点两次 */
+    if(!replaceArmed){
+      replaceArmed = true;
+      this.classList.add('armed');
+      setI18nText(this, T('再点一次确认覆盖'));
+      clearTimeout(replaceTimer);
+      replaceTimer = setTimeout(function(){
+        replaceArmed = false;
+        $('#importReplaceBtn').classList.remove('armed');
+        setI18nText($('#importReplaceBtn'), T('覆盖现有数据'));
+      }, 4000);
+      return;
+    }
+    finishImport('replace');
+  });
+
   
+  /* ---------- 单条练习：存读档 ---------- */
+  $('#pbBtn').addEventListener('click', function(){
+    pendingPractice = null;
+    $('#pbMenu').style.display = '';
+    $('#pbImport').style.display = 'none';
+    $('#practiceBackup').classList.add('open');
+  });
+  $('#pbClose').addEventListener('click', closePracticeBackup);
+  $('#practiceBackup').addEventListener('click', function(e){
+    if(e.target === this) closePracticeBackup();
+  });
+  $('#pbExportBtn').addEventListener('click', function(){
+    exportPractice();
+    closePracticeBackup();
+  });
+  $('#pbImportBtn').addEventListener('click', function(){ $('#practiceFile').click(); });
+  $('#practiceFile').addEventListener('change', function(){
+    var f = this.files && this.files[0];
+    this.value = '';
+    if(!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var data = null;
+      try{
+        data = parsePracticeFile(String(reader.result || ''));
+      }catch(e){
+        toast(T('这个文件不是有效的练习存档'));
+        return;
+      }
+      if(data.fullBackup){
+        toast(T('这是整站存档，请用底部的「导入存档」'));
+        return;
+      }
+      openPracticeImport(data);
+    };
+    reader.onerror = function(){ toast(T('读不出这个文件')); };
+    reader.readAsText(f);
+  });
+  $('#pbCancelBtn').addEventListener('click', function(){
+    closePracticeBackup();
+  });
+  $('#pbConfirmBtn').addEventListener('click', applyPracticeImport);
+
   renderAll();
   applyLang();
   window.__gml = { state: state, render: renderAll };
