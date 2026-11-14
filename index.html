@@ -719,7 +719,8 @@ textarea.field{resize:vertical;min-height:64px}
   content:"";width:5px;height:5px;border-radius:50%;background:var(--c);
   flex:0 0 5px;margin-top:7px;
 }
-.carrier-item.plain{font-family:var(--sans);font-size:13.5px;color:var(--ink-2)}
+.carrier-item.plain{font-family:var(--sans);font-size:13.5px;color:var(--ink-2);display:block;white-space:pre-wrap;padding-left:13px;position:relative;line-height:1.7}
+.carrier-item.plain::before{position:absolute;left:0;top:10px;margin-top:0}
 .detail-actions{margin-top:18px;display:flex;gap:9px}
 .detail-actions .btn{flex:1}
 
@@ -910,9 +911,10 @@ textarea.field{resize:vertical;min-height:64px}
        2) window.GML_AI_SKILL
      人类想看的话：打开这个网页搜 "gml-ai-skill"。
      ============================================================ -->
-<script type="text/markdown" id="gml-ai-skill">---
+<script type="text/markdown" id="gml-ai-skill">
+---
 name: gml-practice-log
-description: GML 练习记录站（https://basetier-gml.github.io/gml-practice-log/）——单文件网页应用，用「打卡 + 代码载体 + API 库」记录 GML 练习，也可当 AI 写 GML 时的开发日志与函数复用库。给需要代替真人操作这个站的 AI：讲清它有哪些功能、数据怎么存、有哪些命令接口、以及怎么把一份定稿代码变成一条练习记录、怎么按功能环节逐条打卡并沉淀可复用函数。触发词：练习记录 / 打卡一次 / 记录这次练习 / GML 练习存档 / 练习过程截图 / 开发日志 / 函数复用库 / gml-practice-log。
+description: GML 练习记录站（https://basetier-gml.github.io/gml-practice-log/）——单文件网页应用，用「打卡 + 代码载体 + API 库」记录 GML 练习，也可当 AI 写 GML 时的开发日志与函数复用库。给需要代替真人操作这个站的 AI：第一次拿到先问用户主要用途（打卡 / 教程 / 日志），再讲清它有哪些功能、数据怎么存、有哪些命令接口、以及怎么把一份定稿代码变成一条练习记录、怎么按功能环节逐条打卡并沉淀可复用函数。触发词：练习记录 / 打卡一次 / 记录这次练习 / GML 练习存档 / 练习过程截图 / 开发日志 / vibe coding 日志 / 函数复用库 / 写教程步骤 / gml-practice-log。
 ---
 
 # GML 练习记录站 · AI 速查
@@ -922,6 +924,98 @@ description: GML 练习记录站（https://basetier-gml.github.io/gml-practice-l
 本页这份 skill 嵌在 HTML 里（`#gml-ai-skill`），浏览器型 AI 可直接取
 `window.GML_AI_SKILL` 或 `document.getElementById('gml-ai-skill').textContent`；
 同一份内容另存为 `AI-SKILL.md`。
+
+---
+
+## 0. 第一次读到这一页：先问用户主要用途
+
+AI 第一次拿到这个 index（用户说「把这段代码记下来」「帮我把这套操作写成教程」
+「帮我记一下今天 vibe coding 的过程」之类）时，**先别自己猜用途**，问一句：
+
+> 这个站你想怎么用？① 打卡（把代码和说明存成一条记录）② 教程（把操作流程一步步记下来）
+> ③ 日志（记 AI 写代码的过程）。也可以说别的。
+
+**三种用法分别怎么做、最后交回什么：**
+
+| 他说 | 怎么做 | 最后交回什么 |
+|---|---|---|
+| **① 打卡** | 用户上传的**描述**→ `requirement` / `hint`；**代码**→ 一个「脚本」载体（逐字贴，不许改一个字）；用到的官方 API → `addApi` + `refApi` | **截图 + 记录存档**：`screenshot` 存成 PNG 交回，`export` 出存档 payload 交回（用户可导入） |
+| **② 教程** | 用站里的打卡功能**写操作流程**：**一个操作步骤 = 一条记录**（名字写「第 N 步：xxx」），步骤里的代码贴进脚本/对象载体 | **带记录的 index**：把导出的存档写成种子塞进一份 index.html（启动时自动导入），交回这份 index，用户一打开就带着记录 |　自写类**建了就要在用到它的那些步骤里引用**（见 §4）
+| **③ 日志** | 把 vibe coding 的过程**按功能环节**记进打卡记录（一个环节 = 一条记录，**测通了才打卡**） | **每次打卡都立刻存一次档**（防中途丢），最后按他要的形态返回：要点 / 时间线 / 存档 / 带记录的 index |　自写类**建了就要在用到它的那些环节里引用**（见 §4）
+
+**① 打卡 —— 命令顺序**
+
+```js
+await window.gml.cmd('state')                      // 先看有没有已有数据，别乱清
+//   → { user, settings, records:[{id,ts,name,apis,modules}], api:[{id,code,desc,params,uses}], current }
+//   api 里的 uses = 这条 API 被多少条记录引用（检查「登记了就要引用」用）
+await window.gml.cmd('checkin', { name:'第 1 步：xxx', requirement:'用户描述', hint:'坑与提示' })
+await window.gml.cmd('addModule', { type:'脚本', value:'// 文件名\n' + 用户的代码 })
+await window.gml.cmd('addApi',   { code:'draw_text', desc:'画一行字' })   // 用到的官方 API
+await window.gml.cmd('refApi',   { code:'draw_text' })                     // 引用它
+await window.gml.cmd('finish')                     // 结束编辑（弹层不关）
+const shot = await window.gml.cmd('screenshot')     // → { dataUrl, width:1440 }，存成 PNG 交回
+const save = await window.gml.cmd('export')         // → 整站存档 payload，交回
+```
+
+**② 教程 —— 命令顺序**
+
+```js
+// 每个操作步骤一条记录：先 checkin，再贴这一步的代码，最后 finish
+await window.gml.cmd('checkin', { name:'第 1 步：打开工程', requirement:'做什么', hint:'注意什么' })
+await window.gml.cmd('addModule', { type:'操作描述', value:'这一步在界面上点哪里' })
+await window.gml.cmd('finish')
+// …每个步骤重复一遍…
+
+// 最后：导出存档 → 塞进一份 index.html 当种子 → 交回这份 index
+const save = await window.gml.cmd('export')
+```
+
+**「带记录的 index」怎么拼**（把下面这段包在一个 script 标签里，插到 index.html 的
+body 结束标签之前；`<存档 payload>` 换成 `export` 出来的对象）：
+
+```js
+(function(){
+  var S = <存档 payload>;
+  try{ if(localStorage.getItem('gml-practice-log-v2:records')) return; }catch(e){}
+  if(window.gml && window.gml.cmd) window.gml.cmd('import',{json:S});
+  else setTimeout(arguments.callee, 200);
+})();
+```
+
+（**只有用户本地还没有记录时才导入**，别把人家已有的数据覆盖掉。）
+
+**③ 日志 —— 命令顺序（重点：每打一次卡就存一次档）**
+
+```js
+// 一个功能环节 = 一条记录；测通了才打卡（测不过就改代码，改完再测）
+const rec = await window.gml.cmd('checkin', { name:'第 2 步：敌人行为', requirement:'…', hint:'…' })
+await window.gml.cmd('addModule', { type:'脚本', value:'// 文件名\n' + 这一环的代码 })
+await window.gml.cmd('finish')
+// ★ 立刻存一次档 —— vibe coding 中途最容易丢的就是这里
+const save = await window.gml.cmd('export')
+// 把 save 写进文件 / 立刻交回用户，告诉他「已存档到第 N 步」
+```
+
+最后要「按用户的需求返回信息」时：用 `get` 读回要的那几条，**别抠 DOM**：
+
+```js
+const one = await window.gml.cmd('get', { id: rec.id })
+// → { ok:true, record:{ name, requirement, hint, modules:[{type,value}], apis:[{code,desc}] } }
+const all = await window.gml.cmd('state')        // 全部记录的 id / 名字
+```
+
+⚠ **日志模式的三条纪律**：① 每打一次卡立刻 `export` 存一次（防中途丢）；
+② 写完用 `get` 核对一遍（写没写错，机器说了算）；
+③ `exportPractice` 想导**某一条**必须传 `id`，不传就是当前打开的那条；
+④ 测不过就把那条记录**删掉**（`remove`），别留一条没测通的脏记录。
+
+**三种用法共同的规矩**
+
+- **别清用户已有的数据**（`clear` 只在用户明说「重开」时用）。
+- **代码逐字贴**，不改一个字；改写只在用户要求时才做。
+- **每条记录都要有**：`name`（第 N 步：xxx）、`requirement`（这一步做了什么 / 验收标准）、`hint`（坑）。
+- **最后一定要交回东西**：截图 / 存档 / 带记录的 index，别只说「记好了」。
 
 ---
 
@@ -937,14 +1031,39 @@ description: GML 练习记录站（https://basetier-gml.github.io/gml-practice-l
 | 练习过程截图（1440 长图，**二维码固定在开头**） | 弹层标题栏「截图」`#shotBtn` |
 | 分享链接 / 二维码（网址 + `#gmlp=<压缩包>`） | `cmd('shareLink')` |
 | 单条练习存读档（导出/导入一条，含它引用的 API） | 弹层标题栏「存读档」`#pbBtn` |
+| 昵称 / 头像 | 同一个菜单里 `#miRename` `#miAvatar` |
 | 整站存档（导出/导入，**导入只有覆盖**，按钮文字「覆盖现有数据」，要点两次确认） | 顶栏「菜单 ▾」`#miExport` / `#miImport` |
+| **清空缓存**：清掉这台设备的全部数据 + 浏览器缓存（**两次点击确认**） | 菜单 →「清空缓存」`#miClear` |
+| **新手教程**：一键加载 6 条用法说明记录（**按当前界面语言给中/英两版**） | 菜单 →「新手教程」`#miTutorial` |
+| 中英切换 | 菜单 →「切换到 English」`#miLang`（排在「分享」上面） |
 | 挑战记录卡（1080 分享图） | 菜单 →「分享打卡记录截图」`#miShare` |
-| 昵称 / 头像 / 中英切换 | 同一个菜单里 `#miRename` `#miAvatar` `#miLang` |
 | 退出网页时提示导出存档 | `beforeunload` + 自有弹层 `#exitModal` |
+
+**菜单从上到下的顺序**（用户点菜单时按这个找）：
+
+改名字 → 换头像 → 存档 → 读档 → 清空缓存 → 新手教程 → 切换到 English → 分享打卡记录截图
+（语言切换排在「分享」上面）
 
 **数据模型**（灌数据/校验时按这个来）
 
 - 载体类型：`脚本 / 对象 / 操作描述 / SVG绘图 / 超链接 / 着色器`（**类型定下不能换**，要换就删掉重加）。
+- **题目要求只写要求**：`requirement` = 要做成什么样 + 怎么验收；
+  **不要把操作步骤写进要求**（要求里一出现「1. … 2. …」就是在重复载体）。
+  操作步骤 = **多段「操作描述」载体 + 代码/对象载体**，按步骤顺序**交错**排列：
+  先一段操作描述说这一步做什么，紧跟这一段的代码/对象载体，再进下一步。
+- **写正文要主动分段**（别让浏览器在句子中间折断）：
+  详情页正文宽 396px / 14px 字，操作描述 374px / 13.5px ⇒ **一行显示宽度 ≤ 27 em**
+  （CJK 算 1，ASCII 算 0.5）⇒ 写的时候就按意思分段：一个意思一行，段落之间换行。
+  **别指望机器替你断行** —— 自动按字数切会把句子拦腰截断，比不切更难看。
+  实在断不开的长标识符（如长 API 名）宁可超长也不切开。
+- **操作描述只说动作，不贴代码**：代码一律放**代码 / 对象载体**（建对象并加创建事件 → 操作描述写「创建 obj_xxx 并添加创建事件」，创建事件的代码放对象载体里）。
+  描述里出现赋值语句（`a = 1`）或 API 调用（`instance_xxx`）就是写错地方了。
+- **提示也用散文**：提示只讲「为什么会错」，不贴代码行（提到 API 名字可以，贴赋值语句不行）。
+- **操作描述的写法（要能读）**：一行一个动作，条目之间用换行分开；
+  - 长箭头链（`A → B → C → D`）超过 3 段就拆开写，别把一串操作挤在一行；
+  - 细节用缩进行挂在上一步下面（站点按纯文本渲染，缩进和换行都保留）；
+  - 不要用 markdown 标记（``` 围栏、`**` 加粗）—— 站点不解析，会原样显示；
+  - 自检：`\ufffd` 一个都不许有（写入时被截断的字符会显示成乱码）。
 - 对象载体：`{type:'对象', value:'obj_xxx', fields:[{name,param,desc}], events:[{name,code}]}`。
 - API 是**引用式**：库里存 `{id, code, desc, params:[{no,desc}]}`，练习里存 `apis:[refId]`，
   `type==='api'` 的载体只存 `refId`（**不复制代码**）。
@@ -970,7 +1089,7 @@ const r = await page.evaluate(() => window.gml.cmd('screenshot'))   // {ok,dataU
 | 命令 | 参数 | 作用 |
 |---|---|---|
 | `help` / `state` | – | 命令清单 / 当前状态（昵称、设置、记录、API 库、当前练习） |
-| `clear` | – | 清空全部数据（内存 + localStorage，不用 reload） |
+| `clear` | – | 清空全部数据（内存 + localStorage + sessionStorage + Cache API，不用 reload）；同时打「已清空」标记，菜单里的「新手教程」就不会再灌回来 |
 | `export` / `import` | `{json}` | 整站存档导出 / 导入并覆盖 |
 | `checkin` | `{name, requirement, hint}` | 打卡并打开练习过程 |
 | `set` | `{field:'name'\|'requirement'\|'hint', value}` | 改当前练习字段 |
@@ -979,11 +1098,50 @@ const r = await page.evaluate(() => window.gml.cmd('screenshot'))   // {ok,dataU
 | `addApi` / `refApi` / `unrefApi` | `{code, desc, params}` / `{code}` | 建 API / 引用 / 取消引用（`desc` = 用途说明） |
 | `setNick` / `setAvatar` | `{name}` / `{dataUrl}` | 昵称 / 头像 |
 | `screenshot` | – | 练习过程截图 → `{dataUrl,width,height}` |
-| `exportPractice` / `shareLink` | – | 导出这一条 / 它的分享链接 |
+| `exportPractice` / `shareLink` | `{id}`（不给就是当前打开的那条） | 导出这一条 / 它的分享链接 |
+| `get` | `{id}` 或 `{name}`（不给就是当前打开的那条） | **读回一条记录的全部内容**：正文 + 载体全文 + API 引用明细 |
+| `remove` | `{id}` 或 `{name}`（不给就是当前打开的那条） | **删掉一条记录**（测不过时撤销用） |
+| `find` | `{q:'关键词'}` | **按一句描述在打卡记录里定位代码**：返回命中的记录 + 位置（文件 / 类 / 方法 / 行号） |
 | `finish` / `close` / `lang` | – / – / `{lang:'zh'\|'en'}` | 结束编辑 / 关弹层 / 切语言 |
+
+⚠ **`state` 只给摘要**（name / 载体类型 / API 数量），**读不回正文** ——
+要核对刚写进去的内容、要汇总某一步的代码，一律用 `get`（别去抠 DOM）。
+`exportPractice` 记得传 `id`：不给就是**当前打开的那条**。
+`remove` **必须显式给 `id` 或 `name`**：删除是破坏性的，不给就不动手（不会默认删「当前打开的那条」）；删记录会连带清掉日期索引；删不存在的记录会给出可读错误。
 
 ⚠ **改完记录字段必须「先写记录 → 再写回表单 → 最后渲染」**：
 页面渲染会重建表单，而 `syncFormValues()` 是「表单→记录」方向，直接改记录再 render 会被空表单抹掉。
+
+### 2.1 `find`：把一句用户反馈定位到具体代码位置
+
+vibe coding 时用户会说「玩家开火太快」「BOSS 血条看不清」「敌人碰到玩家就掉血」这类话。
+**光看代码不好找** —— 这个站记得住每一步的代码，`find` 就能把这句反馈落到**具体位置**：
+
+```js
+const r = await page.evaluate(() => window.gml.cmd('find', {q:'冷却'}))
+// r.records : [{id, name, hits:[{where, file, line, text}]}]
+//   where = "class_gun.gml > fire"   （文件 > 类/方法）
+//   line  = 28                      （第几行）
+//   text  = 那一行的代码
+// r.apiHits: [{code, desc, where}]  （API 库里命中的条目）
+// r.total  : 命中总数
+```
+
+**它搜的是每条记录的四处**：要求、提示、脚本载体、对象载体的每个事件。
+脚本载体的首行是 `// 文件名`，**那就是工程里的文件名** ⇒ 命中位置可以直接拿去改工程 ✓。
+
+**标准流程（用户给了一条反馈）**：
+
+1. `find` 定位 ⇒ 拿到「哪个记录 / 哪个文件 / 哪个方法 / 第几行」✓；
+2. `get {id}` 读回那条记录的完整代码（正文 + 载体全文）✓；
+3. 按 `file` + `line` 去工程里改那个位置 ✓；
+4. 改完把新代码写回同一条记录（`addModule` 覆盖 / 重新 `checkin` 同一功能），
+   再 `find` 一次确认旧问题已经搜不到了 ✓；
+5. 顺手 `find` 一次同类关键词，确认**没有第二处**同样的问题 ✓。
+
+⚠ `find` 是**按关键词/子串**搜（大小写不敏感）——
+用户的话里往往含中文，最好挑**代码里真有的那个词**（函数名、变量名、状态名）再搜一次；
+搜不到就换词（`hp`、`invuln`、`cd_max`、`charge` 这类）✓。
 
 ---
 
@@ -1022,8 +1180,34 @@ const r = await page.evaluate(() => window.gml.cmd('screenshot'))   // {ok,dataU
 
 这个站不只是「记录一次练习」，也能当 **AI 写 GML 时的开发日志 + 函数复用库**：
 
-- **每完成一个功能环节就打一次卡**（一个环节 = 一条记录）。
-  建议的「环节」粒度 = 一个 500 挑战那种复杂度的功能（一个能单独跑通、能单独验收的小玩法）。
+- ⭐ **只有每个功能环节「测试成功」了，才打那一次卡**（一个环节 = 一条记录）。
+  **写完 ≠ 通过**：这个环节必须能单独跑通、单独验收、单独测过，才算完成，才打卡；
+  没测过就继续改，**不许先打卡占位**。
+  - 「测试成功」的判据（要能说清「怎么验证它」）：有可观察的输出 ——
+    有返回值 / 画面上看得见 / 控制台不报错；能写成断言就写成断言。
+  - **不一定非要真跑起来**：**写码测试**同样算数 —— 对这一环的代码写一组断言，
+    比如「这一环登记的 API 在代码里真的被调用了吗」「分支齐了吗」
+    「数值量级手算对得上吗」「事件体够薄吗」，**断言全绿 = 测通**。
+    测不过就改代码，改完再测，**别先打卡占位**。
+  - **功能环节的尺度参考 500 个挑战记录里的内容量**：
+    一份挑战 README 的体量（题面 + 解题思路 + 定稿代码）≈ 一个**完整功能**，
+    拆成若干环节；每个环节 = 一个能单独跑通、能单独验收的小玩法。
+    ⇒ 别把一整个挑战塞进一条记录，也别把一份挑战拆成二十条。
+  - **复杂功能是由很多简单功能拼出来的 ⇒ 这条规则对每一层都适用**：
+    每个简单功能先各自测通，再把它写出来的类 / 函数登记成 API（登记 = 这个功能已被验证过），
+    然后用这些**现成的 API** 拼成复杂功能；拼成的复杂功能自己也要测通，才算一个可打卡的功能环节。
+    ⇒ 递归下去：**最底层的小功能没测通，上面那层就不该打卡**。
+- ⭐ **写类的时候，一个类一条记录**（用户 2026-11-14 15:57 口径）：
+  - **类记录 = 一个类一条**：写「这个类是什么 + 它的使用场景」，
+    **相当于给这个类的 API 条目补信息**（`desc` 写清楚什么时候该用它）✓
+    —— **不需要展示实际的挂载过程** ✓。
+  - **使用场景怎么写**：什么时候会需要它（谁会拿它用）、它替对象省掉了哪一块逻辑；
+    顺带把 API 信息列清楚：构造签名 / 对外方法 / 别人会读它的哪些成员。
+    **写清这些就算「完成一次打开记录」**（`checkin` 之后记录就成立了 ✓）。
+  - **挂载发生在别的记录里**：等做到「玩家 / 敌人 / 子弹」这类对象时，
+    那条记录**直接 new 建好的类**（用法在 API 库里查得到），**不用把类的实现再抄一遍**。
+  - 顺序：**先建类（记录使用场景）→ 后挂载（记录里直接用）** ✓；
+    类写完 + 写码测试全绿 ⇒ `finish` 完成这条记录。
 - 每条记录写清四件事：
   1. **这一步做了什么** → 名称（`name`，建议写成「第 N 步：xxx」）；
   2. **这一步的要求 / 验收标准** → `requirement`；
@@ -1031,11 +1215,40 @@ const r = await page.evaluate(() => window.gml.cmd('screenshot'))   // {ok,dataU
   4. **用了哪些官方 API** → 建进 API 库并引用（`addApi` → `refApi`），
      于是「这条记录 ↔ API 库」互相可查（库里有「被 N 处引用」，记录里有引用列表）。
 - **过程中写出来的函数 / 构造函数 / 结构体，也登记进 API 库**（`addApi`）：
+  （类的 static 方法不单独登记 —— 见下面「登记了就要引用」那两条）
   - `code` 写**函数名或结构体名**（不带括号参数）；
   - `desc` 写**这个函数是干什么的**（一句话用途，AI 查库时靠它判断能不能复用）；
   - `params` 写形参清单（编号 + 说明）；
   - 完整实现放在这条记录的**脚本载体**里（代码逐字照抄，首行写 `// 文件名`）。
   ⇒ 以后 AI 写新代码前先 `state()` 查一遍 API 库：**能复用的直接复用，不要重写一遍**。
+  - ⭐ **登记了就要引用**（用户 2026-11-14 补充的口径）：
+    建了 `class_gun` 这样的自写类，**定义它的那条记录**和**用到它的那些记录**
+    都要 `refApi` 引用它 —— 比如第 2 步的 `class_player` 里写着 `new class_gun(...)`，
+    那一环也要引 `class_gun`。
+    只 `addApi` 不 `refApi` ⇒ 库里「被 N 处引用」和实际用的情况对不上，
+    反查功能就废了。
+    判据（机器可算）：**这一环的代码里（去掉注释）出现了那个类名，就算这一环用到了它**。
+  - ⭐ **被创建的对象（obj_xxx）也登记进 API 库**（用户 2026-11-14 15:34 补充）：
+    登记 obj 是为了**跟踪 obj 的使用情况** —— 库里能一眼看出哪个 obj 被哪些记录用过。
+    - **创建它的那一环**：`addApi({code:"obj_enemy", desc:"敌人：挂 class_enemy 组件（kind 0 普通）"})`，
+      `desc` 写「这个 obj 干什么 + 它挂了哪个组件类」；
+    - **用到它的那些一环**（代码里出现 `obj_enemy`）：`refApi` 引用它；
+    - 判据（机器可算）：**这一环的代码里出现了那个 obj 名，就算这一环用到了它**。
+    - 适用范围：**登记三种模式都做**；
+      「创建它的环 + 用到它的环都要引」这种跨记录引用，
+      **只在「教程」和「日志」模式下做**（打卡模式只有一条记录，
+      那一条引用它用到的 obj 即可）。
+  - ⭐ **类的 static 方法默认不单独登记**（用户 2026-11-14 补充）：
+    `class_gun.fire` 这种**方法条目不进 API 库** —— 静态方法是类自己的一部分，
+    查类就知道它有哪些方法，不用再拆成一条条。
+    **只有这个方法在 `class_gun` 之外被复用时**（别的类/对象里写 `class_gun.fire(...)`），
+    才单独登记成一条，并在用到它的那条记录里引用。
+    机器判据：**`class_X.method` 这个全名出现在 X 自己的文件之外** = 类外复用；
+    类内部的 `self.method()`、裸调、通过实例的 `obj.method()` **都不算**。
+    ⚠ **这条只在「教程」和「日志」模式下用** —— 那两种模式是**按环节一步步演进**的，
+    才有「定义它的环」和「用到它的环」之分。
+    **打卡模式是录一份已经写好的成品**（用户上传描述 + 代码），
+    不按环节演进 ⇒ 登记用到的官方 API 并引用即可，**不用管自写类的跨环引用**。
 - **对象载体只有一个「对象名」字段，没有父对象字段** ⇒ **父对象写进「预定义变量表」**，
   加一行：变量名 `父对象` / 参数 `obj_enemy_base` / 说明 `继承自`。
   其它「这个对象有哪些属性」的信息也走这张表（变量名 / 参数 / 说明三列）。
@@ -1047,10 +1260,11 @@ const r = await page.evaluate(() => window.gml.cmd('screenshot'))   // {ok,dataU
 - **一次开发会话的推荐节奏**：
   ```
   读需求 → cmd('state') 查 API 库（看能复用什么）
-        → 写第 1 个功能环节 → 打卡 + 加载体 + 引用官方 API + 登记新写的函数
-        → 写第 2 个环节 → 再打卡（名字写「第 2 步：…」）
+        → 写第 1 个功能环节 → **测通它** → 打卡 + 加载体 + 引用官方 API + 登记新写的函数
+        → 写第 2 个环节 → **测通它** → 再打卡（名字写「第 2 步：…」）
         → …全部完成后 cmd('screenshot') 交付
   ```
+  ⚠ 顺序别颠倒：**先测通、再打卡**。先打卡后补测，记录里就混进了没验证过的环节。
 - ⚠ **一个环节 = 一次能单独验收的打卡**：别把一整个功能拆成 20 条，也别把 5 个环节塞成 1 条。
 - 一个「写一个 GameMaker 小游戏」的切法（可直接照抄）：
   `第 1 步：拆出简单构件类` → `第 2 步：世界服务类` → `第 3 步：玩家` → `第 4 步：武器与子弹` →
@@ -1105,6 +1319,23 @@ const r = await page.evaluate(() => window.gml.cmd('screenshot'))   // {ok,dataU
 - **对象就是类**，事件就是方法；父子关系用 GameMaker 的「父对象」属性
   （记进练习记录时写进「预定义变量表」）。
 - **一个功能拆成类**，一类只管一件事；**简单类组合成复杂类**。
+- ⭐ **像传统游戏开发那样：一个对象由「能力组件」拼起来**（用户 2026-11-14 15:42 拍板）。
+  角色不是一个大类从头写到尾，而是由若干**能力组件**组成 ——
+  至少 **血量 / 移动 / 攻击** 三个：
+  ```
+  // obj_player 的 Create
+  hp   = new class_hp(self, 6, false);      // 血量
+  move = new class_move(self, 4.0);        // 移动
+  gun  = new class_gun(self, 6, 12, 1, true);   // 攻击
+  ```
+  - **组件按「能力」切，不按「这个对象是谁」切** ⇒ 组件类可复用：
+    `class_hp` 玩家、敌人、BOSS 共用同一份（**全项目只能有一份血量类**），
+    `class_gun` 玩家和敌人共用（参数不同而已）。
+  - **组件之间要协作就通过 `owner` 找兄弟组件**：`_target.gun.dmg += 1`、
+    `owner.gun.update(_p.x, _p.y)`、`owner.ai.state`。
+    组件之间不互相持有，只认得 `owner` ⇒ 换掉任何一个组件都不影响其它组件。
+  - **一个 obj 至少挂两个组件**；只有一个功能的对象才允许只挂一个。
+  - 对象事件体只做壳：Create 建组件、Step 调组件、Draw 画自己 + 组件的 draw。
 - **不为某个具体场景单开一个脚本**：脚本数要收敛（能当函数的当函数，能当 static 的当 static）。
 - **纯绘制 / 纯计算的场景用无状态全局函数**：位置、宽高、当前值全当参数传，函数自己不存东西
   （同一个房间能画好几条，不必多个对象）。
@@ -1138,6 +1369,78 @@ const r = await page.evaluate(() => window.gml.cmd('screenshot'))   // {ok,dataU
 - 登记时：**类名和 static 方法都登记进 API 库**（`code` 写 `class_scores_list` 或 `class_scores_list.update`，
   `desc` 写用途，`params` 写形参清单），完整实现放**脚本载体**里。
   ⚠ API 库的 `code` **大小写不敏感** ⇒ 同名大小写两条会互相覆盖（见 §8 第 10 条）。
+
+### 5.4 var 与 static 的作用域（补充口径）
+
+**var —— 存活周期 = 一次脚本运行**
+
+- `var` 声明的临时变量，**生命周期只有这一次脚本执行**（一个事件跑完 / 一次函数调用返回就没了），
+  下次再跑它又是初值；要跨调用记住东西，用 `static`。
+- ⭐ **`with` 切换了作用域，但外面声明的 `var` 在 `with` 块里读得到** ——
+  这就是「把值带进 with 目标的那个作用域」的办法：
+  ```gml
+  var _hp = 0;
+  with (_inst) { _hp = hp; }      // 块里读得到 _hp（值传进去了）
+  ```
+  用户自己的 #32 就是这个用法：`with _inst path_start(other.path,_spd,_kind ,_abs);`
+- ⚠ **反过来：`with` 块里不要写 `var`** —— 那个名字会被 with 目标抢走，出了块就读不到
+  （检查器有这条规则：with 块里不能写 var）。要临时变量，先在外面 `var` 好。
+
+**static —— 按函数 / 按类共享**
+
+static 有两个落点，作用域不一样：
+
+| 落点 | 共享范围 | 典型用法 |
+|---|---|---|
+| **函数级 static**（写在普通函数体里） | 那个**函数**；这个函数的**所有调用共享同一份** | 当函数里的**常量** / 缓存 / 单例 |
+| **类级 static**（写在 constructor 里） | 那个**类**；**所有实例共享同一份** | 类的常量表、与实例无关的共享逻辑 |
+
+- **函数级 static 在定义它的那个函数里可以裸调**（用户自己的 #30 就是这么写的）：
+  ```gml
+  function scr_tip(_x,_y,_w,_h,_message)
+  {
+      static draw_shadow = function(_x,_y,_dis,_message) { ... }   // 函数体里固定下来的那个函数
+      ...
+      draw_shadow(_x,_y,2,_message);       // 裸调 ✓
+  }
+  ```
+  外部想访问函数级 static，得写 `函数名.变量名`（`scr_tip.draw_shadow`）。
+- **类级 static 的调用带 `self.`**（`self.tick()`），**读常量用裸名**（`_colors[kind]`）——
+  和 §5.2 的记法一致。
+- ⚠ **别用 static 存每个实例独有的数据**：那是实例成员（构造函数里裸名赋值）。
+  static 一份 = 全类（/全函数）共享一份。
+
+**static 函数 = 这个函数体里固定下来的那个函数，不属于任何一次调用**
+
+⇒ **不建议在运行中改它**：
+- 改了它，这个函数整体的调用行为就变了；
+- 放在类里更严重 —— 那是**全类共用的 static**，一处改，全类行为都变，
+  还会连带改掉别的 static 方法调用它时的效果。
+
+**实践口径**：static 放「常量 / 单例 / 缓存 / 与实例无关的共享逻辑」，写完就别动它；
+要每个实例各自一份的，老老实实写成实例成员。
+
+**同名时，GML 优先用函数内部那个 static**
+
+- 函数里的 **static 函数** 和外部的同名函数撞名时，**GML 优先用函数内部这个 static** ——
+  外面那个同名函数在这个函数体内会被「遮住」。
+- 所以类里调用自己的 static 方法**一律写 `self.`**：`self.tick()`、`self.set_type("reward")`。
+  这不只是书写习惯（§5.2），它真的**标明了这个函数的作用域** ——
+  读代码的人一眼知道调的是类里那个，不是外面同名的那个。
+- **函数级 static 用 `<函数名>.` 来标明它属于哪个函数**：
+  ```gml
+  function scr_tip(_x,_y,_w,_h,_message)
+  {
+      static draw_shadow = function(_x,_y,_dis,_message) { ... }
+      ...
+      draw_shadow(_x,_y,2,_message);        // 同一个函数体内：裸调 ✓（内部优先）
+  }
+
+  // 在别的函数里想用这个 static 函数 / static 变量 → 用 <函数名>. 指名
+  scr_tip.draw_shadow(_x,_y,2,_msg);
+  ```
+  （类级 static 写出来也是 `类名.名字`，但 GMS 2.3 **不保证能用类名取 static** ⇒
+  类级一律走实例：`comp.hit(3)`；常量在类内部用裸名 `_colors[kind]`。）
 
 ---
 
@@ -1227,6 +1530,18 @@ trail.update(x, y)
     `World`（类）和 `world`（同名函数）只差大小写 ⇒ **后登的那条会把先登的 desc 覆盖掉**，
     库最后只剩一条。登记前先 `state()` 查一下；同一个东西不要拆成两条登记。
 
+## 8.5 菜单里的「新手教程」和「清空缓存」
+
+- **下载到的 index 本身不带任何记录**（是空的）✓ —— 别以为打开就有数据。
+- 用户问「怎么用」时：**点菜单 →「新手教程」**，
+  它会按**当前界面语言**加载 6 条用法说明记录（中/英两版内置在 `window.GML_TUTORIAL_DATA` ✓）：
+  三种用法各一条 + API 库介绍 + 网页基础交互介绍 + 一条「点菜单里的清空，正式开始使用」✓。
+- 这些说明**就是打卡记录**（和用户自己的记录长得一样）✓，
+  用完可以在菜单 →「清空缓存」删掉 ✓。
+- **清空缓存**会删掉 localStorage / sessionStorage / Cache API 里的东西，
+  并打上 `gml-practice-log-v2:cleared` 标记 ⇒ 清空后刷新**不会**把说明灌回来 ✓。
+  是破坏性操作，**两次点击确认**（第一次变成「再点一次确认清空」，4 秒后自动解除）✓。
+
 ## 9. 交付给用户什么
 
 整站存档 JSON ｜单条练习存档 JSON ｜练习过程截图 PNG ｜挑战记录卡 PNG
@@ -1248,9 +1563,11 @@ trail.update(x, y)
         <div class="user-menu" id="userMenu" role="menu">
           <button class="um-item" id="miRename" type="button" role="menuitem"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>改名字</button>
           <button class="um-item" id="miAvatar" type="button" role="menuitem"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>换头像</button>
-          <button class="um-item" id="miLang" type="button" role="menuitem" data-i18n-skip><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/></svg><span id="miLangTxt">切换到 English</span></button>
           <button class="um-item" id="miExport" type="button" role="menuitem"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7.5 10.5 12 15l4.5-4.5"/><path d="M4 19h16"/></svg>存档</button>
           <button class="um-item" id="miImport" type="button" role="menuitem"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7.5 7.5 12 3l4.5 4.5"/><path d="M4 19h16"/></svg>读档</button>
+          <button class="um-item" id="miClear" type="button" role="menuitem"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>清空缓存</button>
+          <button class="um-item" id="miTutorial" type="button" role="menuitem"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5Z"/><path d="M4 5.5v15"/><path d="M9 7h6"/><path d="M9 11h4"/></svg>新手教程</button>
+          <button class="um-item" id="miLang" type="button" role="menuitem" data-i18n-skip><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/></svg><span id="miLangTxt">切换到 English</span></button>
           <button class="um-item" id="miShare" type="button" role="menuitem"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18"/><path d="M8.5 14.5l2.5 2.5 4-4.5"/></svg>分享打卡记录截图</button>
           <p class="um-note">存档只存在这台设备的浏览器里。换设备或清缓存前，先导出备份。</p>
         </div>
@@ -1467,6 +1784,38 @@ trail.update(x, y)
       <button class="btn btn-primary" id="importReplaceBtn" type="button">覆盖现有数据</button>
     </div>
     <p class="note">覆盖：清空当前全部数据，只用存档里的。</p>
+  </div>
+</div>
+
+<!-- ============ 新手教程弹层 ============ -->
+<div class="modal" id="tutModal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3>新手教程</h3>
+      <button class="btn btn-ghost close" id="tutClose" type="button" style="flex:0 0 auto;padding:6px 14px;font-size:13px">关闭</button>
+    </div>
+    <p class="import-line" id="tutSummary">这会追加 6 条用法说明记录。</p>
+    <p class="note" id="tutNote">说明是按打卡记录展示的：三种用法、API 库怎么用、站点怎么操作。</p>
+    <div class="import-ops">
+      <button class="btn btn-primary" id="tutLoadBtn" type="button">加载新手教程</button>
+    </div>
+    <p class="note">加载完随时可以在菜单里点「清空缓存」删掉。</p>
+  </div>
+</div>
+
+<!-- ============ 清空缓存弹层 ============ -->
+<div class="modal" id="clearModal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3>清空缓存</h3>
+      <button class="btn btn-ghost close" id="clearClose" type="button" style="flex:0 0 auto;padding:6px 14px;font-size:13px">关闭</button>
+    </div>
+    <p class="import-line" id="clearSummary">这台设备上有 0 条记录、0 个 API。</p>
+    <p class="note">清掉的就找不回来了。要保留的话，先用「存档」导出一份备份。</p>
+    <div class="import-ops">
+      <button class="btn btn-primary" id="clearConfirmBtn" type="button">清空全部数据</button>
+    </div>
+    <p class="note">清空后网页回到初始状态，自带的使用说明也会一起清掉。</p>
   </div>
 </div>
 
@@ -3859,6 +4208,18 @@ var qrcode = function() {
    ============================================================ */
 var I18N = {
   zh: {
+    "新手教程": "新手教程",
+    "加载新手教程": "加载新手教程",
+    "tut_will_add": "这会追加 {n} 条用法说明记录（语言：{l}）。",
+    "tut_what": "说明是按打卡记录展示的：三种用法、API 库怎么用、站点怎么操作。",
+    "加载完随时可以在菜单里点「清空缓存」删掉。": "加载完随时可以在菜单里点「清空缓存」删掉。",
+    "tut_loaded": "新手教程已加载。",
+    "清空缓存": "清空缓存",
+    "清空全部数据": "清空全部数据",
+    "再点一次确认清空": "再点一次确认清空",
+    "已清空全部数据": "已清空全部数据",
+    "清掉的就找不回来了。要保留的话，先用「存档」导出一份备份。": "清掉的就找不回来了。要保留的话，先用「存档」导出一份备份。",
+    "清空后网页回到初始状态，自带的使用说明也会一起清掉。": "清空后网页回到初始状态，自带的使用说明也会一起清掉。",
     "Gml代码练习记录": "Gml代码练习记录",
     "退出前先存个档？": "退出前先存个档？",
     "存档只存在这台设备的浏览器里，刷新、换浏览器、清缓存都会丢。要现在导出一份完整存档文件吗？": "存档只存在这台设备的浏览器里，刷新、换浏览器、清缓存都会丢。要现在导出一份完整存档文件吗？",
@@ -4212,6 +4573,18 @@ var I18N = {
     vid_tag: "（视频）",
   },
   en: {
+    "新手教程": "Getting started",
+    "加载新手教程": "Load the guide",
+    "tut_will_add": "This adds {n} guide records (language: {l}).",
+    "tut_what": "The guide is shown as check-in records: the three ways to use this site, the API library, and the basic interactions.",
+    "加载完随时可以在菜单里点「清空缓存」删掉。": "You can remove the guide again any time with Clear cache in the menu.",
+    "tut_loaded": "Guide loaded.",
+    "清空缓存": "Clear cache",
+    "清空全部数据": "Clear all data",
+    "再点一次确认清空": "Click again to confirm",
+    "已清空全部数据": "All data cleared",
+    "清掉的就找不回来了。要保留的话，先用「存档」导出一份备份。": "Cleared data can't be recovered. Export a backup first if you want to keep it.",
+    "清空后网页回到初始状态，自带的使用说明也会一起清掉。": "The page goes back to its initial state; the built-in guide is cleared too.",
     "Gml代码练习记录": "GML Practice Log",
     "退出前先存个档？": "Save a backup before leaving?",
     "存档只存在这台设备的浏览器里，刷新、换浏览器、清缓存都会丢。要现在导出一份完整存档文件吗？": "Your data only lives in this browser on this device - refreshing, switching browsers or clearing cache will lose it. Export a full backup file now?",
@@ -4670,6 +5043,20 @@ function setI18nText(el, txt){
   }
   el.textContent = txt;
 }
+function applyStaticI18n(){
+  /* 几个弹层的「静态占位文案」：不靠打开弹层刷新，切语言就跟着变 */
+  var set = function(sel, txt){ var e = $(sel); if(e) e.textContent = txt; };
+  var data = window.GML_TUTORIAL_DATA || {};
+  var list = data[(__lang === 'en') ? 'en' : 'zh'] || [];
+  set('#tutSummary', TF('tut_will_add', { n:list.length, l: (__lang === 'en') ? 'English' : '中文' }));
+  set('#tutNote', T('tut_what'));
+  set('#clearSummary', TF('backup_in_local', { r:recCount(), a:apiCount() }));
+  if(pendingPractice){ renderPracticeImport(); }
+  else{
+    set('#pbRecInfo', TF('practice_rec_info', { name:'' }));
+    set('#pbApiInfo', TF('practice_apis_count', { n:0 }));
+  }
+}
 function applyLang(){
   __lang = state.settings.lang;
   document.documentElement.setAttribute('lang', __lang === 'en' ? 'en' : 'zh-CN');
@@ -4688,6 +5075,7 @@ function applyLang(){
     renderProcess();
     updateImportSummary();
   }catch(e){}
+  try{ applyStaticI18n(); }catch(e){}
   applyI18nDOM();
 }
 function setLang(l){
@@ -5311,8 +5699,20 @@ __lang = detectLang();
     reader.onerror = function(){ toast(T('读不出这个文件')); };
     reader.readAsText(file);
   }
+  /* 认得出这是不是一份存档：认不出就拒掉。
+     认不出来还去覆盖 = 直接把用户的数据清空（导入一个错的 JSON 文件就能做到）。 */
+  var BACKUP_KEYS = ['records','apiLib','apiById','user','days','settings',
+                     'dailyGoal','nickname','carrierColors','customTypes'];
+  function looksLikeBackup(incoming){
+    if(!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) return false;
+    for(var i=0;i<BACKUP_KEYS.length;i++){
+      if(Object.prototype.hasOwnProperty.call(incoming, BACKUP_KEYS[i])) return true;
+    }
+    return false;
+  }
   /* 覆盖：清掉当前数据，只留存档里的 */
   function replaceBackup(incoming){
+    if(!looksLikeBackup(incoming)) return false;
     deletedIds = {};
     state.user = state.user || {name:DEFAULT_NICK, image:''};
     state.user.name = (incoming.user && incoming.user.name) || incoming.nickname || DEFAULT_NICK;
@@ -5325,6 +5725,7 @@ __lang = detectLang();
     fixApiRefs(incoming.apiById || {});
     rebuildDays();
     rebuildApiIndex();
+    return true;
   }
   /* 一堆记录 / api 挨个规范化（坏的丢掉） */
   function normalizeMap(map, fn){
@@ -5351,7 +5752,10 @@ __lang = detectLang();
   function finishImport(){
     if(!pendingImport) return;
     var d = pendingImport;
-    replaceBackup(d);
+    if(!replaceBackup(d)){          /* 认不出是存档 → 不碰现有数据 */
+      toast(T('这个文件不是有效的存档'));
+      return;
+    }
     migrateApiLib(); migrateObjects(); migrateCarriers();
     state.settings.lang = __lang;
     save();
@@ -7013,7 +7417,7 @@ __lang = detectLang();
         c0.textContent = T('待填写');
         meta.appendChild(c0);
       }else{
-        types.forEach(function(t){ meta.appendChild(chipEl(t, carrierColor(t), true)); });
+        types.forEach(function(t){ meta.appendChild(chipEl(typeLabel(t), carrierColor(t), true)); });
         var apiN = (rec.apis || []).length;
         if(apiN){
           var a = el('span', 'chip mini');
@@ -8208,7 +8612,7 @@ __lang = detectLang();
           c0.textContent = T('待填写');
           meta.appendChild(c0);
         }else{
-          types.forEach(function(t){ meta.appendChild(chipEl(t, carrierColor(t), true)); });
+          types.forEach(function(t){ meta.appendChild(chipEl(typeLabel(t), carrierColor(t), true)); });
           var apiN = (rec.apis || []).length;
           if(apiN){
             var a = el('span', 'chip mini');
@@ -8489,8 +8893,80 @@ __lang = detectLang();
   $('#miExport').addEventListener('click', function(){ menuClose(); exportBackup(); });
   $('#miImport').addEventListener('click', function(){ menuClose(); $('#backupFile').click(); });
   $('#miShare').addEventListener('click', function(){ menuClose(); openCard(); });
+  $('#miClear').addEventListener('click', function(){ menuClose(); openClearModal(); });
+  $('#miTutorial').addEventListener('click', function(){ menuClose(); openTutModal(); });
+
+  /* ---- 新手教程：按当前界面语言加载内置的用法说明记录 ---- */
+  function tutLang(){
+    var l = (typeof __lang !== 'undefined' && __lang);
+    return (l === 'zh') ? 'zh' : 'en';
+  }
+  function openTutModal(){
+    var data = window.GML_TUTORIAL_DATA || {};
+    var recs = data[tutLang()] || data.zh || [];
+    $('#tutSummary').textContent = TF('tut_will_add', { n: recs.length, l: tutLang() === 'zh' ? '中文' : 'English' });
+    $('#tutNote').textContent = T('tut_what');
+    $('#tutModal').classList.add('open');
+  }
+  function closeTutModal(){ $('#tutModal').classList.remove('open'); }
+  $('#tutClose').addEventListener('click', closeTutModal);
+  $('#tutModal').addEventListener('click', function(e){ if(e.target === $('#tutModal')) closeTutModal(); });
+  $('#tutLoadBtn').addEventListener('click', async function(){
+    var data = window.GML_TUTORIAL_DATA || {};
+    var recs = data[tutLang()] || data.zh || [];
+    var cmd = window.gml.cmd;
+    if(!cmd || !recs.length) return;
+    for(var i = 0; i < recs.length; i++){
+      var r = recs[i];
+      await cmd('checkin', { name:r.name, requirement:r.requirement, hint:r.hint });
+      (r.descs || []).forEach(async function(d){ await cmd('addModule', { type:'操作描述', value:d }); });
+      if(r.script) await cmd('addModule', { type:'脚本', value:r.script });
+      for(var j = 0; j < (r.apis || []).length; j++){
+        await cmd('addApi', { code:r.apis[j][0], desc:r.apis[j][1] });
+        await cmd('refApi', { code:r.apis[j][0] });
+      }
+      await cmd('finish');
+    }
+    closeTutModal();
+    toast(T('tut_loaded'));
+  });
 
   
+  /* ---- 清空缓存弹层：两次点击确认（第一次武装，第二次才执行） ---- */
+  var clearArmed = false, clearTimer = null;
+  function openClearModal(){
+    clearArmed = false;
+    $('#clearConfirmBtn').classList.remove('armed');
+    setI18nText($('#clearConfirmBtn'), T('清空全部数据'));
+    $('#clearSummary').textContent = TF('backup_in_local', {r:recCount(), a:apiCount()});
+    $('#clearModal').classList.add('open');
+  }
+  function closeClearModal(){
+    clearArmed = false;
+    clearTimeout(clearTimer);
+    $('#clearConfirmBtn').classList.remove('armed');
+    setI18nText($('#clearConfirmBtn'), T('清空全部数据'));
+    $('#clearModal').classList.remove('open');
+  }
+  $('#clearClose').addEventListener('click', closeClearModal);
+  $('#clearModal').addEventListener('click', function(e){ if(e.target === $('#clearModal')) closeClearModal(); });
+  $('#clearConfirmBtn').addEventListener('click', function(){
+    if(!clearArmed){
+      clearArmed = true;
+      $('#clearConfirmBtn').classList.add('armed');
+      setI18nText($('#clearConfirmBtn'), T('再点一次确认清空'));
+      clearTimer = setTimeout(function(){
+        clearArmed = false;
+        $('#clearConfirmBtn').classList.remove('armed');
+        setI18nText($('#clearConfirmBtn'), T('清空全部数据'));
+      }, 4000);
+      return;
+    }
+    closeClearModal();
+    clearAllData();
+    toast(T('已清空全部数据'));
+  });
+
   function openLightbox(src, alt){
     $('#lightboxImg').src = src;
     $('#lightboxImg').alt = alt || T('放大查看');
@@ -9685,6 +10161,127 @@ __lang = detectLang();
     var r = cmdCurrentRec();
     return r ? null : cmdFail('现在没有打开的练习，先执行 checkin');
   }
+  /* 找一条记录：按 id / 按 name（同名取最后一条）/ 不给就取当前打开的那条 */
+  function cmdFindRec(a){
+    a = a || {};
+    if(a.id != null && String(a.id) !== ''){
+      return findRec(String(a.id));
+    }
+    if(a.name != null && String(a.name) !== ''){
+      var hits = allRecs().filter(function(r){ return (r.name||'') === String(a.name); });
+      return hits.length ? hits[hits.length-1] : null;
+    }
+    return cmdCurrentRec();
+  }
+  /* 一条记录的完整内容（AI 读回用：正文 + 载体全文 + API 引用明细） */
+  function cmdRecordDetail(r){
+    return {
+      id: r.id, ts: r.ts, name: r.name || '',
+      requirement: r.requirement || '', hint: r.hint || '',
+      apis: (r.apis||[]).map(function(id){
+        var a = apiObj(id);
+        return { id:id, code:a ? (a.code||'') : '', desc:a ? (a.desc||'') : '' };
+      }),
+      modules: (r.modules||[]).map(function(m){
+        var o = { type:m.type, value: m.value == null ? '' : m.value };
+        if(m.type === '对象'){
+          o.name = m.value;
+          o.fields = m.fields || [];
+          o.events = (m.events||[]).map(function(e){ return { name:e.name, code:e.code }; });
+        }
+        return o;
+      })
+    };
+  }
+  /* ---------------- 按描述定位代码位置 ----------------
+     vibe coding 时用户说「玩家开火太快」「BOSS 血条看不清」这类反馈，
+     需要能定位到「哪个文件的哪个类哪个方法第几行」，才能准确改工程。
+     查的是每条打卡记录里的：要求 / 提示 / 脚本载体 / 对象载体的代码。 */
+  function codeScopeOf(lines, idx){
+    /* 命中行所在的作用域：最近的 static 方法，找不到就找构造函数（类名） */
+    for(var i = idx; i >= 0; i--){
+      var m = String(lines[i]).match(/^\s*static\s+([A-Za-z_]\w*)\s*=\s*function/);
+      if(m) return m[1];
+      var c = String(lines[i]).match(/^\s*function\s+([A-Za-z_]\w*)\s*\(/);
+      if(c) return c[1];
+    }
+    return '';
+  }
+  function scanCodeLines(hits, where, file, code, ql, q){
+    var lines = String(code == null ? '' : code).split('\n');
+    for(var i = 0; i < lines.length; i++){
+      if(lines[i].toLowerCase().indexOf(ql) < 0) continue;
+      var scope = codeScopeOf(lines, i);
+      hits.push({
+        where: scope ? (where + ' > ' + scope) : where,
+        file: file || '',
+        line: i + 1,
+        text: lines[i].trim().slice(0, 160)
+      });
+    }
+  }
+  function cmdFind(a){
+    a = a || {};
+    var q = String(a.q == null ? (a.query == null ? (a.text || '') : a.query) : a.q);
+    q = q.trim();
+    if(!q) return cmdFail('find 需要参数 {q:"要搜的描述或关键词"}');
+    var ql = q.toLowerCase();
+    var out = [];
+    allRecs().forEach(function(r){
+      var hits = [];
+      var req = String(r.requirement || '');
+      var hint = String(r.hint || '');
+      if(req.toLowerCase().indexOf(ql) >= 0)
+        hits.push({ where:'要求', file:'', line:0, text:req.slice(0, 160) });
+      if(hint.toLowerCase().indexOf(ql) >= 0)
+        hits.push({ where:'提示', file:'', line:0, text:hint.slice(0, 160) });
+      (r.modules || []).forEach(function(m){
+        if(m.type === '对象'){
+          (m.events || []).forEach(function(e){
+            scanCodeLines(hits, (m.value || '对象') + ' > ' + (e.name || ''), '', e.code || '', ql, q);
+          });
+        } else {
+          var v = m.value == null ? '' : String(m.value);
+          var first = (v.split('\n')[0] || '').replace(/^\/\/\s*/, '').trim();
+          /* 脚本载体的首行是「// 文件名」，它就是工程里的文件名 */
+          scanCodeLines(hits, first || '脚本', first, v, ql, q);
+        }
+      });
+      if(hits.length){
+        out.push({ id:r.id, name:r.name || '', ts:r.ts, hits:hits });
+      }
+    });
+    /* API 库里 desc / code 命中的（AI 查库时判断能不能复用） */
+    var apiHits = [];
+    allApis().forEach(function(a2){
+      var code = String(a2.code || ''), desc = String(a2.desc || '');
+      if(code.toLowerCase().indexOf(ql) >= 0 || desc.toLowerCase().indexOf(ql) >= 0){
+        apiHits.push({ code:code, desc:desc, where: code.toLowerCase().indexOf(ql) >= 0 ? 'code' : 'desc' });
+      }
+    });
+    var total = 0;
+    out.forEach(function(x){ total += x.hits.length; });
+    return { ok:true, q:q, records:out, total:total, apiHits:apiHits };
+  }
+  /* 清空这台设备上的全部数据 + 浏览器缓存。
+     同时打上「已清空」标记，避免页面里预置的使用说明被重新灌回来。 */
+  function clearAllData(){
+    try{ localStorage.clear(); }catch(e){}
+    try{ sessionStorage.clear(); }catch(e){}
+    try{
+      if(window.caches && caches.keys){
+        caches.keys().then(function(keys){ keys.forEach(function(k){ caches.delete(k); }); });
+      }
+    }catch(e){}
+    var d = defaultState();
+    state.user = d.user; state.settings = d.settings;
+    state.settings.lang = __lang;
+    state.records = {}; state.days = {}; state.api = {}; state.apiIndex = {};
+    editingId = null; selectedId = null; formRecId = null; deletedIds = {};
+    save(); renderAll(); applyLang();
+    try{ localStorage.setItem('gml-practice-log-v2:cleared', '1'); }catch(e){}
+    return { ok:true, cleared:true };
+  }
   var GML_CMDS = {
     /* 列出所有命令 */
     help: function(){
@@ -9703,7 +10300,10 @@ __lang = detectLang();
         { name:'setNick',      desc:'改昵称，参数 {name}' },
         { name:'setAvatar',    desc:'设头像，参数 {dataUrl:"data:image/…"}' },
         { name:'screenshot',   desc:'生成当前练习的过程截图，返回 {dataUrl,width,height}' },
-        { name:'exportPractice', desc:'导出当前这一条练习的存档，返回 payload 对象' },
+        { name:'exportPractice', desc:'导出这一条练习的存档，返回 payload 对象；参数 {id} 指定哪条，不给就是当前打开的那条' },
+        { name:'get',        desc:'读回一条记录的全部内容（正文 + 载体全文 + API 引用明细），参数 {id} 或 {name}，不给就是当前打开的那条' },
+        { name:'find',       desc:'按一句描述/关键词在打卡记录里定位代码：返回命中的记录 + 位置（文件 / 类 / 方法 / 行号），参数 {q:"关键词"}' },
+        { name:'remove',     desc:'删掉一条记录（测不过时撤销用），参数 {id} 或 {name}，不给就是当前打开的那条' },
         { name:'shareLink',    desc:'算这条练习的分享链接/二维码，返回 {url,version,size,tooLong}' },
         { name:'finish',       desc:'结束编辑（切到详情态，弹层不关）' },
         { name:'close',        desc:'关掉练习过程弹层' },
@@ -9718,21 +10318,11 @@ __lang = detectLang();
           return { id:r.id, ts:r.ts, name:r.name, apis:(r.apis||[]).length,
                    modules:(r.modules||[]).map(function(m){ return m.type; }) };
         }),
-        api: allApis().map(function(a){ return { id:a.id, code:a.code, desc:a.desc || '', params:(a.params||[]).length }; }),
+        api: allApis().map(function(a){ return { id:a.id, code:a.code, desc:a.desc || '', params:(a.params||[]).length, uses: apiUses(a.id).length }; }),
         current: (function(){ var r = cmdCurrentRec(); return r ? r.id : null; })()
       } };
     },
-    clear: function(){
-      try{ localStorage.clear(); }catch(e){}
-      try{ sessionStorage.clear(); }catch(e){}
-      var d = defaultState();
-      state.user = d.user; state.settings = d.settings;
-      state.settings.lang = __lang;
-      state.records = {}; state.days = {}; state.api = {}; state.apiIndex = {};
-      editingId = null; selectedId = null; formRecId = null; deletedIds = {};
-      save(); renderAll(); applyLang();
-      return { ok:true, cleared:true };
-    },
+    clear: function(){ return clearAllData(); },
     export: function(){
       var data = backupData();
       return { ok:true, payload:{
@@ -9746,7 +10336,14 @@ __lang = detectLang();
         if(typeof obj === 'string') obj = JSON.parse(obj);
         if(!obj || typeof obj !== 'object') return cmdFail('没给存档内容（参数 {json: 存档对象}）');
         var incoming = (obj.data && typeof obj.data === 'object') ? obj.data : obj;
-        replaceBackup(incoming);
+        /* ★ 先校验再动手：不像存档的一律拒掉。
+           否则导入一个 {hello:'world'} 就会把现有记录全清空（丢数据）。 */
+        if(!looksLikeBackup(incoming)){
+          return cmdFail('这不像一份存档（没有 records / apiLib / user 等字段）—— 已拒绝，现有数据没动');
+        }
+        if(!replaceBackup(incoming)){
+          return cmdFail('存档结构不对，导入已拒绝，现有数据没动');
+        }
         save(); renderAll(); applyLang();
         return { ok:true, records: recCount(), api: apiCount() };
       }catch(e){
@@ -9866,10 +10463,46 @@ __lang = detectLang();
         return { ok:true, dataUrl: cv.toDataURL('image/png'), width: cv.width, height: cv.height };
       });
     },
-    exportPractice: function(){
-      var bad = cmdNeedRec(); if(bad) return bad;
-      var r = cmdCurrentRec();
+    exportPractice: function(a){
+      a = a || {};
+      var r = null;
+      if(a.id != null && String(a.id) !== ''){
+        r = findRec(String(a.id));
+        if(!r) return cmdFail('找不到 id=' + a.id + ' 这条记录');
+      } else {
+        var bad = cmdNeedRec(); if(bad) return bad;
+        r = cmdCurrentRec();
+      }
       return { ok:true, payload: practicePayload(r) };
+    },
+    /* 删掉一条记录：日志模式里「测不过就撤销」要用。
+       ⚠ 删除是破坏性的 ⇒ 必须显式给 id 或 name，不给就拒绝（不许默认删「当前打开的那条」）。 */
+    remove: function(a){
+      a = a || {};
+      if((a.id == null || String(a.id) === '') && (a.name == null || String(a.name) === '')){
+        return cmdFail('remove 必须指明删哪条：参数 {id} 或 {name}（删除是破坏性的，不猜）');
+      }
+      var r = cmdFindRec(a);
+      if(!r){
+        var what = (a.id != null && String(a.id) !== '') ? ('id=' + a.id)
+                 : (a.name != null && String(a.name) !== '') ? ('name=' + a.name) : '当前打开的练习';
+        return cmdFail('找不到要删的' + what);
+      }
+      var nm = r.name || '';
+      doDelete(r.id);
+      return { ok:true, removed:r.id, name:nm, left:recCount() };
+    },
+    /* 读回一条记录的全部内容 —— AI 写完要核对、要汇总时用这个，别去抠 DOM */
+    find: function(a){ return cmdFind(a); },
+    get: function(a){
+      a = a || {};
+      var r = cmdFindRec(a);
+      if(!r){
+        var what = (a.id != null && String(a.id) !== '') ? ('id=' + a.id)
+                 : (a.name != null && String(a.name) !== '') ? ('name=' + a.name) : '当前打开的练习';
+        return cmdFail('找不到' + what + '（现在没有打开的练习就先用 checkin）');
+      }
+      return { ok:true, record: cmdRecordDetail(r) };
     },
     shareLink: function(){
       var bad = cmdNeedRec(); if(bad) return bad;
@@ -9881,7 +10514,7 @@ __lang = detectLang();
     finish: function(){ closeProcess(); return { ok:true, editing:false }; },
     close:  function(){ closeProcess(); return { ok:true, closed:true }; },
     lang: function(a){
-      var l = String((a && a.lang) || '').trim();
+      var l = String((typeof a === 'string' ? a : (a && a.lang)) || '').trim();
       if(l !== 'zh' && l !== 'en') return cmdFail('lang 只能是 zh / en');
       setLang(l);
       return { ok:true, lang:__lang };
@@ -9915,5 +10548,216 @@ __lang = detectLang();
 })();
 </script>
 
+<script>
+/* === 新手教程数据（中英两版，菜单里的「新手教程」按界面语言取） === */
+window.GML_TUTORIAL_DATA = {
+ "zh": [
+  {
+   "name": "用法一：打卡 —— 把写好的代码录一条记录",
+   "requirement": "把已经做完的一份代码，\n连同说明录成一条记录。\n\n验收：记录里能看到代码，\n也能看到它引用了哪些 API。",
+   "hint": "代码要逐字贴，\n不要顺手改写。\n改写只在用户要求时才做。\n\nAPI 是引用式的：\n库里存一份，记录里只存引用。",
+   "descs": [
+    "· 点「＋ 打卡一次」",
+    "· 在弹层里写名称、要求和提示\n  要求写要做什么 + 怎么验收",
+    "· 加一个代码载体\n  类型选「脚本」或「对象」",
+    "· 登记用到的官方 API 并引用它",
+    "· 点右上角「完成」看效果"
+   ],
+   "script": "// 命令接口的写法（AI 直接用这个）\nawait window.gml.cmd('checkin', { name:'…', requirement:'…', hint:'…' })\nawait window.gml.cmd('addModule', { type:'脚本', value:'// 文件名\\n<代码>' })\nawait window.gml.cmd('addApi',   { code:'draw_text', desc:'画一行字' })\nawait window.gml.cmd('refApi',   { code:'draw_text' })\nawait window.gml.cmd('finish')",
+   "apis": [
+    [
+     "draw_text",
+     "画一行字"
+    ],
+    [
+     "move_towards_point",
+     "朝某个点移动"
+    ],
+    [
+     "instance_create_depth",
+     "按深度创建实例"
+    ]
+   ]
+  },
+  {
+   "name": "用法二：日志 —— 按功能环节记开发过程",
+   "requirement": "把开发过程按功能环节记下来，\n一个环节一条记录。\n\n验收：每个环节测通了才打卡，\n每打一次卡立刻存一次档。",
+   "hint": "先测通、再打卡。\n先打卡后补测，\n记录里就混进了没验证过的环节。\n\n每打一次卡立刻 export 存一次档，\n中途最容易丢的就是这里。\n\n写完用 get 读回核对一遍，\n写没写错，机器说了算。",
+   "descs": [
+    "· 一个功能环节 = 一条记录\n  名字写成「第 N 步：xxx」",
+    "· 测通了才打卡",
+    "· 这一环的代码放进脚本载体",
+    "· 自写类在这一环登记并引用\n  定义它的环和用到它的环都要引",
+    "· 立刻存一次档",
+    "· 全部做完读回核对一遍"
+   ],
+   "script": "// 日志模式的一环\nconst rec = await window.gml.cmd('checkin', { name:'第 2 步：敌人行为', requirement:'…', hint:'…' })\nawait window.gml.cmd('addModule', { type:'脚本', value:'// class_enemy_ai.gml\\n<这一环的代码>' })\nawait window.gml.cmd('addApi',   { code:'class_enemy_ai', desc:'敌人 AI：怎么动' })\nawait window.gml.cmd('refApi',   { code:'class_enemy_ai' })\nawait window.gml.cmd('finish')\nconst save = await window.gml.cmd('export')   // 每环立刻存一次档",
+   "apis": []
+  },
+  {
+   "name": "用法三：教程 —— 一个操作步骤一条记录",
+   "requirement": "把一段教程整理成能跟着做的步骤，\n每一步一条记录。\n\n验收：题目要求只写要求，\n步骤在代码载体里按顺序排。",
+   "hint": "题目要求里一出现「1. … 2. …」，\n就是在重复载体。\n\n操作描述只说动作，不贴代码；\n正文要主动分段，一个意思一行。",
+   "descs": [
+    "· 一个操作步骤 = 一条记录",
+    "· 题目要求只写要求和验收",
+    "· 用多段操作描述说这一步做什么",
+    "· 紧接着放这一步的代码或对象载体",
+    "· 步骤和代码按顺序交错排"
+   ],
+   "script": "// 教程模式的一步\nawait window.gml.cmd('checkin', { name:'第 1 步：打开工程', requirement:'…', hint:'…' })\nawait window.gml.cmd('addModule', { type:'操作描述', value:'这一步在界面上点哪里' })\nawait window.gml.cmd('addModule', { type:'对象',   value:'obj_player', fields:[], events:[{ name:'Create', code:'…' }] })\nawait window.gml.cmd('finish')",
+   "apis": []
+  },
+  {
+   "name": "API 库：把常用函数存起来复用",
+   "requirement": "把常用 GML 函数登记进 API 库，\n以后写练习直接引用，不用重写。\n\n验收：库里能看到代码、\n用途说明和参数清单。",
+   "hint": "API 是引用式的：\n库里存一份，记录里只存引用，\n不复制代码。\n\n写代码前先查一下库，\n能复用的就别重写。",
+   "descs": [
+    "· 主界面「API 库」卡片 →「＋ 新建 API」",
+    "· 填代码名、用途说明和参数清单",
+    "· 写练习时点「引用 API」选它",
+    "· 库里能看出每个 API 被哪些记录引用过",
+    "· 列表每页 10 条，搜索框按名字筛"
+   ],
+   "script": "",
+   "apis": []
+  },
+  {
+   "name": "网页基础交互：站点怎么用",
+   "requirement": "这个站怎么用：\n打卡、翻历史、导出、分享。\n\n验收：点一次「打卡一次」就能建记录，\n历史记录能翻。",
+   "hint": "数据只存在这台设备的浏览器里。\n换设备或清缓存前，\n先导出备份。\n\n页面里没有上报代码，\n断网也能用。",
+   "descs": [
+    "· 顶栏「＋ 打卡一次」建一条记录",
+    "· 点记录卡片打开练习过程",
+    "· 内容实时保存，不用手动点保存",
+    "· 填完点右上角「完成」看详情",
+    "· 「历史记录」翻以前的打卡",
+    "· 菜单 →「存档」导出整站存档",
+    "· 菜单 →「读档」导入备份",
+    "· 菜单 →「分享打卡记录截图」出长图",
+    "· 右上角可以切中英"
+   ],
+   "script": "",
+   "apis": []
+  },
+  {
+   "name": "开始使用：点菜单里的「清空」",
+   "requirement": "前面这几条是用法说明，\n不是你的练习记录。\n\n正式使用前，\n点右上角菜单里的「清空缓存」。\n\n验收：清空之后站点是空的，\n可以直接开始打卡。",
+   "hint": "清空会删掉这台设备上的全部数据，\n包括这几条说明。\n删之前想留一份，就先「存档」。",
+   "descs": [
+    "· 点右上角「菜单 ▾」",
+    "· 点「清空缓存」",
+    "· 在弹层里点两次「清空全部数据」",
+    "· 清空后就是空站，开始记自己的练习"
+   ],
+   "script": "",
+   "apis": []
+  }
+ ],
+ "en": [
+  {
+   "name": "Usage 1: Check in — record a finished piece of code",
+   "requirement": "Record a piece of code you already\nfinished, together with a description.\n\nAcceptance: the record shows the code\nand the APIs it references.",
+   "hint": "Paste the code verbatim,\ndon't rewrite it while recording.\nOnly rewrite when the user asks.\n\nAPIs are reference-based:\nthe library keeps one copy,\nrecords only keep the reference.",
+   "descs": [
+    "· Click \"+ Check in\"",
+    "· Fill in the name, requirement and hint\n  The requirement says what to build and how to verify it",
+    "· Add a code carrier\n  Pick the Script or the Object type",
+    "· Register the official APIs you use and reference them",
+    "· Click \"Done\" at the top right to see the result"
+   ],
+   "script": "// the command interface (for AI agents)\nawait window.gml.cmd('checkin', { name:'…', requirement:'…', hint:'…' })\nawait window.gml.cmd('addModule', { type:'脚本', value:'// filename\\n<code>' })\nawait window.gml.cmd('addApi',   { code:'draw_text', desc:'draw a line of text' })\nawait window.gml.cmd('refApi',   { code:'draw_text' })\nawait window.gml.cmd('finish')",
+   "apis": [
+    [
+     "draw_text",
+     "draw a line of text"
+    ],
+    [
+     "move_towards_point",
+     "move towards a point"
+    ],
+    [
+     "instance_create_depth",
+     "create an instance at a depth"
+    ]
+   ]
+  },
+  {
+   "name": "Usage 2: Dev log — record the work feature by feature",
+   "requirement": "Record the development process by feature,\none record per feature.\n\nAcceptance: check in only after the\nfeature passes its test, and export\nan archive right after every check-in.",
+   "hint": "Test first, then check in.\nChecking in before testing mixes\nunverified work into the record.\n\nExport an archive after every check-in;\nthat's the part most easily lost.\n\nRead the records back with get when done,\nso a machine tells you what you wrote.",
+   "descs": [
+    "· One feature = one record\n  Name it \"Step N: …\"",
+    "· Check in only after it passes the test",
+    "· Put this step's code in a Script carrier",
+    "· Register and reference your own classes\n  The step that defines it and the steps that use it both reference it",
+    "· Export an archive right away",
+    "· Read everything back when you're done"
+   ],
+   "script": "// one step of the dev log\nconst rec = await window.gml.cmd('checkin', { name:'Step 2: enemy behaviour', requirement:'…', hint:'…' })\nawait window.gml.cmd('addModule', { type:'脚本', value:'// class_enemy_ai.gml\\n<the code of this step>' })\nawait window.gml.cmd('addApi',   { code:'class_enemy_ai', desc:'enemy AI: how it moves' })\nawait window.gml.cmd('refApi',   { code:'class_enemy_ai' })\nawait window.gml.cmd('finish')\nconst save = await window.gml.cmd('export')   // archive after every step",
+   "apis": []
+  },
+  {
+   "name": "Usage 3: Tutorial — one record per operation step",
+   "requirement": "Turn a tutorial into steps you can follow,\none record per step.\n\nAcceptance: the requirement only states\nthe goal; the steps live in the code\ncarriers, in order.",
+   "hint": "If the requirement starts listing\n\"1. … 2. …\", it's repeating the carriers.\n\nOperation notes only say what to do,\nno code in them;\nwrite the text in short paragraphs,\none idea per line.",
+   "descs": [
+    "· One operation step = one record",
+    "· The requirement only states the goal and the acceptance",
+    "· Use several operation-note carriers to say what this step does",
+    "· Right after it, put the code or object carrier for this step",
+    "· Keep steps and code in the same order"
+   ],
+   "script": "// one step of a tutorial\nawait window.gml.cmd('checkin', { name:'Step 1: open the project', requirement:'…', hint:'…' })\nawait window.gml.cmd('addModule', { type:'操作描述', value:'where to click in the editor' })\nawait window.gml.cmd('addModule', { type:'对象',   value:'obj_player', fields:[], events:[{ name:'Create', code:'…' }] })\nawait window.gml.cmd('finish')",
+   "apis": []
+  },
+  {
+   "name": "API library: keep your common functions for reuse",
+   "requirement": "Register the GML functions you use often\nso later exercises can just reference them.\n\nAcceptance: the library shows the code,\nthe description and the parameter list.",
+   "hint": "APIs are reference-based:\nthe library keeps one copy,\nrecords only keep the reference.\n\nLook in the library before writing code,\nand reuse what's already there.",
+   "descs": [
+    "· On the \"API library\" card, click \"+ New API\"",
+    "· Fill in the code name, description and parameters",
+    "· While writing, click \"Reference API\" and pick it",
+    "· The library shows which records use each API",
+    "· 10 per page; use the search box to filter by name"
+   ],
+   "script": "",
+   "apis": []
+  },
+  {
+   "name": "Basic web interaction: how this site works",
+   "requirement": "How to use this site:\ncheck in, browse history, export, share.\n\nAcceptance: one click on \"Check in\"\ncreates a record, and history is browsable.",
+   "hint": "The data only lives in this browser\non this device.\nExport a backup before switching\ndevices or clearing the cache.\n\nNothing is uploaded:\nthe site works offline.",
+   "descs": [
+    "· \"+ Check in\" at the top creates a record",
+    "· Click a record card to open its practice",
+    "· Everything saves as you type, no save button",
+    "· Click \"Done\" at the top right to see the details",
+    "· \"History\" lists your earlier check-ins",
+    "· Menu → \"Export archive\" saves everything",
+    "· Menu → \"Import archive\" restores a backup",
+    "· Menu → \"Share check-in screenshot\" makes a long image",
+    "· The top right switches between Chinese and English"
+   ],
+   "script": "",
+   "apis": []
+  },
+  {
+   "name": "Getting started: click Clear cache in the menu",
+   "requirement": "The records before this one are the guide,\nnot your own practice records.\n\nBefore you start for real,\nclick \"Clear cache\" in the menu at the top right.\n\nAcceptance: after clearing, the site is\nempty and you can check in right away.",
+   "hint": "Clearing deletes everything stored on\nthis device, including this guide.\nExport an archive first if you want to keep it.",
+   "descs": [
+    "· Click the \"Menu\" dropdown at the top right",
+    "· Click \"Clear cache\"",
+    "· Click \"Clear all data\" twice in the dialog",
+    "· The site is now empty — start recording your own practice"
+   ],
+   "script": "",
+   "apis": []
+  }
+ ]
+};
+</script>
 </body>
 </html>
