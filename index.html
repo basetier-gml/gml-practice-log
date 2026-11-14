@@ -218,6 +218,10 @@ button{font-family:inherit}
 }
 .hist-meta{display:flex;flex-wrap:wrap;gap:5px}
 .hist-item .del{margin-top:0;flex:0 0 24px;width:24px;height:24px;font-size:16px}
+/* API 库条目的用途说明 */
+.lib-desc{font-size:12.5px;color:var(--ink-3);line-height:1.45;margin-top:3px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
 /* 分页 */
 .pager{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px;padding-top:12px}
 .pager button{
@@ -906,235 +910,327 @@ textarea.field{resize:vertical;min-height:64px}
        2) window.GML_AI_SKILL
      人类想看的话：打开这个网页搜 "gml-ai-skill"。
      ============================================================ -->
-<script type="text/markdown" id="gml-ai-skill">
----
+<script type="text/markdown" id="gml-ai-skill">---
 name: gml-practice-log
-description: 用「Gml代码练习记录」网页（https://basetier-gml.github.io/gml-practice-log/）记录一次 GML 练习：先导出存档 → 清空页面全部数据 → 按用户给的信息一次打卡 → 把练习过程截图返回给用户 → 按用户反馈继续修改。触发词：练习记录 / 打卡一次 / 记录这次练习 / GML 练习存档 / 练习过程截图 / gml-practice-log。
+description: GML 练习记录站（https://basetier-gml.github.io/gml-practice-log/）——单文件网页应用，用「打卡 + 代码载体 + API 库」记录 GML 练习，也可当 AI 写 GML 时的开发日志与函数复用库。给需要代替真人操作这个站的 AI：讲清它有哪些功能、数据怎么存、有哪些命令接口、以及怎么把一份定稿代码变成一条练习记录、怎么按功能环节逐条打卡并沉淀可复用函数。触发词：练习记录 / 打卡一次 / 记录这次练习 / GML 练习存档 / 练习过程截图 / 开发日志 / 函数复用库 / gml-practice-log。
 ---
 
-# GML 练习记录站 · AI 操作指南
+# GML 练习记录站 · AI 速查
 
-面向「让 AI 代你操作这个练习记录站」的场景。站点是**单文件网页应用**（一个 `index.html`，无后端、无账号），
-数据只存在**打开它的那台设备的浏览器 localStorage** 里。
-
-- 线上地址：https://basetier-gml.github.io/gml-practice-log/
-- 工程内副本：`/workspace/output/gml-practice-log/index.html`
-- **同一份内容另存为 `AI-SKILL.md`**（工程内 `/workspace/output/gml-practice-log/AI-SKILL.md`），
-  本页里这份是嵌进 HTML 的同一个文件，浏览器驱动型 AI 可直接取
-  `document.getElementById('gml-ai-skill').textContent` 或 `window.GML_AI_SKILL`
+**是什么**：单文件网页应用（一个 `index.html`，无后端、无账号）。数据只存在**打开它的那台设备的浏览器 localStorage**。
+线上 https://basetier-gml.github.io/gml-practice-log/ ｜工程内 `/workspace/output/gml-practice-log/index.html`。
+本页这份 skill 嵌在 HTML 里（`#gml-ai-skill`），浏览器型 AI 可直接取
+`window.GML_AI_SKILL` 或 `document.getElementById('gml-ai-skill').textContent`；
+同一份内容另存为 `AI-SKILL.md`。
 
 ---
 
-## 1. 推荐用法（用户定下的顺序，别自己改）
+## 1. 功能清单（这一站能做哪些事）
 
-| 步 | 做什么 | 为什么 |
-|---|---|---|
-| 1 | **先存档**：把整站数据导出成备份文件，留底 | 后面要清库重做，先留底 |
-| 2 | **清空页面里的全部数据** | 从零开始建，避免旧记录 / 旧 API 混进来 |
-| 3 | **按用户提供的信息一次打卡** | 一次打卡 = 一条练习记录，别拆成多条 |
-| 4 | **打卡后把「练习过程截图」返回给用户** | 让用户直接看到结果，不用你描述 |
-| 5 | **再按用户的想法修改**，改完重新截图返回 | 迭代到用户满意 |
-| 6 | **补偿**：玩家确认「练习过程成立」后 → 再清一次数据 → 把任务开始前的存档装回来 → 按确认的信息把那条练习再打开一次 | 演示用的数据不该留在玩家真实记录里；把现场恢复回去，并让确认好的练习重新出现在页面上 |
+| 功能 | 在哪 |
+|---|---|
+| 打卡一次 = 建一条练习记录 | 主界面「打卡一次」`#checkinBtn` |
+| 练习过程弹层：题面 / 提示 / API 引用 / 代码载体 | `#processCard`（编辑态→详情态） |
+| 代码载体 6 种：脚本、对象、操作描述、SVG绘图、超链接、着色器 | 弹层里「＋ 类型」按钮 |
+| 对象载体：对象名 + 预定义变量表 + 多个事件代码框 | 载体类型「对象」 |
+| API 库（引用式）：建 API → 练习引用它；每条有 **代码 + 用途说明 + 参数清单**；**列表每页 10 条**（`state` 一次返回全部，不受分页影响） | 主界面「API 库」卡片 |
+| 练习过程截图（1440 长图，**二维码固定在开头**） | 弹层标题栏「截图」`#shotBtn` |
+| 分享链接 / 二维码（网址 + `#gmlp=<压缩包>`） | `cmd('shareLink')` |
+| 单条练习存读档（导出/导入一条，含它引用的 API） | 弹层标题栏「存读档」`#pbBtn` |
+| 整站存档（导出/导入，**导入只有覆盖**，按钮文字「覆盖现有数据」，要点两次确认） | 顶栏「菜单 ▾」`#miExport` / `#miImport` |
+| 挑战记录卡（1080 分享图） | 菜单 →「分享打卡记录截图」`#miShare` |
+| 昵称 / 头像 / 中英切换 | 同一个菜单里 `#miRename` `#miAvatar` `#miLang` |
+| 退出网页时提示导出存档 | `beforeunload` + 自有弹层 `#exitModal` |
 
-第 4 步的截图 = 练习过程弹层标题栏「截图」按钮生成的长图（1440 宽 PNG，**二维码固定在图片开头**）。
-第 6 步的详细做法见下面 §8。
+**数据模型**（灌数据/校验时按这个来）
 
-> **在无头浏览器里跑，优先用 §2 的命令接口**（`window.gml.cmd(...)`），
-> 不用去抠 DOM 选择器；需要点界面元素时再回退到 Playwright 的 click。
+- 载体类型：`脚本 / 对象 / 操作描述 / SVG绘图 / 超链接 / 着色器`（**类型定下不能换**，要换就删掉重加）。
+- 对象载体：`{type:'对象', value:'obj_xxx', fields:[{name,param,desc}], events:[{name,code}]}`。
+- API 是**引用式**：库里存 `{id, code, desc, params:[{no,desc}]}`，练习里存 `apis:[refId]`，
+  `type==='api'` 的载体只存 `refId`（**不复制代码**）。
+  `code` = 代码/函数名（**不带括号参数**）；`desc` = **这个 API / 函数是干什么的**（一句话）；
+  `params` = 形参清单（编号 + 说明）。
+- localStorage 按类型分片（前缀 `gml-practice-log-v2:`）：`:user` `:settings` `:records` `:days` `:api` `:apiIndex`。
+  `id` / `date` / `count` **不落盘**（键就是它们、计数现算）。
 
 ---
 
-## 2. 命令接口（无头浏览器里首选这个）
+## 2. 命令接口（无头浏览器里首选，别抠 DOM）
 
-页面挂了一个命令接口：**每条命令等价于手动点一下按钮，但不用抠 DOM 选择器**。
-在 Playwright / CDP / 任何能执行 JS 的地方：
+`window.gml.cmd(命令名, 参数对象)` → Promise<`{ok:true,…}` 或 `{ok:false,error:'原因'}`}>。
+**每条命令等价于手动点一次按钮**。先看 `ok` 再取字段。
 
 ```js
-await page.evaluate(() => window.gml.cmd('help'))                       // 看命令清单
+await page.evaluate(() => window.gml.cmd('help'))
 await page.evaluate(() => window.gml.cmd('checkin', {name:'…', requirement:'…', hint:'…'}))
-await page.evaluate(() => window.gml.cmd('addModule', {type:'脚本', value:'function f(){}'}))
-const r = await page.evaluate(() => window.gml.cmd('screenshot'))       // → {ok:true, dataUrl:'data:image/png;…'}
+await page.evaluate(() => window.gml.cmd('addObject', {name:'obj_player', events:[{name:'Create', code:'…'}]}))
+const r = await page.evaluate(() => window.gml.cmd('screenshot'))   // {ok,dataUrl,width,height}
 ```
 
-返回值永远是 Promise，结果是 `{ok:true, ...}` 或 `{ok:false, error:'原因'}` —— **先看 ok 再取字段**。
-
-| 命令 | 参数 | 干什么 |
+| 命令 | 参数 | 作用 |
 |---|---|---|
-| `help` | – | 命令清单 |
-| `state` | – | 当前状态（昵称/设置/记录列表/API 列表/当前打开的练习） |
-| `clear` | – | 清空全部数据（内存 + localStorage） |
-| `export` | – | 整站存档 payload 对象（不触发下载） |
-| `import` | `{json}` | 导入整站存档并覆盖（对象或 JSON 字符串都行） |
+| `help` / `state` | – | 命令清单 / 当前状态（昵称、设置、记录、API 库、当前练习） |
+| `clear` | – | 清空全部数据（内存 + localStorage，不用 reload） |
+| `export` / `import` | `{json}` | 整站存档导出 / 导入并覆盖 |
 | `checkin` | `{name, requirement, hint}` | 打卡并打开练习过程 |
-| `set` | `{field:'name'\|'requirement'\|'hint', value}` | 改当前练习的字段 |
-| `addModule` | `{type, value}` | 加一个代码载体（type：脚本/对象/操作描述/SVG绘图/超链接/着色器） |
-| `addObject` | `{name, fields:[[变量名,参数,说明]], events:[{name,code}]}` | 加一个对象载体（`fields` 只在材料明确写了「预定义变量」时才填，否则留空） |
-| `addApi` | `{code:'函数名', params:[{no,desc}]}` | 往 API 库加一条 |
-| `refApi` / `unrefApi` | `{code}` | 引用 / 取消引用库里的 API |
-| `setNick` | `{name}` | 改昵称 |
-| `setAvatar` | `{dataUrl:'data:image/…'}` | 设头像 |
-| `screenshot` | – | 生成练习过程截图 → `{dataUrl,width,height}` |
-| `exportPractice` | – | 导出当前这一条练习的 payload |
-| `shareLink` | – | 这条练习的分享链接/二维码 `{url,version,size,tooLong}` |
-| `finish` / `close` | – | 结束编辑 / 关掉弹层 |
-| `lang` | `{lang:'zh'\|'en'}` | 切语言 |
+| `set` | `{field:'name'\|'requirement'\|'hint', value}` | 改当前练习字段 |
+| `addModule` | `{type, value}` | 加一个代码载体 |
+| `addObject` | `{name, fields:[[变量名,参数,说明]], events:[{name,code}]}` | 加对象载体 |
+| `addApi` / `refApi` / `unrefApi` | `{code, desc, params}` / `{code}` | 建 API / 引用 / 取消引用（`desc` = 用途说明） |
+| `setNick` / `setAvatar` | `{name}` / `{dataUrl}` | 昵称 / 头像 |
+| `screenshot` | – | 练习过程截图 → `{dataUrl,width,height}` |
+| `exportPractice` / `shareLink` | – | 导出这一条 / 它的分享链接 |
+| `finish` / `close` / `lang` | – / – / `{lang:'zh'\|'en'}` | 结束编辑 / 关弹层 / 切语言 |
 
-⚠ 程序改完记录字段后，页面会**重建表单**（`renderProcess` → `syncFormValues` 是「表单→记录」方向），
-所以命令接口内部是「先写记录、再写回表单、最后才渲染」——**你自己直接改页面 JS 时要照这个顺序**，
-否则新填的内容会被空表单抹掉（这个坑我踩过 ✓）。
+⚠ **改完记录字段必须「先写记录 → 再写回表单 → 最后渲染」**：
+页面渲染会重建表单，而 `syncFormValues()` 是「表单→记录」方向，直接改记录再 render 会被空表单抹掉。
 
-## 3. 第 1 步：先存档
+---
 
-- 入口：顶栏**玩家名右边的「菜单 ▾」→「存档」**（`#menuBtn` → `#miExport`），
-  下载 `gml-practice-log-backup-YYYY-MM-DD.json`。
-- 另有**单条**练习存档：练习过程弹层 →「存读档」→「导出这一条练习」（`#pbBtn` → `#pbExportBtn`）。
-  两者别搞混：前者是**整站**，后者是**一条**。
-- 整站存档 JSON：`{app:"gml-practice-log", version:2, exportedAt, counts:{records,apiLib}, data:{user,settings,records,api}}`。
+## 3. 把一份定稿代码变成一条练习
 
-## 4. 第 2 步：清空全部数据
+1. **先存档**（菜单 ▾ →「存档」）留底，再 `cmd('clear')` 从零建。
+2. `cmd('checkin', {name, requirement, hint})` ⇒ 一次打卡 = 一条记录。
+3. **填题面**：名称 / 练习题要求 / 练习题提示（内容实时保存，没有保存按钮；编辑态标题栏是「完成」`#processClose`，点它切详情态但弹层不关）。
+4. **加载体**（顺序 = 定稿代码的顺序，一个文件一个载体，代码逐字照抄）：
+   - 构造函数 / 独立脚本 → **脚本**载体；
+   - 挂载对象 → **对象**载体：对象名 `[data-role="objectName"]`，
+     事件名 `[data-role="eventName"]`（Create / Step / Draw / Alarm 0 / Clean Up / Collision…），
+     代码填进该事件框。
+   - ⚠ **「预定义变量表」不是 Create 事件里写的那些变量**：Create 里的赋值原样放**事件代码框**；
+     变量表**只填材料里明确写成「预定义变量」的项**，没明确说就**留空**，不要从 Create 事件推导。
+   - 脚本载体没有文件名字段 ⇒ 约定代码首行写 `// 文件名`。
+   - 正文提到但没有独立代码文件的物体 ⇒ 也建一个**零事件**的对象载体。
+5. **建 API 并引用**：API 的**代码字段只写函数名**（`clamp`，不带括号参数），参数另写编号+说明；
+   再 `addApi` → `refApi`。库里被引用的条目不能删。
+6. `cmd('screenshot')` ⇒ 1440 长图（二维码在开头），交付给用户；改完要重新截。
+   ⚠ **存档里带 `data.apiById`（id → 代码对照表）**：导入时站点会**按代码重挂引用**、
+   并把**同代码的重复条目归并成一条** ⇒ 两台机器上同一条 API 的 id 不同也不会出现
+   「已从 API 库删除」。
+7. **补偿**（用户确认「练习过程成立」后）：导出确认好的那条 → 再 `cmd('clear')` →
+   把任务开始前的整站存档覆盖装回来 → 再把那条练习导入（或按确认信息再打一次卡）并打开给它看。
+   ⇒ **别把演示数据留在玩家真实记录里**。
+8. **要把一批已有的记录灌进这个站 ⇒ 走「空站起步」**：
+   `cmd('clear')` 清空 → `cmd('import', {json: 整份存档})` 覆盖导入 → `cmd('export')` 再导出成最终存档。
+   ⇒ **别手工拼 payload**：手工拼会把 API 的 id 对不上（不同机器/不同会话生成的 id 各编各的），
+   记录里的引用会变成悬挂的 ⇒ 界面显示「已从 API 库删除」。
+   走导入路径则由站点自己按代码归并 + 重挂引用 ✓。
 
-```js
-localStorage.clear(); sessionStorage.clear();
+---
+
+## 4. 另一个用法：把 AI 写 GML 的过程也记进这个站（开发日志 + 复用库）
+
+这个站不只是「记录一次练习」，也能当 **AI 写 GML 时的开发日志 + 函数复用库**：
+
+- **每完成一个功能环节就打一次卡**（一个环节 = 一条记录）。
+  建议的「环节」粒度 = 一个 500 挑战那种复杂度的功能（一个能单独跑通、能单独验收的小玩法）。
+- 每条记录写清四件事：
+  1. **这一步做了什么** → 名称（`name`，建议写成「第 N 步：xxx」）；
+  2. **这一步的要求 / 验收标准** → `requirement`；
+  3. **坑与提示** → `hint`（下一轮直接搜得到）；
+  4. **用了哪些官方 API** → 建进 API 库并引用（`addApi` → `refApi`），
+     于是「这条记录 ↔ API 库」互相可查（库里有「被 N 处引用」，记录里有引用列表）。
+- **过程中写出来的函数 / 构造函数 / 结构体，也登记进 API 库**（`addApi`）：
+  - `code` 写**函数名或结构体名**（不带括号参数）；
+  - `desc` 写**这个函数是干什么的**（一句话用途，AI 查库时靠它判断能不能复用）；
+  - `params` 写形参清单（编号 + 说明）；
+  - 完整实现放在这条记录的**脚本载体**里（代码逐字照抄，首行写 `// 文件名`）。
+  ⇒ 以后 AI 写新代码前先 `state()` 查一遍 API 库：**能复用的直接复用，不要重写一遍**。
+- **对象载体只有一个「对象名」字段，没有父对象字段** ⇒ **父对象写进「预定义变量表」**，
+  加一行：变量名 `父对象` / 参数 `obj_enemy_base` / 说明 `继承自`。
+  其它「这个对象有哪些属性」的信息也走这张表（变量名 / 参数 / 说明三列）。
+- **记录名统一带顺序**：`第 1 步：xxx`、`第 2 步：xxx` ⇒ 以后回看能直接看出开发顺序。
+- 还能挂在这套机制上的信息：
+  - 素材依赖（贴图 / 音频 / 字体名）→ 写进 `hint`；
+  - 房间 / 图层 / 实例层约定 → 写进对象载体的说明或 `hint`；
+  - 待办与下一步 → 直接开下一条打卡，名字里带上顺序。
+- **一次开发会话的推荐节奏**：
+  ```
+  读需求 → cmd('state') 查 API 库（看能复用什么）
+        → 写第 1 个功能环节 → 打卡 + 加载体 + 引用官方 API + 登记新写的函数
+        → 写第 2 个环节 → 再打卡（名字写「第 2 步：…」）
+        → …全部完成后 cmd('screenshot') 交付
+  ```
+- ⚠ **一个环节 = 一次能单独验收的打卡**：别把一整个功能拆成 20 条，也别把 5 个环节塞成 1 条。
+- 一个「写一个 GameMaker 小游戏」的切法（可直接照抄）：
+  `第 1 步：拆出简单构件类` → `第 2 步：世界服务类` → `第 3 步：玩家` → `第 4 步：武器与子弹` →
+  `第 5 步：几种敌人` → `第 6 步：BOSS` → `第 7 步：房间状态机与 HUD`。
+  每一步 = 一个脚本（类库）或一个对象 ⇒ 正好对应「一个文件一个载体」✓。
+
+---
+
+## 5. 写 GML 的风格约定（面向对象优先 · 按用户 500 挑战里的既有写法）
+
+**这一节是从他自己的 77 份 500 挑战 README（44 份带编号 + 33 份早期题）里统计出来的**，
+写 GML 代码时按这套来（不是"另一种风格"，就是他本人的写法）：
+
+### 5.1 命名（77 份代码统计）
+
+| 约定 | 例子 |
+|---|---|
+| 类名 = `class_` + 小写下划线 | `class_scores_list`、`class_cool_down`、`class_muzzle`、`class_item_with_gap`；本工程的 `class_player` / `class_gun` / `class_enemy` / `class_boss` / `class_reward` / `class_room`（**45 个构造函数里 44 个带 `class_` 前缀**） |
+| 对象里挂组件的变量按「它是什么」取名，通用默认叫 `comp` | `comp = new class_xxx(...)`；有专属含义的按含义取（`last` / `effect` / `trail` / `dial`） |
+| **形参一律 `_` 前缀**，成员变量不带前缀 | `function class_scores_list(_long)` → 成员 `long`（**实测 74/74 个形参都带 `_`**） |
+| static 方法名用**极简动词** | `draw` / `update` / `tick` / `set` / `clear` / `find` / `start` / `get_x` |
+| static 常量带 `_` 前缀 | `static _sprite = 0, _name = 1;`、`static _texts = [...]` |
+
+### 5.2 写法
+
+- **tab 缩进**（77 份代码里 **tab 2052 行 / 空格 457 行**，约 4.5 : 1）。
+- 每个类 / 函数**前一行 `///` 说明它是干什么的**（`/// 武器系统控制器：持有整张 weapon_info 表 + 当前使用下标`）。
+- 逻辑或写 `or`：`mouse_check_button_pressed(mb_left) or mouse_check_button_pressed(mb_right)`。
+- 字符串插值用 `$"Ammo:{_weapon[2]}"`。
+- 他写 `if` **常不加括号**（`if _check val += _gain;`）——GML 允许，但**只有紧跟的那一条语句算在分支里**；
+  照这习惯写时绝不能在无括号分支后面放多行语句。
+- **事件体极薄**：Create 一行 `comp = new class_xxx(...)`、Step 读输入再 `comp.update(...)`、
+  Draw 一行 `comp.draw(x,y,...)`；事件体超过约 5 行还没拆出去 = 当场该重构的信号。
+- ⭐ **static 方法里引用本类的成员变量用裸名，不用 `self.`**：
+  写 `hp -= _dmg;`，**不是** `self.hp -= _dmg;`。
+  他语料里的原话：「**函数体内直接写 `hitmeter` 就能改 struct 成员，不需要 `self.`**」。
+  - `self.` 只留给**调用本类的 static 方法**：`self.tick()`、`self.set_type("reward")`。
+    这不是多余的修饰，而是**阅读时的区分标记** —— 带 `self.` 的一眼看出是「类内部的函数」，
+    不带的是全局函数（GMS 2.3 里裸调同类 static 方法还会报「函数未找到」）。
+    ⇒ 记法：**成员裸名、方法带 `self.`**，两者不混。
+  - **static 常量也是裸名**：`array_length(_texts)`（不是 `self._texts`）。
+  - 构造函数的成员赋值同样是裸名：`owner = _owner;`。
+  - ⚠ 唯一要小心**同名遮蔽**：形参 / 局部变量和成员重名时，裸名指的是那个局部变量
+    （所以形参都带 `_` 前缀正是为了避开这个坑）。
+- **每个事件文件头写一行 `// === obj_xxx : Event name ===`**（77 份里有 20 份这么写），
+  脚本文件第一行写 `// 文件名`。
+- **一个类一个文件，文件名就等于类名**（`class_xxx.gml` 里只放 `class_xxx`）。
+  找文件不用翻，类也能单独复制进别的工程。
+
+### 5.3 结构（用户拍板的口径）
+
+- **对象就是类**，事件就是方法；父子关系用 GameMaker 的「父对象」属性
+  （记进练习记录时写进「预定义变量表」）。
+- **一个功能拆成类**，一类只管一件事；**简单类组合成复杂类**。
+- **不为某个具体场景单开一个脚本**：脚本数要收敛（能当函数的当函数，能当 static 的当 static）。
+- **纯绘制 / 纯计算的场景用无状态全局函数**：位置、宽高、当前值全当参数传，函数自己不存东西
+  （同一个房间能画好几条，不必多个对象）。
+- **共享逻辑写成类里的 `static` 方法**，通过**实例**调用：`comp.hit(3)`、`world().player()`。
+  - ⚠ **不要用类名取 static**（`class_stats.hit(3)`）—— GMS 2.3 不保证能用。
+  - ⚠ `static` 方法里 `self` = **调用它的那份实例** ⇒ `self.hp -= _dmg` 改的是调用方。
+- **构造函数必须写在脚本资源里**（`function class_x() constructor {}`），不能写在对象事件里。
+- **单一用途的常量 / 小工具**用 `static` 收在类里，或用**函数级 static**：
+  `function world() { static _w = new class_world(); return _w; }` ⇒ **不开 `global` 变量**；
+  同一个常量只写一处（房间尺寸 960×640 只写在 `class_world` 这一处）。
+- **别写一堆 `td_xxx()` 全局小工具函数**：谁依赖谁根本看不出来；收进类里之后调用处就是 `world().xxx`。
+- **组件要动位置就拿着 `owner`**：构造时把实例传进来（`new class_enemy(self, 0)`），
+  类里改 `owner.x` / `owner.y`。位置始终是对象的事，组件只管数值和动作，
+  换个对象挂上去也能用（比在类里另存一份 `_x, _y` 少一套同步）。
+- **不用对象继承做封装**：行为有差异就写成同一个类的不同 `kind`（`new class_enemy(self, 2)`），
+  公共的血量 / 闪白 / 血条只写一遍。继承会让公共部分和子类互相打架。
+- **能用引擎内建的别自己写**：`room_width` / `room_height` / `instance_number` / `instance_find`
+  / `instance_find_all` / `collision_circle_list` / `point_in_rectangle`。
+  自己维护一份「世界状态」服务类（记玩家位置、记房间大小、记敌人数）反而要自己同步，
+  实例一多就穿帮。
+- **不要用「对象名.成员」**（`obj_enemy_base.hp` 拿到的是**不确定的那一个实例**）：
+  要访问具体实例就用它的 id（`instance_find` / `instance_find_all`）再点号访问，或用 `with`。
+- **对象事件里不要定义具名函数**（GM 支持很差，`is_method` 返回 0、作用域混乱）：共享逻辑放类里。
+- **`struct` 里没有 `alarm`**（alarm 属于实例）：要「等 N 帧再动作」就让控制器对象去设 alarm
+  （状态机写 `pending_alarm`，控制器读它设 `alarm[0]`）。
+- **几乎不用 `global.`**（77 份里只有 4 份用到）。
+- **`with` 常用**（77 份里 35 份用到、76 处），写法是 `with _inst`（不带括号）：
+  批处理同类实例时最省事。⚠ **但 `with` 块里不要写 `var`**——那个变量会被 with 目标抢走，
+  出了块就读不到；确实要临时变量就先把 id 存进数组再用点号访问。
+- **写代码前先 `state()` 查 API 库**：能复用的类 / 方法直接复用，不要重写一遍。
+- 登记时：**类名和 static 方法都登记进 API 库**（`code` 写 `class_scores_list` 或 `class_scores_list.update`，
+  `desc` 写用途，`params` 写形参清单），完整实现放**脚本载体**里。
+  ⚠ API 库的 `code` **大小写不敏感** ⇒ 同名大小写两条会互相覆盖（见 §8 第 10 条）。
+
+---
+
+## 6. 写「解题思路 / 要求 / 提示」的行文风格
+
+用户 500 挑战 README 里那套「解题思路」的写法（77 份里 73 份有这一节），
+**练习记录里的 `requirement`（要求）和 `hint`（提示）也按这个写**。
+
+### 6.1 两种现成版式（挑一种，别自创）
+
+**版式 A（早期题最常见，77 份里约 20 份用这套）—— 两层对照**
+
+```markdown
+### 思路 1:贴合题目意思(讲"题目要你做什么")
+
+第 1 步:开一个"位置记录本",只保留 n 条最新位置,超出就把最早的那条擦掉
+第 2 步:每帧把当前坐标塞进记录本末尾,塞完就裁剪到 n 条以内
+第 3 步:画尾巴时按"离当前 source 距离"算 alpha —— 近的画亮、远的画淡
+
+### 思路 2:贴合实际代码的工作逻辑(讲"程序怎么跑")
+
+[Create 事件 —— obj_player]
+trail = new class_trail(10, x, y)
+  -> 内部: long = max(1, 10); tx = [x]; ty = [y];
+
+[Step 事件 —— obj_player]
+move()                          // 玩家先移动,再更新拖尾
+trail.update(x, y)
+  -> array_push(tx, x)
+  ...
 ```
 
-然后 **reload** 页面。自检：记录数 0、API 库 0、昵称回到默认。
-（站点启动时本来就会删掉老的大 key `gml-practice-log-v2`，不用管它。）
+⇒ **「题目要什么」和「代码实际怎么跑」分开讲**，中间用一层对照把两边接上。
 
-## 5. 第 3 步：一次打卡
+**版式 B（较新的题，#37 / #56 / #77 / #81 这一批）—— 按代码结构编号分步**
 
-1. 点「打卡一次」（`#checkinBtn`）⇒ **练习过程弹层自动打开**（`#processCard`），此时是**编辑态**。
-   （无头浏览器里等价命令：`cmd('checkin', {name, requirement, hint})` ✓）
-2. 填三个字段（**没有 id，用 data-field 选**）：
-   - 名称 `[data-field="name"]`
-   - 练习题要求 `[data-field="requirement"]`
-   - 练习题提示 `[data-field="hint"]`
-3. 内容**实时保存**（输入后约 250ms 自动落盘），**没有保存按钮**；
-   标题栏那个按钮在编辑态是「完成」（`#processClose`），点它切到详情态但**弹层不关**。
-4. 加代码载体：点类型按钮（`.type-picker .type-tab`，文字是「＋ 脚本」「＋ 对象」…）。
-   **类型定下后不能换**，想换就删掉重加。
-5. 引用 API：点「＋ 从 API 库添加 api 载体」或「选择练习题要求的 API」→ 选择器 `#apiPicker` → 选中 → `#apiPickerOk`。
-   引用的是**库里已有的 API**（引用式模型），不是把代码复制一份。
+```markdown
+1. **一条定长数组 = 一个角色**（加粗小标题 + 解释）
+2. **class 只负责画，状态留给 obj**
+3. **「传坐标进、返回新坐标出」的链式布局**
+...
+### 两个容易踩的点
+- **顺序陷阱**：夹取要放在改完血量之后。
+- **偏移陷阱**：横坐标的减半放在函数里做，调用方传中心点。
+```
 
-### 载体规则（用户口径，照做）
+### 6.2 两种版式共同的东西（都在用）
 
-- 定稿代码里的**构造函数 / 独立脚本** → 建**脚本**载体（一个 `.module` 里一个 textarea）。
-- 定稿代码里的**挂载对象** → 建**对象**载体：
-  - 对象名填 `[data-role="objectName"]`（例如 `obj_player`）
-  - 「事件代码框」：点「＋ 添加事件」，事件名填 `[data-role="eventName"]`（Create / Step / Draw…），
-    代码填进该事件框里的 textarea
-  - 「预定义变量表」按行填（变量名 | 参数 | 说明），但注意：
-    ⚠ **「预定义变量」不是 Create 事件里写的那些变量/函数**！
-    Create 事件里的赋值代码原样放进**事件代码框**（事件名写 Create ✓）。
-    「预定义变量表」只填**材料里明确写成「预定义变量」的那几项**；
-    没明确说就**留空**，不要从 Create 事件里推导变量 ✗。
-- 载体顺序 = **定稿代码的顺序**，一个文件一个载体，别合并。
-- 代码**逐字照抄**，tab 缩进也要一致。
+- **分小标题 + 分步**，一个标题讲一件事；不写成一大段。
+- **每步讲取舍，不只讲做法**：「为什么拆在这」「好处是…」「以后要加多个，组件整体换掉就行，事件体不用动」。
+- 用**具体数字 / 单位**和**具体 API 名**：`0 到 100 的百分比`、`四个角坐标`、
+  `string_width()`、`alarm[0]=cd`（alarm 是一次性的，忘了重置只转一次）。
+- **结尾写一段「坑 / 取舍」类小节**：他用过「两个容易踩的点」「关键取舍」
+  「已知的小问题（照抄定稿代码，未改动）」「触发条件说明」。
+- **题面有歧义时**（大纲和提示打架、触发条件对不上）单独写一段，写清本期按哪个实现、为什么。
+- 早期题里还常配一个 **「口诀」**（77 份里 16 份有）—— 把要点压成几句好记的话；
+  要写就写，别硬凑。
+- **不要**写成「标准答案腔」，也不要把他的原话改写成书面语 —— 只做分点排版。
+- ⚠ 「解题思路」如果是**我们代写**的（他只给了代码）⇒ 开头加一句
+  「这一节是**基于定稿代码的客观描述**（用户没有另外口述思路），Gate B 时请确认或替换」。
 
-### API 库规则
+---
 
-- API **代码字段只写函数名**（`clamp`、`draw_healthbar`），**不要带括号参数**。
-- 参数写在下面的参数说明里，按顺序编号 + 用途（1. / 2. / 3. …）。
-- 入口：主界面「API 库」卡片 →「＋ 新建 API」（`#libAddBtn`）→ 弹层 `#apiModal`：
-  `#apiCodeInput` 填代码，`#apiModalAddArg` 加参数行，`#apiModalSave` 保存，`#apiModalCancel` 取消。
-- 库里的 API 被引用后不能直接删（会提示「还有 N 处练习在引用」）。
+## 7. 关键 DOM id
 
-## 6. 第 4 步：返回练习过程截图
+`#checkinBtn` `#recordList .rec` `#processCard` `#processClose` `#pbBtn` `#pbExportBtn` `#pbImportBtn`
+`#pbQrBtn` `#shotBtn` `#shotPreview` `#shotSave` `#shotRebuild` `#menuBtn` `#userMenu .um-item`
+`#miRename` `#miAvatar` `#miLang` `#miExport` `#miImport` `#miShare` `#fullscreenBtn` `#exitModal`
+`#apiModal` `#apiCodeInput` `#apiModalSave` `#apiPicker` `#apiPickerOk`
+字段用 `[data-field="name|requirement|hint"]`，对象用 `[data-role="objectName|eventName"]`。
 
-- 练习过程弹层标题栏 →「截图」（`#shotBtn`）→ 生成 1440 宽长图 → 弹层里是 `#shotPreview`（一个 `img`）。
-- 存成 PNG 交付给用户。页面上的「保存图片」（`#shotSave`）是给真人点的；脚本侧直接取 `img.src` 的 dataURL
-  解码成文件更省事。
-- 图里包含：题面、提示、API 引用、全部代码载体（按步骤分块）、底部二维码（站点网址 + 这条练习的压缩包）。
-- 内容改完要**重新点「截图」**（`#shotRebuild`）—— 旧图不会自动更新。
+---
 
-## 7. 第 5 步：按用户的想法修改
+## 8. 坑（真踩过的）
 
-- 继续在**同一个练习过程弹层**里改（内容实时保存），改完再截图返回。
-- 详情态里想回去改：点「编辑这条记录」回到编辑态。
-  ⚠ 编辑态会重建表单，动手前先确认上一次输入没丢。
-- 删一条练习：主界面记录卡右上角 ×。删 API：API 库条目上的 ×。
+1. 打卡会自动打开练习过程弹层 ⇒ 之后点主界面的东西前先关弹层（否则 "intercepts pointer events"）。
+2. 输入是 250ms 防抖实时保存 ⇒ 自动化填完先等 300ms 再切走/刷新。
+3. `?lang=zh` **不能覆盖** localStorage 里用户手动选过的语言；要切中文先把 `gml-practice-log-v2:settings` 的 `lang` 写成 `zh`。
+4. 退出网页会拦（原生「离开/留下」框），自动化要接住 dialog。
+5. 页面里写死的中文文案要进 i18n 字典才翻译；昵称/头像带 `data-i18n-skip`，不会被翻译。
+6. localStorage 配额约 4.9MB 字符 / origin，一条典型记录约 270 字节。
+7. 宽屏（≥1000px）是左右分屏、练习过程常驻右栏 ⇒ 自动化用窄视口更省事。
+8. 整站导入**只有覆盖一种方式**，且要点两次确认。
+9. **合并两份存档时别手工改 id**：把两边的 API 条目都带上（id 各编各的没关系），
+   导入时站点会按代码归并 + 重挂引用；手工去重反而会把记录里的引用弄成悬挂的。
+10. **API 库的 `code` 是大小写不敏感的**（内部统一转小写后建索引）：
+    `World`（类）和 `world`（同名函数）只差大小写 ⇒ **后登的那条会把先登的 desc 覆盖掉**，
+    库最后只剩一条。登记前先 `state()` 查一下；同一个东西不要拆成两条登记。
 
-## 8. 补偿：玩家确认「练习过程成立」之后
+## 9. 交付给用户什么
 
-玩家确认后按这三步把现场恢复回去（**别把演示数据留在玩家真实记录里**）：
-
-1. **先把确认好的那条练习导出留底**（下一步要清库，会抹掉它）：
-   练习过程弹层 →「存读档」→「导出这一条练习」（`#pbBtn` → `#pbExportBtn`）⇒ 拿到**单条**练习 JSON
-   （它引用的 API 也一起打包在里面 ✓）。
-2. **再次清空网页数据**：`localStorage.clear(); sessionStorage.clear();` → reload。
-   （命令：`cmd('clear')` ✓ —— 它会连内存状态一起清掉，不用 reload ✓）
-3. **把任务开始前的存档装回来**：菜单 ▾ →「读档」→ 选第 1 步开头存下的**整站备份**
-   → 弹层里点「**覆盖现有数据**」（要连点两次确认 ✓）
-   ⇒ 玩家原来的记录 / API 库 / 昵称 / 设置全回来了。
-4. **按被确认的信息把那条练习再打开一次**：
-   - 推荐：练习过程 →「存读档」→「导入一条练习」⇒ 选第 1 步导出的单条存档。
-     库里有同名 API 时会逐个问「用存档里的 / 保留库里现有的」⇒ 选「**用存档里的**」，
-     把玩家确认的那份 API 装进去 ✓。
-   - 不想留中间文件的话：直接按确认的信息**再打一次卡**（`#checkinBtn`），效果一样。
-   - 最后**打开这条练习**（点主界面那条记录，打卡时会自动打开）⇒ 玩家看到的就是他确认的那份 ✓。
-5. 自检：整站记录数 = 任务开始前的数量 **+1**（多出来那条就是确认好的练习）；
-   昵称、设置跟任务开始前一致 ✓。
-
-## 9. 其它功能入口
-
-- 整站导入（**只有覆盖一种方式**）：菜单 → 读档 → 选文件 → 弹层里点「覆盖现有数据」（要**点两次**确认）。
-- 单条练习导入：练习过程 →「存读档」→「导入一条练习」。
-- 挑战记录卡（1080 分享图）：菜单 → 分享打卡记录截图。
-- 改名字 / 换头像 / 中英切换：都在同一个「菜单 ▾」里。
-
-## 10. 坑（都是真踩过的）
-
-1. **打卡会自动打开练习过程弹层** ⇒ 之后要点主界面的东西，先关弹层（`#processClose` 或 Esc），
-   否则 Playwright 会报 "intercepts pointer events"。
-2. **输入是防抖实时保存**（约 250ms）⇒ 自动化里填完先 `wait 300ms+` 再切走 / 刷新。
-3. **语言**：`?lang=zh` **不能覆盖** localStorage 里「用户手动选过」的那份设置；
-   自动化要切中文就先把 `gml-practice-log-v2:settings` 的 `lang` 写成 `zh` 再 reload。
-4. **退出网页会拦**：有改动且还没导出过时，`beforeunload` 会触发浏览器原生「离开/留下」框。
-   自动化关页/跳转要接住 dialog（dismiss = 留在页面）。
-5. **localStorage 按类型分片**（前缀 `gml-practice-log-v2:`）：
-   `:user` / `:settings` / `:records` / `:days` / `:api` / `:apiIndex`。
-   要灌数据就按这个格式写；`id` / `date` / `count` 不落盘（键就是它们、计数现算）。
-6. **配额**：每个 origin 约 4.9MB 字符；一条典型记录约 270 字节（够存上万条）。
-7. **宽屏（≥1000px）** 是左右分屏，练习过程在右栏常驻、关不掉 ⇒ 自动化用窄视口更省事。
-8. **页面里写死的中文文案要进 i18n 字典才会翻译**；用户的昵称/头像带 `data-i18n-skip`，不会被翻译。
-
-## 11. 真实用例（2026-11-13，第 77 期「带分段的小血条」）
-
-用户原话：「打开这个网页…点击"打卡一次"创建一个新的练习过程，按照页面中的提示文本输入当前挑战的内容，
-然后在下面的"代码载体"中按我定稿代码的顺序添加载体，如果我用的是构造函数或者是脚本，就创建脚本载体，
-如果我用了挂载对象，就创建对象载体，按照对象载体的创建提示输入对象名字，并创建对应的事件填入对应的脚本。
-最后你点击练习过程页中的存档功能，将导出的存档文件发给我。」
-
-AI 的实际动作（这个顺序可以照抄）：
-
-1. 先读定稿代码文件（`03-solve/*.gml`）⇒ 判断要做几个载体：
-   - `Mini_Healthbar_With_Segments.gml`（构造函数）→ 脚本载体
-   - `obj_player_Create.gml` / `obj_player_Step.gml` / `obj_player_Draw.gml` → 对象载体 `obj_player`，3 个事件
-2. **清缓存重建**（`localStorage.clear()` + reload）—— API 库和记录归零，从零建。
-3. 建 3 个 API（代码只写函数名，参数按顺序写说明）：`clamp` / `draw_healthbar` / `draw_line`。
-4. 填题面（**手动断行**，别让长句折行溢出；例：题面 13 行最长 25 字、提示 21 行最长 22 字）。
-5. 加载体：脚本 1 + 对象 obj_player（Create / Step / Draw），代码与源文件**逐字一致**（含 tab 缩进）。
-   ⚠ Create 事件里的 `hp=8; max_hp=hp;` 是**事件代码**（放事件框），
-   **不是「预定义变量表」** ⇒ 那次变量表是留空的 ✓。
-6. 引用 API，顺序 clamp → draw_healthbar → draw_line。
-7. **导出前先截图核对**：详情页截图 +「编辑 API」弹层截图（证明代码框里只有函数名）。
-8. 导出存档（练习过程 → 存读档 → 导出），拿到 JSON 后**脚本校验**：
-   脚本载体逐字比对 == 源文件 ✓；每个事件逐字比对 ✓；API code 全部无括号 ✓；载体顺序 / 引用顺序 ✓。
-9. 把存档 JSON 交付给用户，并说明怎么在站点里导入。
-10. **玩家确认后走补偿**（见 §7）：导出确认好的那条 → 清空数据 → 把任务开始前的整站存档覆盖装回来
-    → 再把确认好的那条练习导入（或按确认信息再打一次卡）并打开给它看。
-
-用户随后提了一次修正：「api 中不需要蓝色的这些文字，清空网页缓存后重新输出」
-⇒ **API 代码字段只保留函数名**（括号里的参数属于「参数说明」，不要塞进代码框），
-并且要求清缓存重建后再导一版。
-
-## 12. 交付给用户什么
-
-- 整站存档 JSON（菜单 → 存档）
-- 单条练习存档 JSON（练习过程 → 存读档 → 导出）
-- 练习过程截图 PNG（练习过程 → 截图）
-- 挑战记录卡 PNG（菜单 → 分享打卡记录截图）
-- 说明里要写清：**这是完整存档还是单条练习**、里面有什么、怎么导入。
-
+整站存档 JSON ｜单条练习存档 JSON ｜练习过程截图 PNG ｜挑战记录卡 PNG
+——并说明**这是完整存档还是单条练习**、里面有什么、怎么导入。
 </script>
 
 <header class="topbar">
@@ -1248,6 +1344,7 @@ AI 的实际动作（这个顺序可以照抄）：
     <input class="field lib-search" id="libSearch" type="search" autocomplete="off"
            placeholder="搜索 API 代码或参数说明" aria-label="搜索 API 库">
     <div class="rec-list" id="apiLibList"></div>
+    <div class="pager" id="libPager"></div>
     <div class="empty" id="libEmpty">API 库还是空的。<br>点右上角「新建 API」把常用 API 存进来，<br>练习时就能直接引用，不用重复写。</div>
     <p class="note" id="libNote">练习题要求的 API 和代码载体里的 api，都从库里引用。</p>
   </section>
@@ -1321,6 +1418,11 @@ AI 的实际动作（这个顺序可以照抄）：
       <label>API 代码<span class="req"> *</span></label>
       <textarea class="field code-field" id="apiCodeInput" rows="1"
                 placeholder="例如 ds_list_create(capacity, is_array)"></textarea>
+    </div>
+    <div class="form-block" style="margin-bottom:12px">
+      <label>用途说明（这个 API / 函数是干什么的）</label>
+      <input class="field" id="apiDescInput" type="text" maxlength="120"
+             placeholder="例如：创建列表并返回它的索引">
     </div>
     <div class="form-block" style="margin-bottom:12px">
       <label>参数说明（编号可自定义 + 简单描述）</label>
@@ -3985,6 +4087,8 @@ var I18N = {
     "重新生成": "重新生成",
     "手机上也可以长按上面的图片，直接保存到相册。": "手机上也可以长按上面的图片，直接保存到相册。",
     "参数说明（编号可自定义 + 简单描述）": "参数说明（编号可自定义 + 简单描述）",
+    "用途说明（这个 API / 函数是干什么的）": "用途说明（这个 API / 函数是干什么的）",
+    "例如：创建列表并返回它的索引": "例如：创建列表并返回它的索引",
     "＋ 添加参数": "＋ 添加参数",
     "保存到 API 库": "保存到 API 库",
     "确定": "确定",
@@ -4337,6 +4441,8 @@ var I18N = {
     "重新生成": "Regenerate",
     "手机上也可以长按上面的图片，直接保存到相册。": "On a phone you can also press and hold the image above to save it to your gallery.",
     "参数说明（编号可自定义 + 简单描述）": "Parameter docs (custom number + short description)",
+    "用途说明（这个 API / 函数是干什么的）": "What it does (purpose of this API / function)",
+    "例如：创建列表并返回它的索引": "e.g. creates a list and returns its index",
     "＋ 添加参数": "+ Add parameter",
     "保存到 API 库": "Save to the API library",
     "确定": "Confirm",
@@ -4667,8 +4773,10 @@ __lang = detectLang();
   migrateObjects();
   migrateCarriers();
   var daysChanged = rebuildDays();
+  /* 同代码归并 + 修悬挂引用（放在迁移之后，避免被迁移重新搞乱） */
+  var apiFixed = fixApiRefs({});
   var idxChanged = rebuildApiIndex();
-  if(structChanged || daysChanged || idxChanged || !hadStore) save();
+  if(structChanged || daysChanged || idxChanged || apiFixed || !hadStore) save();
 
   /* ============================================================
      存储：每个类型一个 localStorage key（写一块不用重写整份）
@@ -4704,6 +4812,7 @@ __lang = detectLang();
     return {
       id: id || a.id || uid(),
       code: (a.code == null ? '' : (typeof a.code === 'string' ? a.code : String(a.code))),
+      desc: (a.desc == null ? '' : (typeof a.desc === 'string' ? a.desc : String(a.desc))),
       params: Array.isArray(a.params) ? a.params.filter(function(p){ return p && typeof p === 'object'; }) : []
     };
   }
@@ -5112,7 +5221,12 @@ __lang = detectLang();
       records: allRecs(),
       carrierColors: state.settings.carrierColors || {},
       customTypes: state.settings.customTypes || [],
-      apiLib: allApis()
+      apiLib: allApis(),
+      apiById: (function(){
+        var m = {};
+        allApis().forEach(function(a){ m[a.id] = a.code; });
+        return m;
+      })()
     };
   }
   function exportBackup(){
@@ -5208,6 +5322,7 @@ __lang = detectLang();
     state.api = normalizeMap(toIdMap(incoming.apiLib), normalizeApi);
     state.settings.carrierColors = incoming.carrierColors || {};
     state.settings.customTypes = incoming.customTypes || [];
+    fixApiRefs(incoming.apiById || {});
     rebuildDays();
     rebuildApiIndex();
   }
@@ -5273,9 +5388,13 @@ __lang = detectLang();
   /* 单条练习的存档内容（导出文件 / 生成二维码共用同一份） */
   function practicePayload(rec){
     var apis = [];
+    var apiById = {};
     practiceApiIds(rec).forEach(function(id){
       var it = apiItem(id);
-      if(it) apis.push({id:it.id, code:it.code, params:it.params});
+      if(it){
+        apis.push({id:it.id, code:it.code, params:it.params});
+        apiById[it.id] = it.code;
+      }
     });
     return {
       app: 'gml-practice-log',
@@ -5284,7 +5403,8 @@ __lang = detectLang();
       kind: 'practice',
       exportedAt: new Date().toISOString(),
       record: JSON.parse(JSON.stringify(rec)),
-      apis: apis
+      apis: apis,
+      apiById: apiById
     };
   }
   function exportPractice(){
@@ -5526,6 +5646,7 @@ __lang = detectLang();
       return {
         record: rec,
         apis: Array.isArray(obj.apis) ? obj.apis.filter(function(x){ return x && x.code; }) : [],
+        apiById: (obj.apiById && typeof obj.apiById === 'object') ? obj.apiById : {},
         exportedAt: obj.exportedAt || ''
       };
     }
@@ -5537,6 +5658,7 @@ __lang = detectLang();
       record: data.record,
       adds: [],
       conflicts: [],
+      apiById: data.apiById || {},
       exportedAt: data.exportedAt
     };
     /* 按代码（同名）比对：库里没有 → 直接加；有 → 逐条问 */
@@ -5627,9 +5749,27 @@ __lang = detectLang();
 
     var rec = JSON.parse(JSON.stringify(p.record));
     rec = normalizeRec(rec, rec && rec.id) || rec;
-    rec.apis = (rec.apis || []).map(function(id){ return map[id] || id; });
+    /* 存档里的 id 在这边找不到时 ⇒ 用代码在本地库找回（防止「已从 API 库删除」） */
+    var hint = p.apiById || {};
+    function remapByCode(id){
+      var code = hint[id];
+      if(!code) return null;
+      var hit = libFindByCode(code);
+      return hit ? hit.id : null;
+    }
+    rec.apis = (rec.apis || []).map(function(id){
+      if(map[id]) return map[id];
+      var byCode = remapByCode(id);
+      return byCode || id;
+    });
     rec.modules = (rec.modules || []).map(function(m){
-      if(m && m.type === 'api' && m.refId && map[m.refId]) m.refId = map[m.refId];
+      if(m && m.type === 'api' && m.refId){
+        if(map[m.refId]) m.refId = map[m.refId];
+        else {
+          var byCode = remapByCode(m.refId) || (m.code ? (libFindByCode(m.code) || {}).id : null);
+          if(byCode) m.refId = byCode;
+        }
+      }
       return m;
     });
 
@@ -5666,6 +5806,53 @@ __lang = detectLang();
   function apiItem(refId){
     return apiObj(refId);
   }
+  /* 修 API 引用（导入 / 启动时跑一次）：
+     1) 同一个代码在库里出现多次 ⇒ 只留第一条，其余按代码归并到它；
+     2) 记录里的引用指向已不存在的条目 ⇒ 用代码找回（hint = {id: code}，来自存档的 apiById）；
+     3) 找不回就保留原样（界面会提示「已从 API 库删除」）。
+     返回 true = 有改动。 */
+  function fixApiRefs(hint){
+    hint = hint || {};
+    var byCode = {};
+    var remap = {};
+    var ids = Object.keys(state.api);
+    for(var i = 0; i < ids.length; i++){
+      var aid = ids[i], a = state.api[aid];
+      if(!a) continue;
+      var c = normCode(a.code);
+      if(!c) continue;
+      if(byCode[c]){ remap[aid] = byCode[c]; delete state.api[aid]; }
+      else byCode[c] = aid;
+    }
+    var changed = false;
+    Object.keys(state.records).forEach(function(rid){
+      var rec = state.records[rid];
+      if(!rec) return;
+      if(Array.isArray(rec.apis)){
+        rec.apis = rec.apis.map(function(aid){
+          if(state.api[aid]) return aid;
+          /* ① 这条 id 刚被同代码的重复项归并掉了 ⇒ 指向留下的那条 */
+          if(remap[aid]){ changed = true; return remap[aid]; }
+          /* ② 靠代码找回（hint = 存档里的 id → 代码对照表） */
+          var code = hint[aid];
+          var target = code ? byCode[normCode(code)] : null;
+          if(target){ changed = true; return target; }
+          return aid;
+        });
+      }
+      if(Array.isArray(rec.modules)){
+        rec.modules.forEach(function(m){
+          if(!m || m.type !== 'api') return;
+          if(state.api[m.refId]) return;
+          if(remap[m.refId]){ m.refId = remap[m.refId]; changed = true; return; }
+          var code = m.code || hint[m.refId];
+          var target = code ? byCode[normCode(code)] : null;
+          if(target){ m.refId = target; changed = true; }
+        });
+      }
+    });
+    return changed;
+  }
   function apiCode(refId){
     var it = apiItem(refId);
     return it ? it.code : '';
@@ -5696,7 +5883,7 @@ __lang = detectLang();
       var dup = false;
       rec.modules.forEach(function(m){ if(m && m.type === 'api' && m.refId === refId) dup = true; });
       if(dup) return false;
-      rec.modules.push({ type:'api', refId:refId });
+      rec.modules.push({ type:'api', refId:refId, code:(it && it.code) || '' });
       return true;
     }
     rec.apis = rec.apis || [];
@@ -5982,6 +6169,8 @@ __lang = detectLang();
   
   var libOpenId = null;    
   var libQuery = '';       
+  var libPage = 0;        
+  var LIB_PAGE_SIZE = 10; 
 
   function libMatches(it, q){
     if(!q) return true;
@@ -6007,10 +6196,17 @@ __lang = detectLang();
     $('#libNote').style.display = lib.length ? '' : 'none';
 
     if(lib.length && !items.length){ list.appendChild(el('div', 'empty', TF('lib_no_match', {q:q})));
+      var pager0 = $('#libPager'); if(pager0) pager0.innerHTML = '';
       return;
     }
 
-    items.forEach(function(it){
+    var pages = Math.max(1, Math.ceil(items.length / LIB_PAGE_SIZE));
+    if(libPage > pages - 1) libPage = pages - 1;
+    if(libPage < 0) libPage = 0;
+    var start = libPage * LIB_PAGE_SIZE;
+    var pageItems = items.slice(start, start + LIB_PAGE_SIZE);
+
+    pageItems.forEach(function(it){
       var uses = apiUses(it.id);
       var ps = normParams(it.params);
 
@@ -6023,6 +6219,10 @@ __lang = detectLang();
       top.appendChild(el('span', 'rec-name code', it.code));
       top.appendChild(el('span', 'rec-time', uses.length ? TF('ref_used', {n:uses.length}) : T('未被引用')));
       main.appendChild(top);
+      if(it.desc){
+        var dline = el('div', 'lib-desc', it.desc);
+        main.appendChild(dline);
+      }
       var meta = el('div', 'rec-meta');
       meta.appendChild(chipEl(ps.length ? TF('param_count', {n:ps.length}) : T('无参数'), '#7a7a7a', true));
       main.appendChild(meta);
@@ -6074,6 +6274,24 @@ __lang = detectLang();
 
       list.appendChild(li);
     });
+
+    var pager = $('#libPager');
+    pager.innerHTML = '';
+    if(pages > 1){
+      var prev = el('button', '', T('‹ 上一页'));
+      prev.type = 'button';
+      prev.disabled = libPage === 0;
+      prev.addEventListener('click', function(){ libPage--; renderApiLib(); });
+      pager.appendChild(prev);
+
+      pager.appendChild(el('span', 'pg-now', (libPage + 1) + ' / ' + pages));
+
+      var next = el('button', '', T('下一页 ›'));
+      next.type = 'button';
+      next.disabled = libPage >= pages - 1;
+      next.addEventListener('click', function(){ libPage++; renderApiLib(); });
+      pager.appendChild(next);
+    }
   }
 
   
@@ -6574,11 +6792,13 @@ __lang = detectLang();
     apiEditing = item || null;
     apiDraft = {
       code: item ? item.code : '',
+      desc: item ? (item.desc || '') : '',
       params: item ? normParams(item.params).map(function(p){ return { no:p.no, desc:p.desc }; })
                    : [{ no:'1', desc:'' }]
     };
     $('#apiModalTitle').textContent = item ? T('编辑 API') : T('新建 API');
     $('#apiCodeInput').value = apiDraft.code;
+    $('#apiDescInput').value = apiDraft.desc || '';
     renderApiModalArgs();
     $('#apiModal').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -6632,14 +6852,16 @@ __lang = detectLang();
       
       .filter(function(p){ return (p.desc || '').trim(); })
       .map(function(p){ return { no:(p.no || '').trim() || '1', desc:(p.desc || '').trim() }; });
+    var desc = String($('#apiDescInput').value || '').trim();
     var wasEdit = !!apiEditing;
     if(apiEditing){
       apiIndexDel(apiEditing);
       apiEditing.code = code;
+      apiEditing.desc = desc;
       apiEditing.params = params;
       apiIndexSet(apiEditing);
     }else{
-      var item = { id: uid(), code: code, params: params };
+      var item = { id: uid(), code: code, desc: desc, params: params };
       state.api[item.id] = item;
       apiIndexSet(item);
     }
@@ -6711,6 +6933,7 @@ __lang = detectLang();
       var box = el('span');
       box.style.cssText = 'flex:1;min-width:0';
       box.appendChild(el('span', 'pk-code', it.code));
+      if(it.desc) box.appendChild(el('div', 'pk-sub', it.desc));
       var ps = normParams(it.params);
       var sub = ps.length
         ? ps.map(function(p){ return (p.no || '') + ' ' + (p.desc || ''); }).join(' · ')
@@ -6731,7 +6954,10 @@ __lang = detectLang();
       pickerRec.apis = pickerSel.slice();
     }else if(pickerMode === 'module' && pickerRec){
       var others = (pickerRec.modules || []).filter(function(m){ return !m || m.type !== 'api'; });
-      pickerSel.forEach(function(id){ others.push({ type:'api', refId:id }); });
+      pickerSel.forEach(function(id){
+        var _it = apiItem(id);
+        others.push({ type:'api', refId:id, code:(_it && _it.code) || '' });
+      });
       pickerRec.modules = others;
     }else if(pickerMode === 'one' && pickerMod){
       if(pickerSel.length) pickerMod.refId = pickerSel[pickerSel.length - 1];
@@ -8095,6 +8321,7 @@ __lang = detectLang();
   
   $('#libSearch').addEventListener('input', function(){
     libQuery = this.value;
+    libPage = 0;
     renderApiLib();
   });
   $('#libAddBtn').addEventListener('click', function(){ openApiModal(null); });
@@ -9491,7 +9718,7 @@ __lang = detectLang();
           return { id:r.id, ts:r.ts, name:r.name, apis:(r.apis||[]).length,
                    modules:(r.modules||[]).map(function(m){ return m.type; }) };
         }),
-        api: allApis().map(function(a){ return { id:a.id, code:a.code, params:(a.params||[]).length }; }),
+        api: allApis().map(function(a){ return { id:a.id, code:a.code, desc:a.desc || '', params:(a.params||[]).length }; }),
         current: (function(){ var r = cmdCurrentRec(); return r ? r.id : null; })()
       } };
     },
@@ -9583,15 +9810,20 @@ __lang = detectLang();
       var code = String(a.code || '').trim();
       if(!code) return cmdFail('没给 API 代码');
       var dup = libFindByCode(code);
-      if(dup) return { ok:true, id:dup.id, code:dup.code, existed:true };
+      if (dup) {
+        var d2 = String(a.desc == null ? '' : a.desc).trim();
+        if (d2 && dup.desc !== d2){ dup.desc = d2; save('api'); renderApiLib(); }
+        return { ok:true, id:dup.id, code:dup.code, desc:dup.desc || '', existed:true };
+      }
       var params = (a.params || []).map(function(p, i){
         if(Array.isArray(p)) return { no:String(p[0] || (i+1)), desc:String(p[1] || '') };
         return { no:String(p.no || (i+1)), desc:String(p.desc || '') };
       }).filter(function(p){ return p.desc; });
-      var item = { id: uid(), code: code, params: params };
+      var desc = String(a.desc == null ? '' : a.desc).trim();
+      var item = { id: uid(), code: code, desc: desc, params: params };
       state.api[item.id] = item; apiIndexSet(item);
       save('api'); save('apiIndex'); renderApiLib();
-      return { ok:true, id:item.id, code:code, params:params.length };
+      return { ok:true, id:item.id, code:code, desc:desc, params:params.length };
     },
     refApi: function(a){
       var bad = cmdNeedRec(); if(bad) return bad;
@@ -9683,5 +9915,2105 @@ __lang = detectLang();
 })();
 </script>
 
+<script>
+/* === 演示站种子数据（公开版） ===
+   本机还没有任何记录时，把 10 个 500 挑战的打卡记录写进来。
+   已经用过的浏览器不会被覆盖。 */
+(function(){
+  try{
+    var raw = localStorage.getItem('gml-practice-log-v2:records');
+    if(raw){ var o = JSON.parse(raw); if(o && Object.keys(o).length) return; }
+  }catch(e){}
+  var SEED = {
+ "app": "gml-practice-log",
+ "version": 2,
+ "exportedAt": "2026-11-14T01:02:39.628Z",
+ "counts": {
+  "records": 27,
+  "apiLib": 103
+ },
+ "data": {
+  "user": {
+   "name": "Mavis",
+   "image": ""
+  },
+  "nickname": "Mavis",
+  "dailyGoal": 5,
+  "records": [
+   {
+    "id": "rmwfpb708heucx",
+    "ts": 1792314035730.986,
+    "name": "分数记入列表",
+    "requirement": "做一个系统，记住玩家最近的 10 个分数并且显示在屏幕上；随着新的分数不断加进来，\n这个系统一边更新显示出来的内容，一边把超出保留数量的旧分数剔除掉。",
+    "hint": "把数值加进一个 ds_list 里，超过指定长度的时候把最旧的一条剔除掉。\n用一个 for 循环来定位并把数组里的数值画出来。",
+    "apis": [
+     "rmwfpb71ke8ccc",
+     "rmwfpb74bki5l5",
+     "rmwfpb771auibe",
+     "rmwfpb77ajpa9j",
+     "rmwfpb77r6tc3x"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_example",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "last = new class_scores_list(12);"
+       },
+       {
+        "name": "Step",
+        "code": "if mouse_check_button_pressed(mb_left)\n{\n\tlast.update(irandom(1000));\n}"
+       },
+       {
+        "name": "Draw",
+        "code": "last.draw(x,y,32);"
+       }
+      ]
+     },
+     {
+      "type": "脚本",
+      "value": "// class_scores_list.gml\nfunction class_scores_list(_long) constructor\n{\n\tlast=ds_list_create();\n\tlong = _long;\n\t\n\tstatic clear = function()\n\t{\n\t\tds_list_destroy(last);\n\t}\n\t\n\tstatic update = function(_score)\n\t{\n\t\tds_list_add(last,_score);\n\t\tvar _size=ds_list_size(last);\n\t\trepeat (_size - long)\n\t\t{\n\t\t\tds_list_delete(last,0);\n\t\t}\n\t}\n\t\n\tstatic draw = function(_x,_y,_off)\n\t{\n\t\tvar _size=ds_list_size(last);\n\t\tfor (var _i = 0; _i < _size; _i ++)\n\t\t{\n\t\t    draw_text(_x,_y+(_i*_off),last[| _i]);\n\t\t}\n\t}\n\t\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpb7a1petha",
+    "ts": 1792402655730.986,
+    "name": "带间隙生成物品",
+    "requirement": "做一个系统：随机生成一批实例，然后让它们互相分开。",
+    "hint": "在房间里的随机位置生成实例。用 collision_circle_list 检查范围内的实例。循环遍历这些实例并把它们推开。",
+    "apis": [
+     "rmwfpb771auibe",
+     "rmwfpb77ajpa9j",
+     "rmwfpb7exdq49k",
+     "rmwfpb7faz8r87",
+     "rmwfpb7k041jii",
+     "rmwfpb7kf89z73"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_manager",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "spawn = new class_item_with_gap(1);\nspawn.create(0,0,room_width,room_height,100,obj_round);"
+       },
+       {
+        "name": "Step",
+        "code": "spawn.update(20);"
+       }
+      ]
+     },
+     {
+      "type": "对象",
+      "value": "obj_round",
+      "fields": [],
+      "events": []
+     },
+     {
+      "type": "脚本",
+      "value": "// class_item_with_gap.gml\nfunction class_item_with_gap(_count) constructor\n{\n\tlist = noone;\n\tindex = noone;\n\tcount = _count;\n\t\n\tstatic create = function(_x1,_y1,_x2,_y2,_amount,_obj)\n\t{\n\t\tlist = ds_list_create();\n\t\tindex = _obj;\n\t\trepeat _amount\n\t\t{\n\t\t\tvar _x=irandom_range(_x1,_x2);\n\t\t\tvar _y=irandom_range(_y1,_y2);\n\t\t\tvar _inst = instance_create_layer(_x,_y, \"Instances\",_obj);\n\t\t\twith _inst\n\t\t\t{\n\t\t\t\timage_speed=0;\n\t\t\t\timage_index=irandom(image_number-1);\n\t\t\t}\n\t\t\tds_list_add(list,_inst);\n\t\t}\n\t}\n\t\n\tstatic apart = function(_inst,_dist,_obj)\n\t{\n\t\twith _inst\n\t\t{\n\t\t\tvar _list=ds_list_create();\n\t\t\tcollision_circle_list(x,y,_dist,_obj,false,true,_list,false);\n\t\t\tvar _size=ds_list_size(_list);\n\t\t\tfor (var i = 0; i < _size; i ++)\n\t\t\t{\n\t\t\t\twith _list[|i]\n\t\t\t\t{\n\t\t\t\t\tvar dir=point_direction(other.x,other.y,x,y);\n\t\t\t\t\tx+=lengthdir_x(1,dir);\n\t\t\t\t\ty+=lengthdir_y(1,dir);\n\t\t\t\t}\n\t\t\t}\n\t\t\tds_list_clear(_list);\n\t\t\tif _size > 0 return 0;\n\t\t}\n\t\treturn 1;\n\t}\n\t\n\tstatic update = function(_dist)\n\t{\n\t\tif list == noone return;\n\t\tvar _size = ds_list_size(list);\n\t\trepeat count\n\t\t{\n\t\t\tvar _ready = 0;\n\t\t\tfor(var _i = 0;_i<_size;_i++)\n\t\t\t{\n\t\t\t\t_ready += apart(list[| _i],_dist,index)\n\t\t\t}\n\t\t\tif _ready == _size\n\t\t\t{\n\t\t\t\tds_list_clear(list);\n\t\t\t\tlist = noone;\n\t\t\t\tindex = noone;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\t}\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpb7n6qtdx3",
+    "ts": 1792491275730.986,
+    "name": "准星追踪目标",
+    "requirement": "做一个系统：随机挑一个敌人，朝它移动过去。鼠标点击时把它销毁，然后再去找一个新的目标。",
+    "hint": "如果存在一个或多个实例，就挑一个作为目标。让准星移动到目标身上。压在它上面的时候换一张准星贴图。用鼠标按键射击，把它杀掉，再选一个新的目标。",
+    "apis": [
+     "rmwfpb7q7cdjb7",
+     "rmwfpb7qjn50k5",
+     "rmwfpb7exdq49k",
+     "rmwfpb7sgn3sad"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_crosshair",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "target = new move_to_target();\nimage_speed=0;\nimage_index=0;"
+       },
+       {
+        "name": "Step",
+        "code": "x=clamp(x,0,room_width);\ny=clamp(y,0,room_height);\n\ntarget.update(obj_parent,4);\nif place_meeting(x,y,target.target) image_index=1;\nelse image_index=0;\n\nvar _target = target.target;\nif mouse_check_button_pressed(mb_left) && _target!=noone \n{\n\tif instance_position(x,y,_target)\n\t{\n\t\tinstance_destroy(_target);\n\t\ttarget.target=noone;\n\t}\n}"
+       }
+      ]
+     },
+     {
+      "type": "对象",
+      "value": "obj_parent",
+      "fields": [],
+      "events": []
+     },
+     {
+      "type": "脚本",
+      "value": "// move_to_target.gml\nfunction move_to_target(_owner = other) constructor\n{\n\towner = _owner;\n\ttarget = noone;\n\t\n\tstatic get_target = function(_obj)\n\t{\n\t\tvar _i = 0;\n\t\tvar _n = instance_number(_obj);\n\t\tif _n > 0\n\t\t{\n\t\t\t_n = irandom(_n-1);\n\t\t\treturn instance_find(_obj,_n);\n\t\t}\n\t\treturn noone;\n\t}\n\t\n\tstatic update = function(_obj,_spd)\n\t{\n\t\tif target == noone target = self.get_target(_obj);\n\t\tvar _target=target;\n\t\twith owner\n\t\t{\n\t\t\tif _target==noone speed = 0;\n\t\t\telse move_towards_point(_target.x,_target.y,_spd);\n\t\t}\n\t}\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpb7teodki0",
+    "ts": 1792579895730.986,
+    "name": "带分段的小血条",
+    "requirement": "画一条血条\n在血条上叠几条竖线，把它切成分段",
+    "hint": "用当前血量画一条血条。在血条上画竖线。",
+    "apis": [
+     "rmwfpb7q7cdjb7",
+     "rmwfpb7vvniq8w",
+     "rmwfpb7wopvos8"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_player",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "hp=8;\nmax_hp=hp;"
+       },
+       {
+        "name": "Step",
+        "code": "if mouse_check_button_pressed(mb_left)\n{\n\thp--;\n}\nif mouse_check_button_pressed(mb_right)\n{\n\thp++;\n}\nhp=clamp(hp,0,max_hp);"
+       },
+       {
+        "name": "Draw",
+        "code": "draw_self();\nMini_Healthbar_With_Segments(x,y,400,40,hp,max_hp,max_hp);"
+       }
+      ]
+     },
+     {
+      "type": "脚本",
+      "value": "// Mini_Healthbar_With_Segments.gml\nfunction Mini_Healthbar_With_Segments(_x,_y,_w,_h,_cur,_max,_part)\n{\n\tdraw_set_color(c_black);\n\tvar _amount = (100/_max)*_cur;\n\t_x -= _w/2;\n\tdraw_healthbar(_x,_y,_x+_w,_y+_h,_amount,c_white,c_blue,c_yellow,0,true,true);\n\tfor (var i = 0; i < _part; i += 1)\n\t{\n\t\tvar _px = _x+(_w/_part)*i;\n\t\tdraw_line(_px,_y,_px,_y+_h);\n\t}\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpb7yagigim",
+    "ts": 1792668515730.986,
+    "name": "玩家强化生成器",
+    "requirement": "做一套系统，让玩家必须不停按按钮，才能拿到强化道具。",
+    "hint": "",
+    "apis": [
+     "rmwfpb7q7cdjb7"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_player",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "comp = new class_Button_Mash(100);"
+       },
+       {
+        "name": "Step",
+        "code": "var _check = mouse_check_button_pressed(mb_left)\n\tor mouse_check_button_pressed(mb_right);\ncomp.update(_check,5,0.2);"
+       },
+       {
+        "name": "Draw",
+        "code": "comp.draw(x,y,50);"
+       }
+      ]
+     },
+     {
+      "type": "脚本",
+      "value": "// class_Button_Mash.gml\nfunction class_Button_Mash(_max) constructor\n{\n\tval = 0;\n\ttarget=_max;\n\ttarget_reached=false;\n\t\n\tstatic update = function(_check,_gain,_churn)\n\t{\n\t\tif _check val += _gain;\n\t\telse if !target_reached val -= _churn;\n\t\t\n\t\tif val>target{target_reached=true;}\n\t\tval=clamp(val,0,target);\t\n\t}\n\t\n\tstatic draw = function(_x,_y,_off)\n\t{\n\t\tdraw_healthbar(\n\t\t\t_x,_y,_x+_off-4,_y+_off-4,\n\t\t\tval/target*100,\n\t\t\tc_white,c_red,c_lime,3,1,1\n\t\t)\n\t\tdraw_text(_x+_off,_y,val);\n\t\tif target_reached\n\t\t{\n\t\t\tdraw_text(_x,_y+_off,\"Target Reached\");\n\t\t}\n\t}\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpb823vpnoo",
+    "ts": 1792757135730.986,
+    "name": "轮胎痕迹特效",
+    "requirement": "绘制会逐渐淡出消失的轮胎痕迹，并且要考虑载具的前进方向。",
+    "hint": "",
+    "apis": [
+     "rmwfpb84nv6kbh",
+     "rmwfpb85ci0i47",
+     "rmwfpb86bn4vu8",
+     "rmwfpb86ihgyn1",
+     "rmwfpb87bwakcb"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_car",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "alarm[0]=5;"
+       },
+       {
+        "name": "Alarm 0",
+        "code": "Tire_Track_Effects(x,y,-120,image_angle,obj_tracks);\nalarm[0]=5;"
+       },
+       {
+        "name": "Step",
+        "code": "move_towards_point(mouse_x,mouse_y,5);\nimage_angle=direction;"
+       }
+      ]
+     },
+     {
+      "type": "对象",
+      "value": "obj_tracks",
+      "fields": [],
+      "events": [
+       {
+        "name": "Step",
+        "code": "image_alpha -= 0.01;// reduce\nif image_alpha<0 instance_destroy();// destrot when faded out"
+       }
+      ]
+     },
+     {
+      "type": "脚本",
+      "value": "// scr_tyre_track.gml\nfunction Tire_Track_Effects(_x,_y,_off,_dir,_obj,_layer = \"tracks\")\n{\n\t///calcuate posutun\n\t_x += lengthdir_x(_off,_dir);\n\t_y += lengthdir_y(_off,_dir);\n\t// create tyre track\n\tinstance_create_layer\n\t(\n\t\t_x,_y,_layer,\n\t\t_obj,{image_angle}\n\t);\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpb891uf70u",
+    "ts": 1792845755730.986,
+    "name": "爆炸特效",
+    "requirement": "把一个 sprite 拆成多个部分，从而做出爆炸效果。",
+    "hint": "用 sprite 编辑器把一张 sprite 切成若干块。\n数出 sprite 的数量，然后借助 for 循环，让每一块都朝各自不同的方向飞出去。\n---",
+    "apis": [
+     "rmwfpb89yq8kpr",
+     "rmwfpb77ajpa9j",
+     "rmwfpb86ihgyn1",
+     "rmwfpb8btp60ye"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_missle",
+      "fields": [],
+      "events": [
+       {
+        "name": "Step",
+        "code": "if mouse_check_button_pressed(mb_left)// check for press\n{\n\tSprite_Exploding_Effect(x,y,\"explosions\",obj_explode,spr_parts,5,4);\n}"
+       }
+      ]
+     },
+     {
+      "type": "对象",
+      "value": "obj_explode",
+      "fields": [],
+      "events": [
+       {
+        "name": "Clean Up",
+        "code": "instance_destroy();"
+       }
+      ]
+     },
+     {
+      "type": "脚本",
+      "value": "// Sprite_Exploding_Effect\nfunction Sprite_Exploding_Effect(_x,_y,_layer,_obj,_spr,_dir,_spd)\n{\n\tvar _parts = sprite_get_number(_spr);// get number of sprites\n\tfor (var i = 0; i < _parts; i += 1)// loop through\n\t{\n\t\t//create parts\n\t\tinstance_create_layer(_x,_y,_layer,_obj,\n\t\t{\n\t\t\t\n\t\t\tsprite_index : _spr,\n\t\t\timage_speed: 0,\n\t\t\timage_index: i,\n\t\t\tdirection: (360/_parts)*i+random_range(-_dir,_dir),\n\t\t\tspeed: _spd\n\t\t});\n\t}\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpb8chausxe",
+    "ts": 1792934375730.986,
+    "name": "穿过平台",
+    "requirement": "做一个单向平台，玩家可以从下方穿过它跳上去。",
+    "hint": "检查玩家当前是否正在箱子(crate)内部跳跃，如果是就允许再跳一次。",
+    "apis": [
+     "rmwfpb8ezunug3",
+     "rmwfpb8fbhwy3d",
+     "rmwfpb8fxuelkl",
+     "rmwfpb8g4jgvsh"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_player",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "// === obj_player : Create event ===\njump_speed=28;\ngravity=1;\nhsp=8;\n\nfunction Through_Jump(_x,_y,_hspd,_jspd,_obj)\n{\n\tif _hspd >= 0\n\t{\n\t\tvar _platform = instance_place(_x, _y + _hspd, _obj);\n\t\tif (_platform != noone)\n\t\t{\n\t\t\tif (self.bbox_bottom > _platform.bbox_top)\n\t\t\t{\n\t\t\t\treturn -_jspd;\n\t\t\t}\n\t\t}\n\t}\n\treturn _hspd;\n}"
+       },
+       {
+        "name": "Step",
+        "code": "// === obj_player : Step event ===\nif mouse_check_button(mb_left)\n{\n\tx=x-hsp; image_xscale=-1\n}\nelse\n{\n\tx=x+hsp; image_xscale=1\n}\nvspeed = Through_Jump(x,y,vspeed,jump_speed,obj_box);"
+       }
+      ]
+     },
+     {
+      "type": "对象",
+      "value": "obj_box",
+      "fields": [],
+      "events": []
+     }
+    ]
+   },
+   {
+    "id": "rmwfpb8i5qp1nq",
+    "ts": 1793022995730.986,
+    "name": "检查点系统",
+    "requirement": "把玩家最后一次与检查点(checkpoint)发生碰撞时的位置存下来，并在玩家死亡时把角色移动到那个位置。",
+    "hint": "逐字译文：\n与检查点碰撞时，把玩家的位置保存到变量里。点击鼠标时，移动到已保存的位置。\n意译（讲解用）：\n玩家撞到检查点的那一瞬间，把角色当前的横纵坐标记下来；等角色需要被送回原地的时候（本期用点击鼠标代替死亡），再把角色的坐标改回记录下来的那一组值。",
+    "apis": [
+     "rmwfpb8kmcfpso",
+     "rmwfpb8kuc4qy2",
+     "rmwfpb8ld6ds2d"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_player",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "// === obj_player : Create event ===\n// 组件在这一步实例化，角色自己的坐标先作为初始检查点。\ncomp = new class_Checkpoint(self);"
+       },
+       {
+        "name": "Step",
+        "code": "// === obj_player : Step event ===\n// 角色跟着鼠标走；左键按下时回到上一个检查点。\nmove_towards_point(mouse_x, mouse_y, 4);\n\nif mouse_check_button_pressed(mb_left)\n{\n\tcomp.teleport(self);\n}"
+       },
+       {
+        "name": "Collision",
+        "code": "// === obj_player : Collision with obj_checkpoint event ===\n// other 就是被撞到的检查点实例，把它的位置记下来。\ncomp.update(other);"
+       }
+      ]
+     },
+     {
+      "type": "对象",
+      "value": "obj_checkpoint",
+      "fields": [],
+      "events": []
+     },
+     {
+      "type": "脚本",
+      "value": "// class_Checkpoint.gml\n// === class_Checkpoint ===\n// 职责：记住最近一次检查点的位置，并能把任意实例传送回该位置。\n// 对外方法：\n//   update(_inst)   —— 把 _inst 当前所在的位置记为新的检查点\n//   teleport(_inst) —— 把 _inst 移动到已记录的检查点位置\nfunction class_Checkpoint(_inst) constructor\n{\n\tpoint_x = _inst.x;\n\tpoint_y = _inst.y;\n\n\tupdate = function(_inst)\n\t{\n\t\tpoint_x = _inst.x;\n\t\tpoint_y = _inst.y;\n\t}\n\n\tteleport = function(_inst)\n\t{\n\t\t_inst.x = point_x;\n\t\t_inst.y = point_y;\n\t}\n\n\tupdate(_inst);\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpb8nshgbdg",
+    "ts": 1793111615730.986,
+    "name": "淡入淡出",
+    "requirement": "让一个精灵(sprite)的 alpha 逐渐变化,从而实现淡入淡出。",
+    "hint": "",
+    "apis": [
+     "rmwfpb87bwakcb",
+     "rmwfpb8r0upplp",
+     "rmwfpb8sdjgoro"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_enemy",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "// === obj_enemy : Create event ===\ncomp = new class_fade(0.02,1);"
+       },
+       {
+        "name": "Step",
+        "code": "// === obj_enemy : Step event ===\ncomp.tick();"
+       },
+       {
+        "name": "Draw",
+        "code": "// === obj_enemy : Draw event ===\ndraw_sprite_ext(sprite_index,0,x,y,1,1,0,c_white,comp.alpha);"
+       }
+      ]
+     },
+     {
+      "type": "对象",
+      "value": "obj_player",
+      "fields": [],
+      "events": []
+     },
+     {
+      "type": "对象",
+      "value": "obj_bullet",
+      "fields": [],
+      "events": []
+     },
+     {
+      "type": "脚本",
+      "value": "// class_fade.gml\nfunction class_fade(_spd,_fading) constructor \n{\n    static _in = 1,_out = -1;\n    static _start = 0,_end = 1;\n    \n    spd = _spd;  \n    fading = _fading>0?_in:_out;\n    alpha = fading == _in?_start:_end;\n    \n    static tick = function ()\n    {\n        alpha += spd*fading;\n        if(alpha>=_end)\n        {\n            alpha=_end;\n            fading=_out;\n        }\n        if(alpha<=_start)\n        {\n            alpha=_start;\n            fading=_in;\n        }\n    }\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpb8tldjz7u",
+    "ts": 1793200235730.986,
+    "name": "冷却系统",
+    "requirement": "为玩家开火的频率设置一个上限。",
+    "hint": "",
+    "apis": [
+     "rmwfpb7q7cdjb7",
+     "rmwfpb86bn4vu8"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_player",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "// === obj_player : Create event ===\ncool = new class_cool_down(200) ;"
+       },
+       {
+        "name": "Step",
+        "code": "// === obj_player : Step event ===\nif mouse_check_button_pressed(mb_left)\n{\n\tif !cool.update() exit;\n}\ncool.tick();"
+       },
+       {
+        "name": "Draw",
+        "code": "// === obj_player : Draw event ===\ncool.draw(100,100,600,200);"
+       }
+      ]
+     },
+     {
+      "type": "脚本",
+      "value": "// class_cool_down.gml\nfunction class_cool_down(_max) constructor\n{\n\thitmeter_max = _max;\n\thitmeter = 0;\n\tcooloff = false;\n\t\n\tstatic update = function()\n\t{\n\t\tif cooloff == true\n\t\t{\n\t\t\tshow_debug_message(\"negative\");\n\t\t\treturn false;\n\t\t}\n\t\telse\n\t\t{\n\t\t\thitmeter += 25;\n\t\t\treturn true;\n\t\t}\n\t}\n\tstatic tick = function()\n\t{\n\t\tif cooloff == false && hitmeter>hitmeter_max)\n\t\t{\n\t\t\thitmeter = hitmeter_max;\n\t\t\tcooloff = true;\n\t\t}\n\t\tif cooloff == true && hitmeter <1\n\t\t{\n\t\t\thitmeter = 0;\n\t\t\tcooloff = false;\n\t\t}\n\t\t\n\t\thitmeter -= 0.2;\n\t\thitmeter = clamp(hitmeter,0,hitmeter_max);\n\t}\n\t\n\t\n\t\n\tstatic draw = function(_x,_y,_w,_h)\n\t{\n\t\tdraw_set_color(c_orange)\n\t\tdraw_rectangle(_x,_y,_x+_w,_y+_h,false);\n\t\tdraw_set_color(c_yellow)\n\t\tdraw_rectangle(_x,_y,_x+((_w/hitmeter_max)*hitmeter),_y+_h,false);\n\t\tdraw_set_colour(c_black);\n\t\tdraw_rectangle(_x,_y,_x+_w,_y+_h,true);\n\t\t\n\t\tdraw_set_halign(fa_center);\n\t\tdraw_set_valign(fa_middle);\n\t\tdraw_set_colour(c_black);\n\t\tdraw_text(_x+_w/2,_y+_h/2,\n\t\tcooloff ?\"RECHARGING\":\"CAN ATTACK AND BLOCK\");\n\t\tdraw_set_halign(fa_top);\n\t\tdraw_set_valign(fa_left);\n\t\tdraw_set_colour(c_white);\n\t\tdraw_text(_x,_y+_h,hitmeter);\n\t}\n\t\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpb8z3awdd2",
+    "ts": 1793288855730.986,
+    "name": "武器管理系统",
+    "requirement": "做一套武器管理系统，允许玩家在不同武器之间切换，每把武器发射不同的子弹（projectile）。\n同时允许玩家购买额外的弹药。\n会用到的内置函数与内置变量：",
+    "hint": "global\ndraw_sprite\naudio_play_sound\nmouse_check_button\ndraw_text\ninstance_create_layer\n用一个二维数组（2D array）来存放武器数据。如果玩家现金足够，就允许用户购买额外弹药。\n允许射击武器——创建一个基础的 object 实例并给它指定 sprite。为这个动作播放合适的音效。",
+    "apis": [],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_player",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "// === obj_player : Create event ===\nglobal.weapon_info = [];\nweapon_info_create\n(\n\t1,\"Hand Gun\",100,1,1,1,5,spr_handgun,\n\tobj_damage_handgun,\"snd_handgun\",\n\t\"snd_voice_handgun_selected\",20\n)\nweapon_info_create\n(\n\t2,\"Rifle\",25,2,2,2,3,spr_rifle,\n\tobj_damage_rifle,\"snd_rifle\",\n\t\"snd_voice_rifle_selected\",15\n)\nscore=100;\n\nweapon_comp = new class_weapon(global.weapon_info);"
+       },
+       {
+        "name": "Step",
+        "code": "// === obj_player : Step event ===\n// set weapon\nif (keyboard_check_released(ord(\"1\"))) weapon_comp.change(1);\nif (keyboard_check_released(ord(\"2\"))) weapon_comp.change(2);\n\nif mouse_check_button_pressed(mb_left)\n{\n  score = weapon_comp.purchase(score);\n}\n\nif mouse_check_button_pressed(mb_right)\n{\n  weapon_comp.shoot();\n}"
+       },
+       {
+        "name": "Draw",
+        "code": "// === obj_player : Draw event ===\nweapon_comp.draw(x,y,18);"
+       }
+      ]
+     },
+     {
+      "type": "对象",
+      "value": "obj_damage_handgun",
+      "fields": [],
+      "events": []
+     },
+     {
+      "type": "对象",
+      "value": "obj_damage_rifle",
+      "fields": [],
+      "events": []
+     },
+     {
+      "type": "脚本",
+      "value": "// weapon_info_create.gml\n/// 全局函数：往 global.weapon_info 的第 _index 行填一把武器的全部字段\n/// 字段顺序 1~11：name / starting_number / strength / reload_speed / cost /\n///                 aiming_speed / sight_sprite / damage_obj / fire_sound /\n///                 voice_selected_sound / ammo_pack_size\nfunction weapon_info_create\n(\n\t_index, _name, _starting_number, _strength,\n\t_reload_speed, _cost, _aiming_speed,\n\t_sight_sprite, _damage_obj, _fire_sound,\n\t_voice_selected_sound, _ammo_pack_size\n)\n{\n\tvar _i = 1;\n\tglobal.weapon_info[_index, _i++] = _name;\n\tglobal.weapon_info[_index, _i++] = _starting_number;\n\tglobal.weapon_info[_index, _i++] = _strength;\n\tglobal.weapon_info[_index, _i++] = _reload_speed;\n\tglobal.weapon_info[_index, _i++] = _cost;\n\tglobal.weapon_info[_index, _i++] = _aiming_speed;\n\tglobal.weapon_info[_index, _i++] = _sight_sprite;\n\tglobal.weapon_info[_index, _i++] = _damage_obj;\n\tglobal.weapon_info[_index, _i++] = _fire_sound;\n\tglobal.weapon_info[_index, _i++] = _voice_selected_sound;\n\tglobal.weapon_info[_index, _i++] = _ammo_pack_size;\n}"
+     },
+     {
+      "type": "脚本",
+      "value": "// class_weapon.gml\n/// 武器系统控制器：持有整张 weapon_info 表 + 当前使用下标\n/// 负责切换 / 购买 / 开火 / 画 HUD 四个操作\nfunction class_weapon(_datas) constructor\n{\n\tweapons = _datas;\n\tusing = 1;\n\n\t// 切换到第 _index 把武器\n\tstatic change = function(_index)\n\t{\n\t\t using = _index;\n\t\t var _weapon = weapons[_index];\n\t\t show_debug_message(_weapon[10]);\n\t}\n\n\t// 买弹药：传入现金，返回扣完之后的余额\n\tstatic purchase = function(_score)\n\t{\n\t\tvar _weapon = weapons[using];\n\t\tvar _cost = _weapon[5];\n\t\tvar _number = _weapon[2];\n\t\tif ( _score >= _cost)\n\t\t{\n\t\t\t_score=_score-_cost;\n\t\t\t_weapon[2] = _number+1;\n\t\t\tshow_debug_message(\"snd_voice_purchase_complete\");\n\t\t}\n\t\telse show_debug_message(\"snd_voice_not_enough_cash\");\n\t\treturn _score;\n\t}\n\n\t// 开火：在鼠标位置生成当前武器对应的子弹\n\tstatic shoot = function()\n\t{\n\t\tvar _weapon = weapons[using];\n\t\tvar _number = _weapon[2];\n\t\tif _number>0\n\t\t{\n\t\t\t show_debug_message(_weapon[9],1,0);\n\t\t\t _weapon[2] = _number-1;\n\t\t\t instance_create_layer (mouse_x,mouse_y,\"Instances\",_weapon[8]);\n\t\t}\n\t\telse {show_debug_message(\"snd_voice_no_ammo\");}\n\t}\n\n\t// 画 HUD：小图 + 名字 / 弹药 / 伤害 / 换弹 / 价格 / 现金\n\tstatic draw = function(_x,_y,_dh)\n\t{\n\t\tvar _weapon = weapons[using];\n\t\tdraw_sprite(_weapon[7],0,_x,_y);\n\t\tdraw_set_colour(c_white);\n\t\tvar _i = 0;\n\t\t_y += 64;\n\t\tdraw_text(_x,_y+ (_i++)*_dh,_weapon[1]);\n\t\tdraw_text(_x,_y+ (_i++)*_dh,$\"Ammo:{_weapon[2]}\");\n\t\tdraw_text(_x,_y+ (_i++)*_dh,$\"Damage:{_weapon[3]}\");\n\t\tdraw_text(_x,_y+ (_i++)*_dh,$\"reload:{_weapon[4]}\");\n\t\tdraw_text(_x,_y+ (_i++)*_dh,$\"Cost:{_weapon[5]}\");\n\t\tdraw_text(_x,_y+ (_i++)*_dh,$\"Cash:{score}\");\n\t}\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpb954pf0z5",
+    "ts": 1793377475730.986,
+    "name": "抛射物曲线路径",
+    "requirement": "一个让玩家发射抛射物、并且抛射物沿着弯曲轨迹飞行的系统。\n用得上的函数和内置变量 / 提示\npath_add / path_set_kind / path_add_point / path_start\n在路径上添加若干个点，让武器沿着它飞行。用 path_set_kind 把路径设置成平滑类型。\n---",
+    "hint": "",
+    "apis": [],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_ball",
+      "fields": [],
+      "events": []
+     },
+     {
+      "type": "对象",
+      "value": "obj_spawn",
+      "fields": [],
+      "events": []
+     },
+     {
+      "type": "脚本",
+      "value": "// class_path.gml\nfunction class_path(_list,_kind=1,_closed=false) constructor\n{\n\tstatic _x = 0,_y = 1,_spd = 2;\n\t\n\tpath = path_add();\n\tpath_set_kind(path, _kind);\n\tpath_set_closed(path, _closed);\n\t\n\tvar _i=0;\n\trepeat array_length(_list)\n\t{\n\t\tvar _p = _list[_i++];\n\t\tpath_add_point(path,_p[_x],_p[_y],_p[_spd]);\n\t}\n\t\n\tstatic start = function(_inst,_spd,_kind = path_action_stop,_abs = true)\n\t{\n\t\twith _inst path_start(other.path,_spd,_kind ,_abs);\n\t}\n\t\n\tstatic clear = function()\n\t{\n\t\tpath_delete(path);\n\t}\n\tstatic draw = function(_x,_y,_abs = true)\n\t{\n\t\tdraw_path(path,_x,_y,_abs);\n\t}\n}"
+     },
+     {
+      "type": "脚本",
+      "value": "// obj_ball\nvar _list = [];\n_list[0] = [x,y,100];\n_list[1] = [(target_x+x)/2,target_y-600,0];\n_list[2] = [target_x,target_y,100];\npath_comp = new class_path(_list);\npath_comp.start(self,20);"
+     },
+     {
+      "type": "脚本",
+      "value": "// obj_ball\nimage_angle=direction;"
+     },
+     {
+      "type": "脚本",
+      "value": "// obj_ball\ndraw_self();\npath_comp.draw(xstart,ystart);"
+     },
+     {
+      "type": "脚本",
+      "value": "// obj_ball\npath_comp.clear();\ninstance_destroy();"
+     },
+     {
+      "type": "脚本",
+      "value": "// obj_spawn\nif mouse_check_button_pressed(mb_left)\n{\n\tinst=instance_create_layer(x,y,\"Instances\",obj_ball,\n\t{\n    target_x : mouse_x,\n    target_y : mouse_y\n\t})\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpb9dk0mowf",
+    "ts": 1793466095730.986,
+    "name": "炮口火焰",
+    "requirement": "mouse_check_button",
+    "hint": "允许玩家旋转一座炮塔。创建一个炮口火焰，把创建者的 id 发送过去。让火焰旋转到与创建者的角度一致。当动画播放完毕时，销毁这个炮口火焰。",
+    "apis": [
+     "rmwfpb9ns6g7jm",
+     "rmwfpb85ci0i47",
+     "rmwfpb86ihgyn1"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_player",
+      "fields": [],
+      "events": []
+     },
+     {
+      "type": "对象",
+      "value": "obj_shoot",
+      "fields": [],
+      "events": []
+     },
+     {
+      "type": "脚本",
+      "value": "// class_muzzle.gml\nfunction class_muzzle(_owner,_xoff,_yoff,_dir,_len) constructor\n{\n\towner = _owner;\n\txoff = _xoff;\n\tyoff = _yoff;\n\tdir = _dir;\n\tlen =_len;\n\t\n\tstatic update = function(_dir,_len)\n\t{\n\t\tdir += _dir;\n\t\tlen += _len;\n\t}\n\tstatic get_x = function() \n\t{\n\t\treturn owner.x+xoff+lengthdir_x(len,dir);\n\t}\n\tstatic get_y = function() \n\t{\n\t\treturn owner.y+yoff+lengthdir_y(len,dir);\n\t}\n\tstatic get_dir = function() \n\t{\n\t\treturn dir;\n\t}\n}"
+     },
+     {
+      "type": "脚本",
+      "value": "// obj_player\nmuzzle_comp = new class_muzzle(self,0,0,0,sprite_width/2);"
+     },
+     {
+      "type": "脚本",
+      "value": "// obj_player\n// change value based on input\nif mouse_check_button(mb_left)\n{\n\tmuzzle_comp.update(1,0);\n}\nelse\n{\n\tmuzzle_comp.update(-1,0);\n}\nimage_angle = muzzle_comp.get_dir();\n//create flash\nif mouse_check_button(mb_right)\n{\n\tvar _x = muzzle_comp.get_x();\n\tvar _y = muzzle_comp.get_y();\n\tinstance_create_layer\n\t(\n\t\t_x,_y,\"Instances\",\n\t\tobj_shoot,{owner : id,image_angle}\n\t);\n}"
+     },
+     {
+      "type": "脚本",
+      "value": "// obj_shoot\nif !instance_exists(owner) exit;\nx = owner.muzzle_comp.get_x();\ny = owner.muzzle_comp.get_y();\nimage_angle = owner.muzzle_comp.get_dir();"
+     },
+     {
+      "type": "脚本",
+      "value": "// obj_shoot\ninstance_destroy();"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpb9u9i3t02",
+    "ts": 1793554715730.986,
+    "name": "可选属性",
+    "requirement": "显示若干个角色，它们各自带有不同的属性，让玩家从中挑选。\n涉及的内置函数与变量（Useful Functions and Built-in Variables）\nalarm　draw_rectangle　draw_line　for　draw_text",
+    "hint": "用数组填入精灵图像和属性的数据。\n用 alarm 循环切换。当当前选项被选中时，把数据保存到全局变量里。\n---",
+    "apis": [],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_stats_ui",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "global.data = {};\nglobal.current=1;\n\ndatas = [];\nvar _i = 0;\ndatas[_i++] = [spr_gun_1_with_stroke,\"GUN1\",6,7,6,6];\ndatas[_i++] = [spr_gun_2_with_stroke,\"GUN2\",7,5,7,4];\ndatas[_i++] = [spr_gun_3_with_stroke,\"GUN3\",4,10,3,5];\ndatas[_i++] = [spr_gun_4_with_stroke,\"GUN4\",5,8,6,10];\ndatas[_i++] = [spr_gun_5_with_stroke,\"GUN5\",5,6,10,3];\nui_comp = new class_Selectable_Stats(datas);\n\ncd = game_get_speed(gamespeed_fps)*3;\nalarm[0]=cd;"
+       },
+       {
+        "name": "Alarm 0",
+        "code": "// resst alarm\nalarm[0]=cd;\n// increase selected and loop\nglobal.current++;\nif global.current=array_length(datas) global.current=0;"
+       },
+       {
+        "name": "Step",
+        "code": "if mouse_check_button_pressed(mb_left)\n{\n\tglobal.data.tyres_sprite=datas[global.current,0]\n\tglobal.data.name=datas[global.current,1]\n\tglobal.data.acceleration=datas[global.current,2]\n\tglobal.data.topspeed=datas[global.current,3]\n\tglobal.data.attack=datas[global.current,4]\n\tglobal.data.turning=datas[global.current,5]\n\tglobal.data.bike_sprite=global.current;\n\tshow_message(global.data);\n}"
+       },
+       {
+        "name": "Draw",
+        "code": "ui_comp.draw(x,y,global.current);"
+       }
+      ]
+     },
+     {
+      "type": "脚本",
+      "value": "// string_width()\n_len = max(_len, string_width(_text));\nreturn _x+_len+_offset;"
+     },
+     {
+      "type": "脚本",
+      "value": "// bar()\nfor (var _i = 0; _i < 10; _i ++) { ... }\nreturn _x+_w*_i+_w+(_i*_gap);"
+     },
+     {
+      "type": "脚本",
+      "value": "// class_Selectable_Stats.gml\nfunction class_Selectable_Stats(_datas) constructor \n{\n    static _sprite = 0, _name = 1;\n    static _texts = [\"Acceleration: \",\"Top Speed: \",\"Attack: \",\"Turning: \"];\n    \n    data_list = _datas;\n    \n    static tile = function (_x,_y,_h,_len)\n    {\n        var _i = 0;\n        draw_set_colour(c_white);\n        draw_set_halign(fa_left);\n        draw_set_valign(fa_middle);\n        draw_text(_x,_y+_h*_i++,\"Choose Your Character\");\n        draw_text(_x,_y+_h*_i++,\"Tap Left Button To Select\");\n        _y += _h*_i++;\n        draw_line(_x,_y,_x+_len,_y);\n        return _y+_h;\n    }\n    \n    static sprite = function (_x,_y,_spr,_name,_h,_offset)\n    {\n        var _spr_w = sprite_get_width(_spr);\n        var _spr_h = sprite_get_height(_spr);\n        draw_set_colour(c_lime);\n        draw_rectangle(_x-4,_y-4,_x+_spr_w+4,_y+_spr_h+4,0);\n        draw_sprite(_spr,0,_x,_y);\n        \n        draw_set_colour(c_white);\n        draw_set_halign(fa_center);\n        draw_set_valign(fa_middle);\n        draw_text(_x+_spr_w/2,_y+_spr_h+_h,_name);\n        \n        _x += _spr_w+_offset;\n        draw_line(_x,_y,_x,_y+_spr_h+_h);\n        return _x+_offset;\n    }\n    \n    static stats = function (_x,_y,_h,_offset)\n    {\n        var _len = 0;\n        draw_set_halign(fa_left);\n        draw_set_valign(fa_top);\n        for (var _i = 0; _i <  array_length(_texts); _i ++) \n        {\n            var _text = _texts[_i];\n            draw_text(_x,_y+_i*_h,_text);\n            _len =max(_len , string_width(_text));\n        }\n        return _x+_len+_offset;\n    }\n    \n    static bar = function (_count,_w, _h, _x,_y, _gap)\n    { \n        for (var _i = 0; _i < 10; _i ++) \n        { \n        \tdraw_set_color(c_green); \n            if _i>_count draw_set_color(c_white); \n        \tdraw_rectangle(_x+_w*_i+(_i*_gap), 0 + _y, \n        \t_x+_w*_i+_w+(_i*_gap), _h + _y,false)//false fills the rectangle \n        }\n        return _x+_w*_i+_w+(_i*_gap);\n    }\n    \n    static draw = function (_x,_y,_cur)\n    {\n        var _offset = 24;\n        var _h = 24;\n        _y = tile(_x,_y,_h,600);\n        \n        var _data = data_list[_cur];\n        _x = sprite(_x,_y,_data[_sprite],_data[_name],_h,_offset);\n        _x = stats(_x,_y,_h,_offset);\n        \n        var _len = 0;\n        for (var _i = 0; _i < array_length(_texts); _i++)\n        {\n            _len = bar(_data[_i+2],8,16,_x,_y+_i*_h,4);\n        }\n    }\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpba4fcqbor",
+    "ts": 1793643335730.986,
+    "name": "随机挑选一个实例",
+    "requirement": "难度：1/5",
+    "hint": "",
+    "apis": [],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_player",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "comp = new class_Choose_Random_Instance(obj_enemy);"
+       },
+       {
+        "name": "Step",
+        "code": "if mouse_check_button_pressed(mb_left) comp.update(1);\n// check if target exists\nif instance_exists(comp.target)\n{\n\tvar _x = comp.target.x;\n\tvar _y = comp.target.y;\n\tvar _dis = distance_to_point(_x,_y)\n\t\n\tif _dis>5 move_towards_point(_x,_y,3);\n\tif _dis<3 speed=0;\n}"
+       }
+      ]
+     },
+     {
+      "type": "对象",
+      "value": "obj_enemy",
+      "fields": [],
+      "events": []
+     },
+     {
+      "type": "脚本",
+      "value": "// class_choose_random_instance.gml\nfunction class_Choose_Random_Instance(_obj) constructor\n{\n\tkind = _obj;\n\ttarget=noone;\n\tstate=\"finding\";\n\t\n\tstatic find = function()\n\t{\n\t\tif instance_exists(kind)\n\t\t{\n\t\t\tvar _cound = instance_number(kind);\n\t\t\tvar _number = irandom(_cound-1);\n\t\t\ttarget = instance_find(kind, _number);\n\t\t\tstate=\"found_target\";\n\t\t}\n\t\telse state=\"finding\";\n\t}\n\t\n\tstatic update = function(_change = false)\n\t{\n\t\tif _change target = noone;\n\t\tif target != noone return;\n\t\tfind();\n\t}\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpba77cdmz3",
+    "ts": 1793731955730.986,
+    "name": "精灵投影",
+    "requirement": "难度：2/5",
+    "hint": "",
+    "apis": [],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_drop_shadow",
+      "fields": [],
+      "events": [
+       {
+        "name": "Draw",
+        "code": "// 绘制事件：\ndraw_sprite_ext(sprite_index,0,x+20,y+20,1,1,image_angle,c_black,0.4);\ndraw_self();"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "rmwfpbaa326px5",
+    "ts": 1793820575730.986,
+    "name": "无尽关卡",
+    "requirement": "用固定视角做一个无尽关卡，让实例在屏幕上不断移动。",
+    "hint": "用定时器在房间上方生成实例，让它们向下移动。重复这个过程，就能造成无尽关卡的视觉效果。",
+    "apis": [
+     "rmwfpbadf98yd5",
+     "rmwfpbadtpc3un",
+     "rmwfpb8g4jgvsh",
+     "rmwfpbaerpwa9m",
+     "rmwfpbaffzk7cp",
+     "rmwfpbafqxawgm",
+     "rmwfpb86bn4vu8"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_spawn",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "comp = new class_Endless_Levels(3,obj_island,1);"
+       },
+       {
+        "name": "Step",
+        "code": "comp.update(irandom_range(50,room_width-50),-300);"
+       }
+      ]
+     },
+     {
+      "type": "对象",
+      "value": "obj_island",
+      "fields": [],
+      "events": []
+     },
+     {
+      "type": "脚本",
+      "value": "// class_Endless_Levels.gml\nfunction class_Endless_Levels(_cd,_obj,_spd)constructor\n{\n\tcd = _cd;\n\ttimer = game_get_speed(gamespeed_fps)*_cd;\n\tobj = _obj;\n\tspd = _spd;\n\t\n\tstatic update = function(_x,_y)\n\t{\n\t\ttimer--;\n\t\tif timer < 0\n\t\t{\n\t\t\tvar _second = game_get_speed(gamespeed_fps);\n\t\t\ttimer=_second*cd+random(_second*2);\n\t\t\twith instance_create_layer(_x,_y,\"Island\",obj)\n\t\t\t{\n\t\t\t\tvspeed = other.spd;\n\t\t\t\tsprite_index=choose(island1,island2,island3,isalnd4);\n\t\t\t}\n\t\t}\n\t\twith obj {if (y>room_height+sprite_height) instance_destroy();}\n\t}\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpbaivatxeg",
+    "ts": 1793909195730.986,
+    "name": "描边着色器",
+    "requirement": "Use a basic shader to draw an outline around any given sprite.\n用一个基础的着色器（shader），给任意指定的精灵（sprite）画出一圈描边。",
+    "hint": "An example of setting a shader to adjust a sprite image. Just an example of how to apply a shader.\n一个设置着色器来调整精灵图像的例子。仅是一个如何应用着色器的示例。\n---",
+    "apis": [
+     "rmwfpbalk4mvv6",
+     "rmwfpbao8frht7"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_outline_test",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "// === obj_outline_test : Create event ===\nglobal.outline = new class_sprite_outline(sh_outline1_1);\nactive=false;"
+       },
+       {
+        "name": "Step",
+        "code": "// === obj_outline_test : Step event ===\nif mouse_check_button(mb_left) active=true;\nelse active=false;"
+       },
+       {
+        "name": "Draw",
+        "code": "// === obj_outline_test : Draw event ===\nif active global.outline.draw(sprite_index, image_index, x, y, 8, c_white);\nelse draw_self();"
+       }
+      ]
+     },
+     {
+      "type": "脚本",
+      "value": "// class_sprite_outline.gml\nfunction class_sprite_outline(_shader) constructor\n{\n    /// 换着色器，并取回 uniform 句柄\n\tstatic set = function(_shader)\n\t{\n\t\tshader = _shader;\n\t\tu_size     = shader_get_uniform(shader, \"size\");\n\t\tu_thick    = shader_get_uniform(shader, \"thick\");\n\t\tu_oColor   = shader_get_uniform(shader, \"oColor\");\n\t\tu_accuracy = shader_get_uniform(shader, \"accuracy\");\n\t\tu_tol      = shader_get_uniform(shader, \"tol\");\n\t\tu_uvs      = shader_get_uniform(shader, \"uvs\");\n\t\tu_half     = shader_get_uniform(shader, \"u_half\");\n\t\tu_rect_v   = shader_get_uniform(shader, \"u_rect_v\");\n\t\tu_half_v   = shader_get_uniform(shader, \"u_half_v\");\n\t\tu_border_v = shader_get_uniform(shader, \"u_border_v\");\n\t}\n\n\t// ---------- 内部状态 ----------\n\tshader    = -1;\n\trect      = [0.0, 0.0, 0.0, 0.0];   // 精灵在图集上的 uv 范围\n\ttexel     = [0.0, 0.0];             // 一个像素在 uv 上占多大\n\thalf_size = [0.0, 0.0];             // 图案半宽半高（像素）\n\n\t// ---------- 画质参数 ----------\n\taccuracy = 16.0;                   // 每圈取样点数\n\ttol      = 0.5;                    // alpha 阈值\n\tself.set(_shader);\n\n\t/// 读这一帧在图集上的信息：一个像素多大、精灵占哪块 UV、实际多大\n\tstatic refresh = function(_spr, _subimg)\n\t{\n\t\tvar _tex = sprite_get_texture(_spr, _subimg);\n\t\tvar _uvs = sprite_get_uvs(_spr, _subimg);\n\t\ttexel[0] = texture_get_texel_width(_tex);\n\t\ttexel[1] = texture_get_texel_height(_tex);\n\t\trect[0]  = _uvs[0];\n\t\trect[1]  = _uvs[1];\n\t\trect[2]  = _uvs[2];\n\t\trect[3]  = _uvs[3];\n\t\thalf_size[0] = (rect[2] - rect[0]) / max(texel[0], 0.000001) * 0.5;\n\t\thalf_size[1] = (rect[3] - rect[1]) / max(texel[1], 0.000001) * 0.5;\n\t}\n\n\t/// 绑定着色器 + 把参数写进 uniform\n\tstatic apply = function(_spr, _subimg, _diameter, _colour)\n\t{\n\t\tself.refresh(_spr, _subimg);\n\t\tshader_set(shader);      // 注意：必须先 shader_set，才能写 uniform\n\t\t// fragment 侧\n\t\tshader_set_uniform_f(u_size,     texel[0], texel[1]);\n\t\tshader_set_uniform_f(u_thick,    _diameter * 0.5);\n\t\tshader_set_uniform_f(u_oColor,   color_get_red(_colour) / 255.0,\n\t\t                                 color_get_green(_colour) / 255.0,\n\t\t                                 color_get_blue(_colour) / 255.0);\n\t\tshader_set_uniform_f(u_accuracy, accuracy);\n\t\tshader_set_uniform_f(u_tol,      tol);\n\t\tshader_set_uniform_f(u_uvs,      rect[0], rect[1], rect[2], rect[3]);\n\t\tshader_set_uniform_f(u_half,     half_size[0], half_size[1]);\n\t\t// vertex 侧\n\t\tshader_set_uniform_f(u_rect_v,   rect[0], rect[1], rect[2], rect[3]);\n\t\tshader_set_uniform_f(u_half_v,   half_size[0], half_size[1]);\n\t\tshader_set_uniform_f(u_border_v, _diameter * 0.5);\n\t}\n\n\t/// 画一个带描边的精灵\n\tstatic draw = function(_spr, _subimg, _x, _y, _diameter = 4.0, _colour = c_white)\n\t{\n\t\tself.apply(_spr, _subimg, _diameter, _colour);\n\t\tdraw_sprite(_spr, _subimg, _x, _y);\n\t\tshader_reset();\n\t}\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpbaqrlvc2f",
+    "ts": 1793997815730.986,
+    "name": "关卡解锁系统",
+    "requirement": "Create a visual system that shows the player which levels are currently locked / unlocked.\n做一个可视化系统，让玩家看得出哪些关卡当前是锁定 / 已解锁的。",
+    "hint": "Use a global value that can change on input from left and right mouse buttons. Use variable definitions to set values for different objects that draw differently depending on locked / unlocked status.\n用一个全局值，它能随着左键和右键的输入而改变。再用变量定义给不同的对象设置不同的值，让它们根据 locked / unlocked 状态画出不同的样子。",
+    "apis": [
+     "rmwfpbau6ux83q",
+     "rmwfpb8kmcfpso",
+     "rmwfpbay61r7tv",
+     "rmwfpb77r6tc3x"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_level_manager",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "var _list = [],_count = 12;\nvar _w = 4 , _off = 72;\nvar _i = 0 , _j = 0 ;\n\nrepeat (_count)\n{\n\tvar _x = x + (_i mod _w)*_off ;\n\tvar _y = y + _j*_off ;\n\t\n\tvar _inst = instance_create_depth(_x,_y,-y,obj_level);\n\tarray_push(_list,_inst);\n\t\n\t_i++;\n\t_j = _i div _w;\n}\n\nlevel_comp = new class_level_control(0,_list);\nlevel_comp.set(\"my_id\");"
+       },
+       {
+        "name": "Step",
+        "code": "var _down = mouse_check_button_pressed(mb_left);\nvar _up = mouse_check_button_pressed(mb_right);\nlevel_comp.update(_up-_down);"
+       }
+      ]
+     },
+     {
+      "type": "对象",
+      "value": "obj_level",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "image_speed=0; \nimage_index=0;\n\nmy_id = 0;\nlocked=false; \n\nset = function(_locked)\n{\n\tlocked = _locked; \n\timage_index = _locked;\n}"
+       },
+       {
+        "name": "Step",
+        "code": "set(global.level >= my_id);"
+       },
+       {
+        "name": "Draw",
+        "code": "draw_sprite(sprite_index,image_index,x,y)\ndraw_set_halign(fa_center);\ndraw_set_colour(c_red);\ndraw_text(x,y,my_id);"
+       }
+      ]
+     },
+     {
+      "type": "脚本",
+      "value": "// class_level_control.gml\nfunction class_level_control(_level,_list) constructor\n{\n\tlevel_max = array_length(_list);\n\tglobal.level = clamp(_level,0,level_max);\n\tlist = _list;\n\t\n\tstatic set = function(_name)\n\t{\n\t\tvar _i = 0;\n\t\trepeat level_max\n\t\tlist[_i++][$ _name] = _i+1;\n\t}\n\t\n\tstatic update = function(_change)\n\t{\n\t\tif _change != 0\n\t\t{\n\t\t\tglobal.level = clamp(global.level+_change,0,level_max);\n\t\t}\n\t}\n}"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpaug21js10",
+    "ts": 1794086435730.986,
+    "name": "第 1 步：拆出两个简单类",
+    "requirement": "先不写对象，把整局游戏里到处都要用的两样东西拆成独立的类：Gun（机枪：射速冷却 / 子弹速度 / 每发伤害）和Reward（奖励：5 种效果，名字、颜色、说明都归它管）。一个类一个文件，文件名就等于类名。",
+    "hint": "命名按用户自己的习惯：类名 class_ + 小写下划线，形参一律 _ 前缀，成员变量不带前缀；类要写在脚本资源里（function X() constructor {}），不能写在对象事件里；类里的共享方法写成 static，通过实例调用：gun.ready()；不要写 Gun.ready()（GMS2.3 不保证类名能取到 static）；static 方法里的 self 就是调用它的那份实例，所以 self.cd -= 1 改的是调用方；同一个类的 static 方法之间调用也要写 self.xxx()。",
+    "apis": [
+     "rmwfpauhbtiwbn",
+     "rmwfpaujaus6ii",
+     "rmwfpauley02e8",
+     "rmwfpaumlup938"
+    ],
+    "modules": [
+     {
+      "type": "脚本",
+      "value": "// class_gun.gml\n/// class_gun —— 机枪：射速冷却 / 子弹速度 / 每发伤害\n/// 无限子弹，冷却好了就能再打；冷却帧数是构造时定的，不是写死的\nfunction class_gun(_cd_max, _spd, _dmg) constructor\n{\n\tcd_max = _cd_max;   // 多少帧打一发\n\tcd = 0;             // 当前冷却\n\tspd = _spd;         // 子弹速度\n\tdmg = _dmg;         // 每发伤害\n\n\t// 冷却好了返回 true（没好就顺手递减一帧）\n\tstatic ready = function()\n\t{\n\t\tif cd > 0\n\t\t{\n\t\t\tcd -= 1;\n\t\t\treturn false;\n\t\t}\n\t\treturn true;\n\t}\n\n\t// 开火：进入冷却\n\t// 减 1 是因为判定这一帧已经算掉了，实际间隔正好 cd_max 帧\n\tstatic fire = function()\n\t{\n\t\tcd = cd_max - 1;\n\t}\n}\n"
+     },
+     {
+      "type": "脚本",
+      "value": "// class_reward.gml\n/// class_reward —— 奖励：5 种效果，名字 / 颜色 / 说明都在这里\n/// 0 红心 1 力量 2 急速 3 疾行 4 治疗\n/// 位置在 obj_pickup 上\nfunction class_reward(_owner, _kind) constructor\n{\n\towner = _owner;\n\tkind = _kind;\n\n\t// 名字（游戏内 UI 一律英文：GMS2 内置字体没有中文字形）\n\tstatic _names = [\"HEART\", \"POWER\", \"HASTE\", \"SPEED\", \"HEAL\"];\n\t// 颜色\n\tstatic _colors = [c_red, c_orange, c_yellow, c_aqua, c_lime];\n\t// 效果说明\n\tstatic _hints = [\"MAX HP +1\", \"DAMAGE +1\", \"FIRE RATE +1\", \"SPEED +0.5\", \"FULL HEAL\"];\n\n\t// 吃到奖励：改玩家身上那两个组件\n\tstatic apply = function(_target)\n\t{\n\t\tvar _p = _target.comp;\n\t\tif kind == 0\n\t\t{\n\t\t\t_p.hp_max += 1;\n\t\t\t_p.hp = _p.hp_max;\n\t\t}\n\t\telse if kind == 1\n\t\t{\n\t\t\t_p.gun.dmg += 1;\n\t\t}\n\t\telse if kind == 2\n\t\t{\n\t\t\t_p.gun.cd_max = max(3, _p.gun.cd_max - 1);\n\t\t}\n\t\telse if kind == 3\n\t\t{\n\t\t\t_p.spd += 0.5;\n\t\t}\n\t\telse\n\t\t{\n\t\t\t_p.heal();\n\t\t}\n\t}\n\n\t// 画自己：上下浮动的小圆\n\tstatic draw = function(_t)\n\t{\n\t\tvar _bob = sin(_t * 0.08) * 3;\n\t\tdraw_set_color(_colors[kind]);\n\t\tdraw_circle(owner.x, owner.y + _bob, 11, -1);\n\t\tdraw_set_color(c_white);\n\t\tdraw_circle(owner.x - 3, owner.y + _bob - 3, 3, -1);\n\t}\n}\n"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpaurmn86ir",
+    "ts": 1794175055730.986,
+    "name": "第 2 步：玩家（身体 + 机枪）",
+    "requirement": "做玩家：WASD 或方向键八向移动，移速 4，出房间边界夹回来，6 点血，全部自己画（不用精灵）。按住鼠标左键连射。玩家 = class_player 一个组件，里面再挂一把 class_gun。",
+    "hint": "组件要动位置就拿着 owner：构造时把实例传进来，类里改 owner.x / owner.y，位置始终是对象的事，组件不关心自己在哪；自己画的对象要用 sprite_index = -1，不能用 visible = false（那样连 Draw 都不跑）；八向移动要先算向量长度再除，否则斜着走会更快；对象事件只管读输入，Create 建组件、Step 调 update、Draw 调 draw。",
+    "apis": [
+     "rmwfpautu7u37n",
+     "rmwfpauwd204ko",
+     "rmwfpb7q7cdjb7",
+     "rmwfpav0nhzj01",
+     "rmwfpb9ns6g7jm",
+     "rmwfpb86ihgyn1",
+     "rmwfpauley02e8",
+     "rmwfpaumlup938",
+     "rmwfpav37bab7t"
+    ],
+    "modules": [
+     {
+      "type": "脚本",
+      "value": "// class_player.gml\n/// class_player —— 玩家：身体（血量/移速/闪白）+ 机枪\n/// 位置在 obj_player 上，这里只管数值和动作\nfunction class_player(_owner, _hp, _spd, _cd, _bspd, _bdmg) constructor\n{\n\towner = _owner;\n\thp_max = _hp;\n\thp = _hp;\n\tspd = _spd;\n\tflash = 0;\n\tinvuln = 0;         // 无敌帧\n\tgun = new class_gun(_cd, _bspd, _bdmg);\n\n\t// 挨一下：扣血 + 闪白；返回 true 表示已经死了\n\tstatic hit = function(_dmg, _flash)\n\t{\n\t\thp -= _dmg;\n\t\tflash = _flash;\n\t\treturn hp <= 0;\n\t}\n\n\t// 每帧：闪白帧递减\n\tstatic tick = function()\n\t{\n\t\tif flash > 0 flash -= 1;\n\t}\n\n\t// 回满血\n\tstatic heal = function()\n\t{\n\t\thp = hp_max;\n\t}\n\n\t// 每帧：按方向移动 → 机枪冷却 → 冷却好了就开火\n\tstatic update = function(_dx, _dy)\n\t{\n\t\tif _dx != 0 || _dy != 0\n\t\t{\n\t\t\tvar _len = sqrt(_dx * _dx + _dy * _dy);\n\t\t\towner.x += _dx / _len * spd;\n\t\t\towner.y += _dy / _len * spd;\n\t\t}\n\t\towner.x = clamp(owner.x, 18, room_width - 18);\n\t\towner.y = clamp(owner.y, 18, room_height - 18);\n\n\t\tif gun.ready()\n\t\t{\n\t\t\tif mouse_check_button(mb_left)\n\t\t\t{\n\t\t\t\tgun.fire();\n\t\t\t\tvar _b = instance_create_layer(owner.x, owner.y, \"Instances\", obj_bullet);\n\t\t\t\t_b.dir = point_direction(owner.x, owner.y, mouse_x, mouse_y);\n\t\t\t\t_b.dmg = gun.dmg;\n\t\t\t\t_b.spd = gun.spd;\n\t\t\t\t_b.from_player = true;\n\t\t\t}\n\t\t}\n\n\t\tif invuln > 0 invuln -= 1;\n\t\tself.tick();\n\t}\n\n\t// 画自己：圆 + 准心 + 血条\n\tstatic draw = function()\n\t{\n\t\tvar _col = c_white;\n\t\tif flash > 0 _col = c_red;\n\t\tif invuln > 0 && (invuln % 6) < 3 _col = c_gray;\n\t\tdraw_set_color(_col);\n\t\tdraw_circle(owner.x, owner.y, 16, -1);\n\t\tdraw_set_color(c_black);\n\t\tdraw_circle(owner.x - 5, owner.y - 3, 4, -1);\n\t\tself.draw_bar();\n\t}\n\n\t// 血条\n\tstatic draw_bar = function()\n\t{\n\t\tvar _w = 44;\n\t\tvar _h = 6;\n\t\tvar _r = clamp(hp / hp_max, 0, 1);\n\t\tdraw_set_color(c_black);\n\t\tdraw_rectangle(owner.x - 22, owner.y - 30, owner.x + 22, owner.y - 30 + _h, false);\n\t\tdraw_set_color(c_red);\n\t\tdraw_rectangle(owner.x - 22, owner.y - 30, owner.x - 22 + _w * _r, owner.y - 30 + _h, true);\n\t}\n}\n"
+     },
+     {
+      "type": "对象",
+      "value": "obj_player",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "// === obj_player : Create event ===\n/// 玩家 = 身体（class_player，里面再挂一把 class_gun）\ncomp = new class_player(self, 6, 4.0, 6, 12, 1);\n"
+       },
+       {
+        "name": "Step",
+        "code": "// === obj_player : Step event ===\n/// 只负责读键盘，方向交给身体组件\nvar _dx = 0;\nvar _dy = 0;\nif keyboard_check(vk_left) || keyboard_check(vk_a) _dx -= 1;\nif keyboard_check(vk_right) || keyboard_check(vk_d) _dx += 1;\nif keyboard_check(vk_up) || keyboard_check(vk_w) _dy -= 1;\nif keyboard_check(vk_down) || keyboard_check(vk_s) _dy += 1;\ncomp.update(_dx, _dy);\n"
+       },
+       {
+        "name": "Draw",
+        "code": "// === obj_player : Draw event ===\ncomp.draw();\n"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "rmwfpav6j4hncm",
+    "ts": 1794263675730.986,
+    "name": "第 3 步：敌人（一个类，kind 决定行为）",
+    "requirement": "三种敌人：普通（3 血直线追玩家）、敏捷（2 血、速度快、蛇形摆动）、远程（2 血、和玩家保持 170~240 距离并放炮）。写成一个 class_enemy，用 kind 参数区分行为，不要写成三个子对象继承公共基类。",
+    "hint": "三种敌人的差异只有「怎么动」，血量、闪白、血条是同一套逻辑；写成继承的话公共那部分迟早和子类打架，写成一个类换 kind，公共逻辑只写一遍；刷怪的时候按种类换组件：_e.comp = new class_enemy(_e, _kind)；角度约定 0 度是右、90 度是上，所以 lengthdir_y(spd, 90) 是负的（向上）；敌人碰到玩家要判无敌帧，不然一帧掉一点血直接暴毙。",
+    "apis": [
+     "rmwfpav0nhzj01",
+     "rmwfpav8grsc7h",
+     "rmwfpb7k041jii",
+     "rmwfpb7kf89z73",
+     "rmwfpaujaus6ii",
+     "rmwfpavbkgxj26",
+     "rmwfpavd46jhk8",
+     "rmwfpavdoraws1",
+     "rmwfpaveef6tj1",
+     "rmwfpb86ihgyn1",
+     "rmwfpavgj6llop",
+     "rmwfpauley02e8",
+     "rmwfpaumlup938",
+     "rmwfpav37bab7t"
+    ],
+    "modules": [
+     {
+      "type": "脚本",
+      "value": "// class_enemy.gml\n/// class_enemy —— 敌人：血量 / 速度 / 三种行为\n/// kind 0 普通（直线追） 1 敏捷（蛇形） 2 远程（保持距离 + 放炮）\n/// 位置在 obj_enemy 上，这里只管数值和动作\nfunction class_enemy(_owner, _kind) constructor\n{\n\towner = _owner;\n\tkind = _kind;\n\thp_max = 3;\n\thp = 3;\n\tspd = 1.6;\n\trad = 16;\n\tflash = 0;\n\tphase = random(628);   // 蛇形相位，避免一排敌人同一条轨迹\n\tcd = 0;               // 远程敌人的炮冷却\n\n\tif _kind == 1\n\t{\n\t\thp_max = 2;\n\t\thp = 2;\n\t\tspd = 3.4;\n\t\trad = 13;\n\t}\n\telse if _kind == 2\n\t{\n\t\thp_max = 2;\n\t\thp = 2;\n\t\tspd = 1.2;\n\t\trad = 15;\n\t}\n\n\t// 挨一下：扣血 + 闪白；返回 true 表示已经死了\n\t// 死了顺手给房间记一次击杀（自己的事自己管，不留给调用方）\n\tstatic hit = function(_dmg, _flash)\n\t{\n\t\thp -= _dmg;\n\t\tflash = _flash;\n\t\tif hp <= 0\n\t\t{\n\t\t\tvar _rc = instance_find(obj_room_controller);\n\t\t\tif _rc != noone _rc.comp.kills += 1;\n\t\t}\n\t\treturn hp <= 0;\n\t}\n\n\t// 每帧：闪白帧递减\n\tstatic tick = function()\n\t{\n\t\tif flash > 0 flash -= 1;\n\t}\n\n\t// 每帧：按 kind 走位 → 远程的放炮 → 碰到玩家就扣血\n\tstatic update = function()\n\t{\n\t\tvar _p = instance_find(obj_player);\n\t\tif _p == noone exit;\n\n\t\tvar _dir = point_direction(owner.x, owner.y, _p.x, _p.y);\n\t\tif kind == 0\n\t\t{\n\t\t\towner.x += lengthdir_x(spd, _dir);\n\t\t\towner.y += lengthdir_y(spd, _dir);\n\t\t}\n\t\telse if kind == 1\n\t\t{\n\t\t\tvar _wob = sin(game_get_speed(gamespeed_fps) * 0.09 + phase) * 50;\n\t\t\towner.x += lengthdir_x(spd, _dir + _wob);\n\t\t\towner.y += lengthdir_y(spd, _dir + _wob);\n\t\t}\n\t\telse\n\t\t{\n\t\t\tself.standoff(_p);\n\t\t\tcd -= 1;\n\t\t\tif cd <= 0\n\t\t\t{\n\t\t\t\tcd = 55;\n\t\t\t\tself.fire(_p);\n\t\t\t}\n\t\t}\n\n\t\tself.tick();\n\t\tself.touch();\n\t}\n\n\t// 远程专用：远了靠近，近了后退，同时横向绕\n\tstatic standoff = function(_p)\n\t{\n\t\tvar _dir = point_direction(owner.x, owner.y, _p.x, _p.y);\n\t\tvar _d = point_distance(owner.x, owner.y, _p.x, _p.y);\n\t\tif _d > 240\n\t\t{\n\t\t\towner.x += lengthdir_x(spd, _dir);\n\t\t\towner.y += lengthdir_y(spd, _dir);\n\t\t}\n\t\telse if _d < 170\n\t\t{\n\t\t\towner.x -= lengthdir_x(spd, _dir);\n\t\t\towner.y -= lengthdir_y(spd, _dir);\n\t\t}\n\t\towner.x += lengthdir_x(spd * 0.7, _dir + 90);\n\t\towner.y += lengthdir_y(spd * 0.7, _dir + 90);\n\t}\n\n\t// 远程专用：放一炮\n\tstatic fire = function(_p)\n\t{\n\t\tvar _b = instance_create_layer(owner.x, owner.y, \"Instances\", obj_bullet);\n\t\t_b.dir = point_direction(owner.x, owner.y, _p.x, _p.y);\n\t\t_b.dmg = 1;\n\t\t_b.spd = 6;\n\t\t_b.from_player = false;\n\t}\n\n\t// 碰到玩家：扣血 + 给一段无敌帧\n\tstatic touch = function()\n\t{\n\t\tvar _p = instance_find(obj_player);\n\t\tif _p == noone exit;\n\t\tif _p.comp.invuln > 0 exit;\n\t\tvar _hit = point_in_rectangle(_p.x, _p.y,\n\t\t\towner.x - rad, owner.y - rad,\n\t\t\towner.x + rad, owner.y + rad);\n\t\tif !_hit exit;\n\t\t_p.comp.hit(1, 8);\n\t\t_p.comp.invuln = 45;\n\t}\n\n\t// 画自己：圆 + 眼 + 血条\n\tstatic draw = function()\n\t{\n\t\tvar _col = c_red;\n\t\tif kind == 1 _col = c_orange;\n\t\tif kind == 2 _col = c_purple;\n\t\tif flash > 0 _col = c_white;\n\t\tdraw_set_color(_col);\n\t\tdraw_circle(owner.x, owner.y, rad, -1);\n\t\tdraw_set_color(c_black);\n\t\tdraw_circle(owner.x - 5, owner.y - 3, 4, -1);\n\t\tself.draw_bar();\n\t}\n\n\t// 血条\n\tstatic draw_bar = function()\n\t{\n\t\tvar _w = 32;\n\t\tvar _h = 5;\n\t\tvar _r = clamp(hp / hp_max, 0, 1);\n\t\tdraw_set_color(c_black);\n\t\tdraw_rectangle(owner.x - 16, owner.y - rad - 10, owner.x + 16, owner.y - rad - 10 + _h, false);\n\t\tdraw_set_color(c_lime);\n\t\tdraw_rectangle(owner.x - 16, owner.y - rad - 10, owner.x - 16 + _w * _r, owner.y - rad - 10 + _h, true);\n\t}\n}\n"
+     },
+     {
+      "type": "对象",
+      "value": "obj_enemy",
+      "fields": [
+       {
+        "name": "组件类",
+        "param": "class_enemy",
+        "desc": "kind 决定行为，房间刷怪时按种类替换"
+       },
+       {
+        "name": "默认 kind",
+        "param": "0",
+        "desc": "普通敌人"
+       }
+      ],
+      "events": [
+       {
+        "name": "Create",
+        "code": "// === obj_enemy : Create event ===\n/// 普通敌人；房间刷怪时会按种类换成别的组件\ncomp = new class_enemy(self, 0);\n"
+       },
+       {
+        "name": "Step",
+        "code": "// === obj_enemy : Step event ===\ncomp.update();\n"
+       },
+       {
+        "name": "Draw",
+        "code": "// === obj_enemy : Draw event ===\ncomp.draw();\n"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "rmwfpavn6mr8zb",
+    "ts": 1794352295730.986,
+    "name": "第 4 步：BOSS 肉盾",
+    "requirement": "一个 BOSS 肉盾：血厚（40）、走得慢、碰到玩家掉 2 血，每过一段时间朝玩家方向蓄力冲撞一次。",
+    "hint": "蓄力冲撞要有状态：walk / wind / charge / rest 四个状态分开写，不能把「当前该去哪」和「状态」混在一个变量里；冲撞期间不再改方向，否则会原地抖动；BOSS 血条画在屏幕顶上，坐标要用 room_width 自己算，不写死。",
+    "apis": [
+     "rmwfpav0nhzj01",
+     "rmwfpb7k041jii",
+     "rmwfpb7kf89z73",
+     "rmwfpaveef6tj1",
+     "rmwfpavgj6llop",
+     "rmwfpavrqebrvh",
+     "rmwfpauley02e8",
+     "rmwfpaumlup938",
+     "rmwfpav37bab7t"
+    ],
+    "modules": [
+     {
+      "type": "脚本",
+      "value": "// class_boss.gml\n/// class_boss —— 肉盾 BOSS：蓄力 → 冲撞 → 歇\n/// 血厚、移速慢，冲撞前会先缩一下给玩家反应时间\nfunction class_boss(_owner) constructor\n{\n\towner = _owner;\n\thp_max = 40;\n\thp = 40;\n\tspd = 1.1;\n\trad = 34;\n\tflash = 0;\n\tstate = \"walk\";     // walk / wind / charge / rest\n\ttimer = 0;\n\tcharge_dir = 0;\n\n\t// 挨一下：扣血 + 闪白；返回 true 表示已经死了\n\tstatic hit = function(_dmg, _flash)\n\t{\n\t\thp -= _dmg;\n\t\tflash = _flash;\n\t\treturn hp <= 0;\n\t}\n\n\t// 每帧：闪白帧递减\n\tstatic tick = function()\n\t{\n\t\tif flash > 0 flash -= 1;\n\t}\n\n\t// 每帧：按状态走\n\tstatic update = function()\n\t{\n\t\tvar _p = instance_find(obj_player);\n\t\tif _p == noone exit;\n\n\t\tif state == \"walk\"\n\t\t{\n\t\t\tvar _dir = point_direction(owner.x, owner.y, _p.x, _p.y);\n\t\t\towner.x += lengthdir_x(spd, _dir);\n\t\t\towner.y += lengthdir_y(spd, _dir);\n\t\t\ttimer -= 1;\n\t\t\tif timer <= 0\n\t\t\t{\n\t\t\t\tstate = \"wind\";\n\t\t\t\ttimer = 40;\n\t\t\t}\n\t\t}\n\t\telse if state == \"wind\"\n\t\t{\n\t\t\ttimer -= 1;\n\t\t\tcharge_dir = point_direction(owner.x, owner.y, _p.x, _p.y);\n\t\t\tif timer <= 0\n\t\t\t{\n\t\t\t\tstate = \"charge\";\n\t\t\t\ttimer = 70;\n\t\t\t}\n\t\t}\n\t\telse if state == \"charge\"\n\t\t{\n\t\t\towner.x += lengthdir_x(spd * 6, charge_dir);\n\t\t\towner.y += lengthdir_y(spd * 6, charge_dir);\n\t\t\ttimer -= 1;\n\t\t\tif timer <= 0\n\t\t\t{\n\t\t\t\tstate = \"rest\";\n\t\t\t\ttimer = 60;\n\t\t\t}\n\t\t}\n\t\telse\n\t\t{\n\t\t\ttimer -= 1;\n\t\t\tif timer <= 0\n\t\t\t{\n\t\t\t\tstate = \"walk\";\n\t\t\t\ttimer = 120;\n\t\t\t}\n\t\t}\n\n\t\tself.tick();\n\t\tself.touch();\n\t}\n\n\t// 碰到玩家：扣血 + 给一段无敌帧\n\tstatic touch = function()\n\t{\n\t\tvar _p = instance_find(obj_player);\n\t\tif _p == noone exit;\n\t\tif _p.comp.invuln > 0 exit;\n\t\tvar _hit = point_in_rectangle(_p.x, _p.y,\n\t\t\towner.x - rad, owner.y - rad,\n\t\t\towner.x + rad, owner.y + rad);\n\t\tif !_hit exit;\n\t\t_p.comp.hit(2, 10);\n\t\t_p.comp.invuln = 60;\n\t}\n\n\t// 画自己：大圆 + 眼 + 状态提示 + 血条\n\tstatic draw = function()\n\t{\n\t\tvar _col = c_maroon;\n\t\tif state == \"wind\" _col = c_red;\n\t\tif state == \"charge\" _col = c_fuchsia;\n\t\tif flash > 0 _col = c_white;\n\t\tdraw_set_color(_col);\n\t\tdraw_circle(owner.x, owner.y, rad, -1);\n\t\tdraw_set_color(c_black);\n\t\tdraw_circle(owner.x - 10, owner.y - 6, 6, -1);\n\t\tdraw_circle(owner.x + 10, owner.y - 6, 6, -1);\n\t\tself.draw_bar();\n\t}\n\n\t// 血条（BOSS 的血条画在屏幕顶上）\n\tstatic draw_bar = function()\n\t{\n\t\tvar _w = 220;\n\t\tvar _h = 10;\n\t\tvar _r = clamp(hp / hp_max, 0, 1);\n\t\tvar _x = room_width / 2 - _w / 2;\n\t\tdraw_set_color(c_black);\n\t\tdraw_rectangle(_x - 2, 96, _x + _w + 2, 96 + _h, false);\n\t\tdraw_set_color(c_red);\n\t\tdraw_rectangle(_x, 98, _x + _w * _r, 98 + _h - 4, true);\n\t}\n}\n"
+     },
+     {
+      "type": "对象",
+      "value": "obj_boss",
+      "fields": [
+       {
+        "name": "组件类",
+        "param": "class_boss",
+        "desc": "肉盾 BOSS：蓄力 → 冲撞 → 歇"
+       }
+      ],
+      "events": [
+       {
+        "name": "Create",
+        "code": "// === obj_boss : Create event ===\ncomp = new class_boss(self);\n"
+       },
+       {
+        "name": "Step",
+        "code": "// === obj_boss : Step event ===\ncomp.update();\n"
+       },
+       {
+        "name": "Draw",
+        "code": "// === obj_boss : Draw event ===\ncomp.draw();\n"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "rmwfpavzame55e",
+    "ts": 1794440915730.986,
+    "name": "第 5 步：子弹（数据不拆类）",
+    "requirement": "给玩家的机枪配子弹：子弹自己飞、撞敌人扣血、撞墙或超时消失，玩家的子弹和敌人的子弹要能区分。",
+    "hint": "子弹只是一包数据（方向、速度、伤害、存活帧数、是不是玩家的），拆成类反而多一层没意义的壳，直接当对象的变量；加一个 from_player 开关：true 就打敌人，false 就打玩家；instance_destroy() 之后要 exit（exit 是关键字不是函数）；找附近的敌人用 collision_circle_list，别自己写距离判断循环。",
+    "apis": [
+     "rmwfpb7k041jii",
+     "rmwfpb7kf89z73",
+     "rmwfpavgj6llop",
+     "rmwfpb7faz8r87",
+     "rmwfpaveef6tj1",
+     "rmwfpaw53wz3xb",
+     "rmwfpavrqebrvh",
+     "rmwfpbaerpwa9m",
+     "rmwfpauley02e8",
+     "rmwfpaumlup938"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_bullet",
+      "fields": [],
+      "events": [
+       {
+        "name": "Create",
+        "code": "// === obj_bullet : Create event ===\n/// 子弹只是一包数据，不需要类\ndir = 0;\nspd = 10;\ndmg = 1;\nlife = 120;\nfrom_player = true;\n"
+       },
+       {
+        "name": "Step",
+        "code": "// === obj_bullet : Step event ===\n/// 往前飞，撞敌人扣血、撞玩家扣血，出界就销毁\nx += lengthdir_x(spd, dir);\ny += lengthdir_y(spd, dir);\n\nlife -= 1;\nif life <= 0\n{\n\tinstance_destroy();\n\texit;\n}\nif x < 0 || x > room_width || y < 0 || y > room_height\n{\n\tinstance_destroy();\n\texit;\n}\n\nif from_player\n{\n\tvar _list = [];\n\tcollision_circle_list(x, y, 20, obj_enemy, false, true, _list, false);\n\tvar _size = array_length(_list);\n\tfor (var _i = 0; _i < _size; _i ++)\n\t{\n\t\twith (_list[_i])\n\t\t{\n\t\t\tcomp.hit(dmg, 4);\n\t\t\tif comp.hp <= 0 instance_destroy();\n\t\t}\n\t}\n\tinstance_destroy();\n\texit;\n}\nelse\n{\n\tvar _p = instance_find(obj_player);\n\tif _p != noone\n\t{\n\t\tvar _hit = point_in_rectangle(x, y, _p.x - 14, _p.y - 14, _p.x + 14, _p.y + 14);\n\t\tif _hit && _p.comp.invuln <= 0\n\t\t{\n\t\t\t_p.comp.hit(dmg, 8);\n\t\t\t_p.comp.invuln = 45;\n\t\t\tinstance_destroy();\n\t\t}\n\t}\n}\n"
+       },
+       {
+        "name": "Draw",
+        "code": "// === obj_bullet : Draw event ===\nvar _col = c_yellow;\nif !from_player _col = c_aqua;\ndraw_set_color(_col);\ndraw_circle(x, y, 4, -1);\n"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "rmwfpaw8uuq6v9",
+    "ts": 1794529535730.986,
+    "name": "第 6 步：房间状态机与控制器",
+    "requirement": "整个游戏只有一个 room，用一个房间控制器对象在原地切 4 种房间类型：战斗（清 3 波）、奖励（刷 3 个奖励）、挑战（限时 15 秒杀 8 个）、BOSS（肉盾 + 杂兵）；数字键 1~4 可以直接切，方便试。房间逻辑收成一个 class_room 状态机，控制器只负责设 alarm 和画 HUD。",
+    "hint": "切房间类型要先清场（敌人、拾取物、子弹）再按类型重刷；战斗房下一波用 Alarm 事件延迟 40 帧；玩家阵亡也走 Alarm：复活回满血再进奖励房；struct 里没有 alarm（alarm 属于实例），所以状态机只写 pending_alarm，让控制器去设 alarm[0]；清场要先 instance_find_all 收集 id 再统一销毁，别在 with 里增删实例；房间尺寸、数敌人、找玩家都用内建（room_width / instance_number / instance_find），不用自己维护一份世界状态；游戏内 UI 一律英文——GMS2 内置字体没有中文字形，中文会变成方块。",
+    "apis": [
+     "rmwfpawakmctgr",
+     "rmwfpb86ihgyn1",
+     "rmwfpaveef6tj1",
+     "rmwfpawdm7q93h",
+     "rmwfpaw53wz3xb",
+     "rmwfpawesf8k4v",
+     "rmwfpawgniybsa",
+     "rmwfpawhcwq3cb",
+     "rmwfpavdoraws1",
+     "rmwfpawk6x6h2m",
+     "rmwfpav8grsc7h",
+     "rmwfpavrqebrvh",
+     "rmwfpbaerpwa9m",
+     "rmwfpauley02e8",
+     "rmwfpb77r6tc3x",
+     "rmwfpawr76ofjq",
+     "rmwfpawsbtc4m9"
+    ],
+    "modules": [
+     {
+      "type": "脚本",
+      "value": "// class_room.gml\n/// class_room —— 房间状态机：这一局是什么房间、进行到哪一步\n/// 四种房型 combat / reward / challenge / boss，数字键 1~4 切\n/// 位置在 obj_room_controller 上\nfunction class_room() constructor\n{\n\ttype = \"combat\";     // combat / reward / challenge / boss\n\tstate = \"playing\";   // playing / cleared / failed / dead\n\twave = 0;\n\tkills = 0;\n\ttimer_left = 0;\n\ttarget_kills = 0;\n\tpending_alarm = 0;   // >0 = 让 obj_room_controller 在 N 帧后跑一次 Alarm 0\n\n\t// HUD 上显示的房间名\n\tstatic title = function()\n\t{\n\t\tif type == \"reward\" return \"REWARD\";\n\t\tif type == \"challenge\" return \"CHALLENGE\";\n\t\tif type == \"boss\" return \"BOSS\";\n\t\treturn \"COMBAT\";\n\t}\n\n\t// 切房型：清场 → 复位状态 → 按类型重新布置\n\tstatic set_type = function(_t)\n\t{\n\t\tself.clear_room();\n\t\ttype = _t;\n\t\tstate = \"playing\";\n\t\twave = 0;\n\t\tkills = 0;\n\t\ttimer_left = 0;\n\t\ttarget_kills = 0;\n\t\tpending_alarm = 0;\n\n\t\tif _t == \"combat\"\n\t\t{\n\t\t\tself.spawn_wave(1);\n\t\t}\n\t\telse if _t == \"reward\"\n\t\t{\n\t\t\tself.spawn_pickups(3);\n\t\t}\n\t\telse if _t == \"challenge\"\n\t\t{\n\t\t\ttimer_left = 900;\n\t\t\ttarget_kills = 8;\n\t\t\tself.spawn_wave(2);\n\t\t}\n\t\telse\n\t\t{\n\t\t\tself.spawn_boss();\n\t\t}\n\t}\n\n\t// 每帧判定：下一波 / 通关 / 失败\n\tstatic update = function()\n\t{\n\t\tif state != \"playing\" exit;\n\n\t\tif type == \"combat\"\n\t\t{\n\t\t\tif instance_number(obj_enemy) == 0\n\t\t\t{\n\t\t\t\twave += 1;\n\t\t\t\tif wave >= 3\n\t\t\t\t{\n\t\t\t\t\tstate = \"cleared\";\n\t\t\t\t\tself.set_type(\"reward\");\n\t\t\t\t}\n\t\t\t\telse\n\t\t\t\t{\n\t\t\t\t\tpending_alarm = 40;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\telse if type == \"challenge\"\n\t\t{\n\t\t\ttimer_left -= 1;\n\t\t\tif kills >= target_kills\n\t\t\t{\n\t\t\t\tstate = \"cleared\";\n\t\t\t\tself.set_type(\"reward\");\n\t\t\t}\n\t\t\telse if timer_left <= 0\n\t\t\t{\n\t\t\t\tstate = \"failed\";\n\t\t\t}\n\t\t}\n\t\telse if type == \"reward\"\n\t\t{\n\t\t\tif instance_number(obj_pickup) == 0 state = \"cleared\";\n\t\t}\n\t\telse\n\t\t{\n\t\t\tif instance_number(obj_enemy) + instance_number(obj_boss) == 0\n\t\t\t{\n\t\t\t\tstate = \"cleared\";\n\t\t\t\tself.set_type(\"reward\");\n\t\t\t}\n\t\t}\n\t}\n\n\t// 刷一波杂兵：普通 / 敏捷 / 远程 按比例混\n\tstatic spawn_wave = function(_wave)\n\t{\n\t\tvar _n = 2 + _wave;\n\t\tfor (var _i = 0; _i < _n; _i ++)\n\t\t{\n\t\t\tvar _roll = random(100);\n\t\t\tvar _kind = 0;\n\t\t\tif _roll < 25 _kind = 1;\n\t\t\telse if _roll < 45 _kind = 2;\n\t\t\tself.spawn_enemy(_kind);\n\t\t}\n\t}\n\n\t// 生成一个敌人：种类决定组件，位置离玩家远一点\n\tstatic spawn_enemy = function(_kind)\n\t{\n\t\tvar _pos = self.spot(280);\n\t\tvar _e = instance_create_layer(_pos[0], _pos[1], \"Instances\", obj_enemy);\n\t\t_e.comp = new class_enemy(_e, _kind);\n\t}\n\n\t// 刷奖励房：3 个随机奖励\n\tstatic spawn_pickups = function(_n)\n\t{\n\t\tfor (var _i = 0; _i < _n; _i ++)\n\t\t{\n\t\t\tvar _pos = self.spot(160);\n\t\t\tinstance_create_layer(_pos[0], _pos[1], \"Instances\", obj_pickup);\n\t\t}\n\t}\n\n\t// 刷 BOSS：肉盾 + 一波杂兵\n\tstatic spawn_boss = function()\n\t{\n\t\tinstance_create_layer(room_width / 2, 120, \"Instances\", obj_boss);\n\t\tself.spawn_wave(1);\n\t}\n\n\t// 房间里一个随机点（离玩家太近就重摇）\n\tstatic spot = function(_min_dist)\n\t{\n\t\tvar _p = instance_find(obj_player);\n\t\tvar _x = random_range(50, room_width - 50);\n\t\tvar _y = random_range(50, room_height - 50);\n\t\tif _p == noone return [_x, _y];\n\t\tfor (var _i = 0; _i < 40; _i ++)\n\t\t{\n\t\t\t_x = random_range(50, room_width - 50);\n\t\t\t_y = random_range(50, room_height - 50);\n\t\t\tif point_distance(_x, _y, _p.x, _p.y) >= _min_dist return [_x, _y];\n\t\t}\n\t\treturn [_x, _y];\n\t}\n\n\t// 清场：敌人 / BOSS / 拾取物 / 子弹\n\tstatic clear_room = function()\n\t{\n\t\tself.clear_kind(obj_enemy);\n\t\tself.clear_kind(obj_boss);\n\t\tself.clear_kind(obj_pickup);\n\t\tself.clear_kind(obj_bullet);\n\t}\n\n\t// 清掉某一类的所有实例（先收集 id 再统一销毁，别在 with 里增删）\n\tstatic clear_kind = function(_obj)\n\t{\n\t\tvar _list = instance_find_all(_obj);\n\t\tvar _size = array_length(_list);\n\t\tfor (var _i = 0; _i < _size; _i ++)\n\t\t{\n\t\t\tif instance_exists(_list[_i]) instance_destroy(_list[_i]);\n\t\t}\n\t}\n}\n"
+     },
+     {
+      "type": "对象",
+      "value": "obj_room_controller",
+      "fields": [
+       {
+        "name": "组件类",
+        "param": "class_room",
+        "desc": "房间状态机"
+       },
+       {
+        "name": "房间尺寸",
+        "param": "960 x 640",
+        "desc": "rm_main"
+       }
+      ],
+      "events": [
+       {
+        "name": "Create",
+        "code": "// === obj_room_controller : Create event ===\n/// 房间控制器 = 状态机（class_room）+ 玩家实例\ncomp = new class_room();\ninstance_create_layer(room_width / 2, room_height / 2, \"Instances\", obj_player);\ncomp.set_type(\"combat\");\n"
+       },
+       {
+        "name": "Step",
+        "code": "// === obj_room_controller : Step event ===\n/// 数字键切房型；玩家阵亡转死亡态；房间说等几帧就把 alarm 排上\nif keyboard_check_pressed(vk_1) comp.set_type(\"combat\");\nif keyboard_check_pressed(vk_2) comp.set_type(\"reward\");\nif keyboard_check_pressed(vk_3) comp.set_type(\"challenge\");\nif keyboard_check_pressed(vk_4) comp.set_type(\"boss\");\n\nvar _p = instance_find(obj_player);\nif _p != noone\n{\n\tif _p.comp.hp <= 0 && comp.state != \"dead\"\n\t{\n\t\tcomp.state = \"dead\";\n\t\tcomp.pending_alarm = 70;\n\t}\n}\n\ncomp.update();\n\nif comp.pending_alarm > 0\n{\n\talarm[0] = comp.pending_alarm;\n\tcomp.pending_alarm = 0;\n}\n"
+       },
+       {
+        "name": "Alarm 0",
+        "code": "// === obj_room_controller : Alarm 0 event ===\n/// 死了就复活进奖励房；否则刷下一波\nif comp.state == \"dead\"\n{\n\tvar _p = instance_find(obj_player);\n\tif _p != noone\n\t{\n\t\t_p.comp.heal();\n\t\t_p.comp.invuln = 70;\n\t\t_p.x = room_width / 2;\n\t\t_p.y = room_height / 2;\n\t}\n\tcomp.set_type(\"reward\");\n}\nelse\n{\n\tcomp.spawn_wave(comp.wave);\n}\n"
+       },
+       {
+        "name": "Draw",
+        "code": "// === obj_room_controller : Draw event ===\n/// HUD：房型 / 血量 / 击杀 / 倒计时\nvar _p = instance_find(obj_player);\nvar _hp = 0;\nif _p != noone _hp = _p.comp.hp;\n\ndraw_set_color(c_yellow);\ndraw_text(16, 26, comp.title(), c_yellow);\ndraw_set_color(c_white);\ndraw_text(16, 48, \"HP \" + string(_hp) + \"   KILLS \" + string(comp.kills), c_white);\n\nif comp.type == \"challenge\"\n{\n\tdraw_text(16, 68, \"TIME \" + string(floor(comp.timer_left / 60)) + \"s   GOAL \" + string(comp.kills) + \"/\" + string(comp.target_kills), c_white);\n}\n\nif comp.state == \"cleared\" draw_text(room_width / 2 - 40, 130, \"CLEARED\", c_lime);\nif comp.state == \"failed\" draw_text(room_width / 2 - 30, 130, \"FAILED\", c_red);\nif comp.state == \"dead\" draw_text(room_width / 2 - 50, 130, \"YOU DIED\", c_red);\n\ndraw_set_color(c_gray);\ndraw_text(16, room_height - 22, \"1 COMBAT   2 REWARD   3 CHALLENGE   4 BOSS\", c_gray);\n"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "rmwfpawzed0plj",
+    "ts": 1794618155730.986,
+    "name": "第 7 步：拾取物与整体自检",
+    "requirement": "做拾取物：碰到玩家就生效然后消失，吃到的效果是 5 种奖励里随机一种——加一点上限血、加一点伤害、射速更快一点、移速更快一点、直接回满血。",
+    "hint": "奖励效果写在 class_reward.apply 里，改的是玩家身上那两个组件的数值，拾取物对象本身只管碰到没有；拾取物创建时用 irandom(4) 随机挑一种；reward 的名字和颜色放在类里的 static 数组里，HUD 要用就直接取；最后整体过一遍：每个类一个文件、对象事件体薄、tab 缩进、类前一行 /// 说明、事件文件头写 // === obj_xxx : Event name ===。",
+    "apis": [
+     "rmwfpax0fhfoqz",
+     "rmwfpaveef6tj1",
+     "rmwfpavgj6llop",
+     "rmwfpaw53wz3xb",
+     "rmwfpax2t4ggxc",
+     "rmwfpauley02e8",
+     "rmwfpaumlup938"
+    ],
+    "modules": [
+     {
+      "type": "对象",
+      "value": "obj_pickup",
+      "fields": [
+       {
+        "name": "组件类",
+        "param": "class_reward",
+        "desc": "随机一种奖励"
+       },
+       {
+        "name": "奖励种类",
+        "param": "0~4",
+        "desc": "心 / 力量 / 急速 / 疾行 / 治疗"
+       }
+      ],
+      "events": [
+       {
+        "name": "Create",
+        "code": "// === obj_pickup : Create event ===\ncomp = new class_reward(self, irandom(4));\n"
+       },
+       {
+        "name": "Step",
+        "code": "// === obj_pickup : Step event ===\n/// 碰到玩家就发奖励然后消失\nvar _p = instance_find(obj_player);\nif _p == noone exit;\nvar _hit = point_in_rectangle(x, y, _p.x - 16, _p.y - 16, _p.x + 16, _p.y + 16);\nif !_hit exit;\ncomp.apply(_p);\ninstance_destroy();\n"
+       },
+       {
+        "name": "Draw",
+        "code": "// === obj_pickup : Draw event ===\ncomp.draw(room_get_frame_time(0));\n"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "carrierColors": {
+   "脚本": "#2FD3B4",
+   "对象": "#7CC46B",
+   "操作描述": "#4a90e2",
+   "SVG绘图": "#3FA9F5",
+   "超链接": "#F0C04A",
+   "着色器": "#FF6060"
+  },
+  "customTypes": [],
+  "apiLib": [
+   {
+    "id": "rmwfpb71ke8ccc",
+    "code": "ds_list_create",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb74bki5l5",
+    "code": "ds_list_delete",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb771auibe",
+    "code": "ds_list_size",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb77ajpa9j",
+    "code": "for",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb77r6tc3x",
+    "code": "draw_text",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb7exdq49k",
+    "code": "with",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb7faz8r87",
+    "code": "collision_circle_list",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb7k041jii",
+    "code": "lengthdir_x",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb7kf89z73",
+    "code": "lengthdir_y",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb7q7cdjb7",
+    "code": "clamp",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb7qjn50k5",
+    "code": "place_meeting",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb7sgn3sad",
+    "code": "move_towards_point",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb7vvniq8w",
+    "code": "draw_healthbar",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb7wopvos8",
+    "code": "draw_line",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb84nv6kbh",
+    "code": "lengthdir_*",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb85ci0i47",
+    "code": "image_angle",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb86bn4vu8",
+    "code": "alarm",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb86ihgyn1",
+    "code": "instance_create_layer",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb87bwakcb",
+    "code": "draw_sprite_ext",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb89yq8kpr",
+    "code": "sprite_get_number",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb8btp60ye",
+    "code": "direction",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb8ezunug3",
+    "code": "gravity",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb8fbhwy3d",
+    "code": "bbox_bottom",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb8fxuelkl",
+    "code": "bbox_top",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb8g4jgvsh",
+    "code": "vspeed",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb8kmcfpso",
+    "code": "mouse_check_button_pressed",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb8kuc4qy2",
+    "code": "x",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb8ld6ds2d",
+    "code": "y",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb8r0upplp",
+    "code": "if",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb8sdjgoro",
+    "code": "else",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpb9ns6g7jm",
+    "code": "mouse_check_button",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpbadf98yd5",
+    "code": "sprite_index",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpbadtpc3un",
+    "code": "choose",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpbaerpwa9m",
+    "code": "room_height",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpbaffzk7cp",
+    "code": "sprite_height",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpbafqxawgm",
+    "code": "movedown",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpbalk4mvv6",
+    "code": "shader_get_uniform",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpbao8frht7",
+    "code": "shader_set_uniform_f",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpbau6ux83q",
+    "code": "global",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpbay61r7tv",
+    "code": "draw_sprite",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpauhbtiwbn",
+    "code": "max",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpaujaus6ii",
+    "code": "sin",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpauley02e8",
+    "code": "draw_set_color",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpaumlup938",
+    "code": "draw_circle",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpauo788m3f",
+    "code": "class_gun",
+    "desc": "class_gun 机枪类：射速冷却 / 子弹速度 / 每发伤害；无限子弹，冷却好了就能再打",
+    "params": [
+     {
+      "no": "cd_max",
+      "desc": "冷却帧数"
+     },
+     {
+      "no": "cd",
+      "desc": "当前冷却"
+     },
+     {
+      "no": "spd",
+      "desc": "子弹速度"
+     },
+     {
+      "no": "dmg",
+      "desc": "每发伤害"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpauobj1d1c",
+    "code": "class_gun.ready",
+    "desc": "冷却好了返回 true（没好就顺手递减一帧）",
+    "params": []
+   },
+   {
+    "id": "rmwfpauoe462oo",
+    "code": "class_gun.fire",
+    "desc": "开火：进入冷却",
+    "params": []
+   },
+   {
+    "id": "rmwfpauoi6fzx4",
+    "code": "class_reward",
+    "desc": "class_reward 奖励类：5 种效果，名字 / 颜色 / 效果说明都在类里",
+    "params": [
+     {
+      "no": "kind",
+      "desc": "奖励类型 0~4"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpauozk0tdx",
+    "code": "class_reward.apply",
+    "desc": "吃到奖励：改玩家身上那两个组件的数值",
+    "params": [
+     {
+      "no": "target",
+      "desc": "目标实例（玩家）"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpaup3cxp4d",
+    "code": "class_reward.draw",
+    "desc": "画自己：上下浮动的小圆",
+    "params": [
+     {
+      "no": "t",
+      "desc": "时间"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpautu7u37n",
+    "code": "keyboard_check",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpauwd204ko",
+    "code": "sqrt",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpav0nhzj01",
+    "code": "point_direction",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpav37bab7t",
+    "code": "draw_rectangle",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpav3gzy7lw",
+    "code": "class_player",
+    "desc": "class_player 玩家类：血量 / 移速 / 闪白 / 无敌帧，内部组合一把 class_gun",
+    "params": [
+     {
+      "no": "owner",
+      "desc": "所属实例"
+     },
+     {
+      "no": "hp",
+      "desc": "当前血量"
+     },
+     {
+      "no": "hp_max",
+      "desc": "满血"
+     },
+     {
+      "no": "spd",
+      "desc": "移速"
+     },
+     {
+      "no": "invuln",
+      "desc": "无敌帧"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpav3m6s75k",
+    "code": "class_player.hit",
+    "desc": "挨一下：扣血 + 闪白，返回 true 表示已经死了",
+    "params": [
+     {
+      "no": "dmg",
+      "desc": "伤害"
+     },
+     {
+      "no": "flash",
+      "desc": "闪白帧"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpav3qpz8tz",
+    "code": "class_player.tick",
+    "desc": "每帧递减受击闪白帧",
+    "params": []
+   },
+   {
+    "id": "rmwfpav3thimn8",
+    "code": "class_player.heal",
+    "desc": "回满血",
+    "params": []
+   },
+   {
+    "id": "rmwfpav3y8wqid",
+    "code": "class_player.update",
+    "desc": "每帧：按方向移动 → 机枪冷却 → 冷却好了就开火",
+    "params": [
+     {
+      "no": "dx",
+      "desc": "横向输入"
+     },
+     {
+      "no": "dy",
+      "desc": "纵向输入"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpav4p5fxnn",
+    "code": "class_player.draw",
+    "desc": "画自己：圆 + 准心 + 血条",
+    "params": []
+   },
+   {
+    "id": "rmwfpav8grsc7h",
+    "code": "point_distance",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpavbkgxj26",
+    "code": "game_get_speed",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpavd46jhk8",
+    "code": "gamespeed_fps",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpavdoraws1",
+    "code": "random",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpaveef6tj1",
+    "code": "instance_find",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpavgj6llop",
+    "code": "point_in_rectangle",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpavjdji8pg",
+    "code": "class_enemy",
+    "desc": "class_enemy 敌人类：血量 / 速度 / 半径；kind 0 直线追、1 蛇形、2 保持距离放炮",
+    "params": [
+     {
+      "no": "owner",
+      "desc": "所属实例"
+     },
+     {
+      "no": "kind",
+      "desc": "行为种类"
+     },
+     {
+      "no": "hp",
+      "desc": "当前血量"
+     },
+     {
+      "no": "spd",
+      "desc": "移速"
+     },
+     {
+      "no": "rad",
+      "desc": "半径"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpavji8w59b",
+    "code": "class_enemy.hit",
+    "desc": "挨一下：扣血 + 闪白；死了顺手给房间记一次击杀",
+    "params": [
+     {
+      "no": "dmg",
+      "desc": "伤害"
+     },
+     {
+      "no": "flash",
+      "desc": "闪白帧"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpavjtux9sz",
+    "code": "class_enemy.tick",
+    "desc": "每帧递减受击闪白帧",
+    "params": []
+   },
+   {
+    "id": "rmwfpavk3fkom1",
+    "code": "class_enemy.update",
+    "desc": "每帧：按 kind 走位 → 远程的放炮 → 碰到玩家就扣血",
+    "params": []
+   },
+   {
+    "id": "rmwfpavk8wyryk",
+    "code": "class_enemy.standoff",
+    "desc": "远程专用：远了靠近，近了后退，同时横向绕",
+    "params": [
+     {
+      "no": "p",
+      "desc": "玩家实例"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpavkeu0fu3",
+    "code": "class_enemy.fire",
+    "desc": "远程专用：放一炮",
+    "params": [
+     {
+      "no": "p",
+      "desc": "玩家实例"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpavlhchpq3",
+    "code": "class_enemy.touch",
+    "desc": "碰到玩家：扣血 + 给一段无敌帧",
+    "params": []
+   },
+   {
+    "id": "rmwfpavlmo53fq",
+    "code": "class_enemy.draw",
+    "desc": "画自己：圆 + 眼 + 血条",
+    "params": []
+   },
+   {
+    "id": "rmwfpavrqebrvh",
+    "code": "room_width",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpavuoy1w6g",
+    "code": "class_boss",
+    "desc": "class_boss 肉盾 BOSS：40 血，四状态机 walk / wind / charge / rest",
+    "params": [
+     {
+      "no": "owner",
+      "desc": "所属实例"
+     },
+     {
+      "no": "hp",
+      "desc": "当前血量"
+     },
+     {
+      "no": "state",
+      "desc": "当前状态"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpavusemw7l",
+    "code": "class_boss.hit",
+    "desc": "挨一下：扣血 + 闪白",
+    "params": [
+     {
+      "no": "dmg",
+      "desc": "伤害"
+     },
+     {
+      "no": "flash",
+      "desc": "闪白帧"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpavuw9lq3t",
+    "code": "class_boss.tick",
+    "desc": "每帧递减受击闪白帧",
+    "params": []
+   },
+   {
+    "id": "rmwfpavuzbp1oe",
+    "code": "class_boss.update",
+    "desc": "每帧：按状态走",
+    "params": []
+   },
+   {
+    "id": "rmwfpavv4bjcla",
+    "code": "class_boss.touch",
+    "desc": "碰到玩家：扣血 + 给一段无敌帧",
+    "params": []
+   },
+   {
+    "id": "rmwfpavwfq99ul",
+    "code": "class_boss.draw",
+    "desc": "画自己：大圆 + 眼 + 状态提示 + 血条",
+    "params": []
+   },
+   {
+    "id": "rmwfpaw53wz3xb",
+    "code": "instance_destroy",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpawakmctgr",
+    "code": "keyboard_check_pressed",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpawdm7q93h",
+    "code": "instance_find_all",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpawesf8k4v",
+    "code": "instance_exists",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpawgniybsa",
+    "code": "instance_number",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpawhcwq3cb",
+    "code": "array_length",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpawk6x6h2m",
+    "code": "random_range",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpawr76ofjq",
+    "code": "string",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpawsbtc4m9",
+    "code": "floor",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpawtrsjxdg",
+    "code": "class_room",
+    "desc": "class_room 房间状态机类：房型 / 波次 / 击杀 / 倒计时 / 通关判定",
+    "params": [
+     {
+      "no": "type",
+      "desc": "房间类型"
+     },
+     {
+      "no": "state",
+      "desc": "当前状态"
+     },
+     {
+      "no": "wave",
+      "desc": "第几波"
+     },
+     {
+      "no": "kills",
+      "desc": "击杀数"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpawuu7cmhi",
+    "code": "class_room.title",
+    "desc": "HUD 上显示的房间标题",
+    "params": []
+   },
+   {
+    "id": "rmwfpawv9w6adi",
+    "code": "class_room.set_type",
+    "desc": "切房间类型：清场 → 复位状态 → 按类型重新布置",
+    "params": [
+     {
+      "no": "t",
+      "desc": "房间类型"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpawve9ul2r",
+    "code": "class_room.update",
+    "desc": "每帧判定：下一波 / 通关 / 失败",
+    "params": []
+   },
+   {
+    "id": "rmwfpawvnb76a6",
+    "code": "class_room.spawn_wave",
+    "desc": "刷一波杂兵，按比例混普通 / 敏捷 / 远程",
+    "params": [
+     {
+      "no": "wave",
+      "desc": "第几波"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpawwk9covg",
+    "code": "class_room.spawn_enemy",
+    "desc": "生成一个敌人：种类决定组件，位置离玩家远一点",
+    "params": [
+     {
+      "no": "kind",
+      "desc": "敌人种类"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpawwp9tcxh",
+    "code": "class_room.spawn_pickups",
+    "desc": "刷 n 个随机奖励",
+    "params": [
+     {
+      "no": "n",
+      "desc": "个数"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpawwtc5ogw",
+    "code": "class_room.spawn_boss",
+    "desc": "刷 BOSS 肉盾 + 一波杂兵",
+    "params": []
+   },
+   {
+    "id": "rmwfpawwxfpnmi",
+    "code": "class_room.spot",
+    "desc": "房间里一个随机点（离玩家太近就重摇）",
+    "params": [
+     {
+      "no": "min_dist",
+      "desc": "离玩家最小距离"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpawx1hk8ti",
+    "code": "class_room.clear_room",
+    "desc": "清场：敌人 / BOSS / 拾取物 / 子弹",
+    "params": []
+   },
+   {
+    "id": "rmwfpawx9i64g2",
+    "code": "class_room.clear_kind",
+    "desc": "清掉某一类的所有实例（先收集 id 再统一销毁）",
+    "params": [
+     {
+      "no": "obj",
+      "desc": "对象"
+     }
+    ]
+   },
+   {
+    "id": "rmwfpax0fhfoqz",
+    "code": "irandom",
+    "desc": "",
+    "params": []
+   },
+   {
+    "id": "rmwfpax2t4ggxc",
+    "code": "room_get_frame_time",
+    "desc": "",
+    "params": []
+   }
+  ],
+  "apiById": {
+   "rmwfpb71ke8ccc": "ds_list_create",
+   "rmwfpb74bki5l5": "ds_list_delete",
+   "rmwfpb771auibe": "ds_list_size",
+   "rmwfpb77ajpa9j": "for",
+   "rmwfpb77r6tc3x": "draw_text",
+   "rmwfpb7exdq49k": "with",
+   "rmwfpb7faz8r87": "collision_circle_list",
+   "rmwfpb7k041jii": "lengthdir_x",
+   "rmwfpb7kf89z73": "lengthdir_y",
+   "rmwfpb7q7cdjb7": "clamp",
+   "rmwfpb7qjn50k5": "place_meeting",
+   "rmwfpb7sgn3sad": "move_towards_point",
+   "rmwfpb7vvniq8w": "draw_healthbar",
+   "rmwfpb7wopvos8": "draw_line",
+   "rmwfpb84nv6kbh": "lengthdir_*",
+   "rmwfpb85ci0i47": "image_angle",
+   "rmwfpb86bn4vu8": "alarm",
+   "rmwfpb86ihgyn1": "instance_create_layer",
+   "rmwfpb87bwakcb": "draw_sprite_ext",
+   "rmwfpb89yq8kpr": "sprite_get_number",
+   "rmwfpb8btp60ye": "direction",
+   "rmwfpb8ezunug3": "gravity",
+   "rmwfpb8fbhwy3d": "bbox_bottom",
+   "rmwfpb8fxuelkl": "bbox_top",
+   "rmwfpb8g4jgvsh": "vspeed",
+   "rmwfpb8kmcfpso": "mouse_check_button_pressed",
+   "rmwfpb8kuc4qy2": "x",
+   "rmwfpb8ld6ds2d": "y",
+   "rmwfpb8r0upplp": "if",
+   "rmwfpb8sdjgoro": "else",
+   "rmwfpb9ns6g7jm": "mouse_check_button",
+   "rmwfpbadf98yd5": "sprite_index",
+   "rmwfpbadtpc3un": "choose",
+   "rmwfpbaerpwa9m": "room_height",
+   "rmwfpbaffzk7cp": "sprite_height",
+   "rmwfpbafqxawgm": "movedown",
+   "rmwfpbalk4mvv6": "shader_get_uniform",
+   "rmwfpbao8frht7": "shader_set_uniform_f",
+   "rmwfpbau6ux83q": "global",
+   "rmwfpbay61r7tv": "draw_sprite",
+   "rmwfpauhbtiwbn": "max",
+   "rmwfpaujaus6ii": "sin",
+   "rmwfpauley02e8": "draw_set_color",
+   "rmwfpaumlup938": "draw_circle",
+   "rmwfpauo788m3f": "class_gun",
+   "rmwfpauobj1d1c": "class_gun.ready",
+   "rmwfpauoe462oo": "class_gun.fire",
+   "rmwfpauoi6fzx4": "class_reward",
+   "rmwfpauozk0tdx": "class_reward.apply",
+   "rmwfpaup3cxp4d": "class_reward.draw",
+   "rmwfpautu7u37n": "keyboard_check",
+   "rmwfpauwd204ko": "sqrt",
+   "rmwfpav0nhzj01": "point_direction",
+   "rmwfpav37bab7t": "draw_rectangle",
+   "rmwfpav3gzy7lw": "class_player",
+   "rmwfpav3m6s75k": "class_player.hit",
+   "rmwfpav3qpz8tz": "class_player.tick",
+   "rmwfpav3thimn8": "class_player.heal",
+   "rmwfpav3y8wqid": "class_player.update",
+   "rmwfpav4p5fxnn": "class_player.draw",
+   "rmwfpav8grsc7h": "point_distance",
+   "rmwfpavbkgxj26": "game_get_speed",
+   "rmwfpavd46jhk8": "gamespeed_fps",
+   "rmwfpavdoraws1": "random",
+   "rmwfpaveef6tj1": "instance_find",
+   "rmwfpavgj6llop": "point_in_rectangle",
+   "rmwfpavjdji8pg": "class_enemy",
+   "rmwfpavji8w59b": "class_enemy.hit",
+   "rmwfpavjtux9sz": "class_enemy.tick",
+   "rmwfpavk3fkom1": "class_enemy.update",
+   "rmwfpavk8wyryk": "class_enemy.standoff",
+   "rmwfpavkeu0fu3": "class_enemy.fire",
+   "rmwfpavlhchpq3": "class_enemy.touch",
+   "rmwfpavlmo53fq": "class_enemy.draw",
+   "rmwfpavrqebrvh": "room_width",
+   "rmwfpavuoy1w6g": "class_boss",
+   "rmwfpavusemw7l": "class_boss.hit",
+   "rmwfpavuw9lq3t": "class_boss.tick",
+   "rmwfpavuzbp1oe": "class_boss.update",
+   "rmwfpavv4bjcla": "class_boss.touch",
+   "rmwfpavwfq99ul": "class_boss.draw",
+   "rmwfpaw53wz3xb": "instance_destroy",
+   "rmwfpawakmctgr": "keyboard_check_pressed",
+   "rmwfpawdm7q93h": "instance_find_all",
+   "rmwfpawesf8k4v": "instance_exists",
+   "rmwfpawgniybsa": "instance_number",
+   "rmwfpawhcwq3cb": "array_length",
+   "rmwfpawk6x6h2m": "random_range",
+   "rmwfpawr76ofjq": "string",
+   "rmwfpawsbtc4m9": "floor",
+   "rmwfpawtrsjxdg": "class_room",
+   "rmwfpawuu7cmhi": "class_room.title",
+   "rmwfpawv9w6adi": "class_room.set_type",
+   "rmwfpawve9ul2r": "class_room.update",
+   "rmwfpawvnb76a6": "class_room.spawn_wave",
+   "rmwfpawwk9covg": "class_room.spawn_enemy",
+   "rmwfpawwp9tcxh": "class_room.spawn_pickups",
+   "rmwfpawwtc5ogw": "class_room.spawn_boss",
+   "rmwfpawwxfpnmi": "class_room.spot",
+   "rmwfpawx1hk8ti": "class_room.clear_room",
+   "rmwfpawx9i64g2": "class_room.clear_kind",
+   "rmwfpax0fhfoqz": "irandom",
+   "rmwfpax2t4ggxc": "room_get_frame_time"
+  }
+ }
+};
+  function seed(){
+    if(window.gml && window.gml.cmd){ window.gml.cmd('import', {json: SEED}); return; }
+    setTimeout(seed, 200);
+  }
+  if(document.readyState === 'complete') seed();
+  else window.addEventListener('load', seed);
+})();
+</script>
 </body>
 </html>
