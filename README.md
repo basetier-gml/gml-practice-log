@@ -143,6 +143,7 @@ await window.gml.cmd('finish')
 | `demoBlocks` | – | 列出可触发打字机的块（序号 / 预览 / 状态） |
 | `demoType` | `{index}` 或 `{match}` | 触发打字机；**默认等它打完再返回**（分镜节奏） |
 | `demoCoverage` | `{covered:[块序号…]}` | **覆盖检查**：返回还有哪些隐藏块没被讲到（`missing`） |
+| `mode` | – | **只在生成的手册文件里**：当前模式 `manual`（只读手册）/ `full`（完整功能）。原始 index 里没有这条命令 |
 
 完整流程见页面内嵌 skill 的 §8.7。
 
@@ -212,6 +213,26 @@ skill 里写死了这次迭代出来的口径（登记与引用纪律、static �
 一类一记录、find 流程、主动分段规则等），AI 读完就能按同一套规矩干活。
 
 ---
+
+## 教程手册模式（另生成一个文件，**原始 index 不动**）
+
+这个站的 index 是**你的练习本**（打卡 / 编辑 / 导入 / 扫码 / 删除都留着）。
+需要「一本教程手册网页」时，**另生成一个独立的只读 HTML 文件**交付：
+
+```bash
+python3 <skill:gml-tutorial-manual>/scripts/build_manual_site.py \
+  --records chapters.json --out /path/to/manual/index.html --title "手册名"
+```
+
+- `chapters.json` = `{title, records:[{name, requirement, hint, modules:[…]}]}`；
+  **数组顺序 = 章节顺序**（第 1 个元素 = 第 1 章 = 最左边）；
+- 脚本：读原始 index → 打上「手册模式补丁」→ 灌内容 ⇒ **原始 index 一个字都不动**；
+- 生成的手册里：没有头像 / 菜单 / 打卡页 / 导入 / 扫码 / 编辑 / 删除；
+  日期显示成「第 N 章」，**先创建的章节排在最左边**；
+  宽屏保持左右分屏（左：章节列表 + API 库；右：练习过程＝这一章的正文），窄屏点章节弹层打开；
+- 手册文件自己带一条 `mode` 命令，可以自报当前模式；
+- 手册的**存档直接写进 HTML 文件本身**（不落 localStorage）⇒ 看手册不会往你的练习记录里塞章节，
+  你练习记录里的东西也不会顶掉手册内容（同一浏览器里开也一样）；打开手册后浏览器缓存仍然是空的。
 
 ## 数据与隐私
 
