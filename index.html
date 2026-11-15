@@ -1000,7 +1000,7 @@ AI 第一次拿到这个 index（用户说「把这段代码记下来」「帮�
 | **① 打卡** | 用户上传的**描述**→ `requirement` / `hint`；**代码**→ 一个「脚本」载体（逐字贴，不许改一个字）；用到的官方 API → `addApi` + `refApi` | **截图 + 记录存档**：`screenshot` 存成 PNG 交回，`export` 出存档 payload 交回（用户可导入） |
 | **② 教程** | 用站里的打卡功能**写操作流程**：**一个操作步骤 = 一条记录**（名字写「第 N 步：xxx」），步骤里的代码贴进脚本/对象载体 | **带记录的 index**：把导出的存档写成种子塞进一份 index.html（启动时自动导入），交回这份 index，用户一打开就带着记录 |　自写类**建了就要在用到它的那些步骤里引用**（见 §4）
 | **③ 日志** | 把 vibe coding 的过程**按功能环节**记进打卡记录（一个环节 = 一条记录，**测通了才打卡**） | **每次打卡都立刻存一次档**（防中途丢），最后按他要的形态返回：要点 / 时间线 / 存档 / 带记录的 index |　自写类**建了就要在用到它的那些环节里引用**（见 §4） |
-| **④ 演示** | 用户指定要演示哪条练习 ⇒ 读回记录写**解读稿件** → **用户确认** → 打开**演示模式**，按稿子逐段触发**打字机** → **录屏** → **TTS 配音** → **剪辑**（见 §8.7） | **成片视频**（mp4）+ 解读稿件（给用户确认过的那一版） |
+| **④ 演示** | 用户指定要演示哪条练习 ⇒ **①进预览模式摸底**（`demoBlocks` 拿块清单 + 逐个触发看清每块）→ **②按块写解读稿**（一块一句，页面从上到下）→ **③覆盖检查**（`demoCoverage` 确认没漏）→ **④用户确认稿子** → **⑤按稿子逐段触发打字机** → **⑥录屏（1080p 横屏）** → **⑦TTS 配音** → **⑧剪辑**（见 §8.7） | **成片视频**（mp4）+ 解读稿件（给用户确认过的那一版） |
 
 **① 打卡 —— 命令顺序**
 
@@ -1651,16 +1651,29 @@ trail.update(x, y)
   - **默认档位**：**手机竖屏默认 1 倍，其它情况默认 2 倍**（打开演示时自动套用）✓。
 - 关掉演示界面（关闭按钮 / 点遮罩 / `Esc`）= **退出演示模式** ✓。
 
+**演示相关的命令**（自动化一律走命令，别抠 DOM）：
+
+| 命令 | 参数 | 作用 |
+|---|---|---|
+| `demo` | `{open:true}` / `{close:true}` / `{speed:毫秒}` / `{ratio:'default'\|'zoom150'\|'zoom200'}` | 开/关演示模式、改打字速度、改倍数 |
+| `demoBlocks` | – | **块清单**：`{index,kind,len,preview,text,tlen,state,carrier,carrierHidden}`（`text`=内容全文、`carrier`=在第几个载体、`carrierHidden`=载体还没放出来） |
+| `demoReveal` | `{index:n}`（不给就放下一个） | 放出一个代码载体（默认全藏着） |
+| `demoType` | `{index:n}` 或 `{match:'文字'}` / `{wait:false}` | 触发打字机（默认等它打完再返回） |
+| `demoCoverage` | `{covered:[块序号…]}` | **覆盖检查**：`{total,covered,missCount,missing:[…]}`；`missing` 非空 = 有该讲却没讲的隐藏块 |
+
 **自动化时的注意点**：
 - 按钮**只在详情态出现**（编辑态是 `display:none`）⇒ 先 `cmd('finish')` 再点它 ✓。
 - 演示界面里的内容是**重新 buildDetail() 生成的副本**，不是原来那块 DOM ⇒
   演示里点「编辑这条记录」会被去掉，不会误改记录 ✓。
 - 打字机是 `setTimeout` 驱动的 ⇒ 断言「逐字增加」要按时间采样，别一次性断言。
 
-## 8.7 第 4 种用法：演示（解读稿 → 打字机 → 录屏 → 配音 → 剪辑）
+## 8.7 第 4 种用法：演示（摸底 → 写稿 → 覆盖检查 → 打字机 → 录屏 → 配音 → 剪辑）
 
 用户说「把这条练习演示出来」「录一段讲解视频」「做条解读视频」时走这条线。
-**六步，顺序不能跳**（第 2 步没确认就录，等于白录）：
+**八步，顺序不能跳**：
+
+- **不摸底就写稿 ⇒ 一定会漏**（对象名、Create、Step 常是分开三块，最容易漏掉后两块）；
+- **稿子没确认就录 ⇒ 等于白录**。
 
 ### ① 读回这条记录（别凭印象写稿）
 
@@ -1670,26 +1683,69 @@ await window.gml.cmd('get', {id:'记录的 id'})   // 正文 + 载体全文 + AP
 
 稿子里的每一句都要能在这份内容里找到出处 ⇒ **不要编页面上没有的东西**。
 
-### ② 生成解读稿件，**先给用户确认**
+### ② 先进预览模式「摸底」：把所有被隐藏的内容逐个触发一遍
 
-- **分段**：每段 = 一句要念的话 + **它对应页面上哪一块**；
-- **按页面从上到下**排（观众跟着看才不会乱）；
-- 口语化、短句；**不念函数名 / 变量名**（念「扣血方法」，不念「hit 方法」）；
-- 一次只讲一个点，别把整条记录塞进一段；
-- **把稿子贴给用户，等他点头或改完再往下走 —— 这一步不许跳**。
-
-### ③ 打开演示模式，拿到底稿对应的「块」
+**先看清页面上到底藏着什么，再动笔写台词。** 不摸底就写稿 ⇒ 一定会漏。
 
 ```js
 await window.gml.cmd('select', {id:'记录 id'})   // ★ 先选中这条记录（演示要靠它）
-await window.gml.cmd('demo', {open:true})    // 打开演示（倍数按屏幕自动：手机竖屏 1 倍，其它 2 倍）
-await window.gml.cmd('demo', {speed:30})      // 打字速度（毫秒/字，录视频建议 25~40）
-await window.gml.cmd('demoBlocks')            // 列出可触发的块：{index, len, preview, kind, state}
+await window.gml.cmd('demo', {open:true})        // 打开演示（倍数按屏幕自动：手机竖屏 1 倍，其它 2 倍）
+await window.gml.cmd('demo', {speed:30})         // 打字速度（毫秒/字，录视频建议 25~40）
+await window.gml.cmd('demoBlocks')               // ★ 块清单
 ```
 
-用 `demoBlocks` 的 `preview` 把稿子的每一段对到具体块上（对不上就换关键词）。
+`demoBlocks` 每个块给：
 
-### ④ 按稿子逐段触发打字机（分镜节奏）
+| 字段 | 意思 |
+|---|---|
+| `index` | 块序号（`demoType` / `demoReveal` 都用它） |
+| `kind` | 块类型（代码框 / 操作描述 / 对象名 …） |
+| `len` / `text` | 这块会打多少字、**内容全文**（代码块只含代码，不含行号） |
+| `carrier` | 它在第几个「用到的代码载体」里（-1 = 不在载体里） |
+| `carrierHidden` | 那个载体是不是**还没放出来**（没放出来 ⇒ 直接打字等于打进黑洞） |
+
+**然后逐个触发，亲眼看清每块是什么、怎么触发**：
+
+```js
+await window.gml.cmd('demoType', {index:0});    // 触发第 0 块（默认等它打完再返回）
+await window.gml.cmd('demoReveal', {index:2});  // 第 3 个载体放出来
+await window.gml.cmd('demoType', {index:5});    // 再触发它里面的块
+```
+
+- **载体默认全藏着** ⇒ 要看某个载体里的块，先 `demoReveal` 把它放出来
+  （`demoType` 也会自动放目标那个载体，但**只放目标那一个**，前面的载体仍藏着
+  ⇒ 观众看到的先后顺序要靠 `demoReveal` 自己排）；
+- 触发完 `state` 从 `hidden` 变成 `done` ⇒ **再触发同一个块不会重打**
+  （想重来就关掉演示再打开）；
+- 摸底时**每一块都触发一次**，看清它在讲什么 ⇒ 稿子才有依据。
+
+⇒ 这一步结束时，你手上应该有**一份块清单**（每块：是什么、多少字、在第几个载体、怎么触发）。
+
+### ③ 按块清单写台词（一块一句，顺序 = 页面从上到下）
+
+- **一块 = 一句台词**（长的块可以两句，但不要两块合成一句）；
+- 台词顺序 = **块在页面上的顺序**（`demoBlocks` 的 `index` 顺序 = 视觉顺序）；
+- 载体按页面顺序**逐个放出**（`demoReveal` 一个一个来），放一个讲一个；
+- 说清**这块在干什么**（画面 + 作用），别念函数名变量名（念「扣血方法」，不念「hit 方法」）；
+- **每一个要展示的隐藏块都要有台词** —— 这是最容易漏的地方：
+  一条记录里的代码常有好几块（脚本一块、对象名一块、Create 一块、Step 一块），
+  只写「敌人对象里只写装配」就把**对象名**和 **Step 事件**漏掉了；
+- 开场 / 收尾可以不绑块（页面本来就显示：记录名称、练习题要求、API 标签）。
+
+### ④ 覆盖检查：确认没漏（机器可查）
+
+写完稿子，把**覆盖到的块序号**传给 `demoCoverage`：
+
+```js
+await window.gml.cmd('demoCoverage', {covered:[0,1,2,3,4,5,6,7,8,9,10,11,12,13]})
+// → { ok:true, total:14, covered:14, missCount:0, missing:[] }
+```
+
+- `missing` 里还有东西 ⇒ **要么补一句台词，要么明确说「这块不展示」**（不写进 `covered` 即可）；
+- 补完再跑一次，`missCount` 必须是 0（或者能说清为什么漏）；
+- **这一步不许跳** —— 用户 2026-11-15 明确：漏掉需要显示的隐藏内容 = 成片里有内容没被讲到。
+
+### ⑤ 按稿子逐段触发打字机（分镜节奏）
 
 ```js
 await window.gml.cmd('demoReveal', {})              // 先放出一个代码载体（演示里默认全藏着）
@@ -1698,7 +1754,7 @@ await window.gml.cmd('demoType', {match:'关键词'})   // 触发打字机（默
 await window.gml.cmd('demoType', {index:7})         // 或按块序号触发
 ```
 
-- `demoType` **默认会等这块打完才返回** ⇒ 一句接一句串起来，就是现成的分镜节奏 ✓；
+- `demoType` **默认会等这块打完再返回** ⇒ 一句接一句串起来，就是现成的分镜节奏 ✓；
 - 想自己掌握节奏就传 `{wait:false}`；
 - 上一段没打完就触发下一段 ⇒ **前一段直接显示完整内容**（不会卡在半截）✓；
 - **记录名称 / 练习题要求本来就是显示的**（不做打字机），稿子里提到它们时不用触发；
@@ -1710,28 +1766,46 @@ await window.gml.cmd('demoType', {index:7})         // 或按块序号触发
    现在 `demoType` 会**自动把目标块所在的载体放出来**，但你仍然要按稿子顺序放（`demoReveal`），
    观众看到的顺序才对得上解说。
 2. **打字速度在每次触发前设**（`demo({speed})` 紧挨着 `demoType`）——
-   视频里建议 **30~120 毫秒/字**：低于 30 像机器枪在扫（而且浏览器会被拖慢到 60ms/字），
-   高于 120 像逐字蹦。短段落用慢速（读得清），长代码段用 30~45。
-3. **一段 = 打字机播完 → 再说这一段的话 → 再挑下一个打字机**
+   视频里建议 **30~120 毫秒/字**：低于 30 像机器枪在扫，高于 120 像逐字蹦。
+   短段落用慢速（读得清），长代码段用 30~45。
+3. **一段 = 打字机 + 这一段的话并行 → 两个都完了才切下一个**
    （讲解顺序 = 页面从上到下；**练习记录的板面一律不动**，不重排任何 section）
-   （用户 2026-11-15 定稿，别改成「话先说、字后打」）：
+
+   - 打字机一开始就触发，**配音同时开口**；
+   - 台词先讲完 ⇒ 等打字机走到下一段；打字机先走完 ⇒ 留一段静音等台词讲完；
+   - **打字机走完 + 台词说完**，才切下一个打字机、开始读下一段台词；
+   - 台词比打字机短 ⇒ **压缩这一段的视频**（`setpts`），让打字在台词讲完时正好结束，
+     配音时长不动；台词比打字机长 ⇒ 视频原速，末尾补最后一帧到台词讲完。
+
    ```python
    cmd('demo', {'speed': speed})          # 先定速度
    cmd('demoType', {'index': idx, 'wait': False})
-   pg.wait_for_function("() => document.querySelectorAll('#demoInner [data-demo-state="typing"]').length === 0")
-   typing = time.time() - t0               # 打字机播完
-   # 配音从这一刻开始 ⇒ 音轨 = 静音(typing) + 这一段的话
+   pg.wait_for_function("() => document.querySelectorAll('#demoInner [data-demo-state=\"typing\"]').length === 0")
+   typing = time.time() - t0               # 打字机时长
+   seg_len = max(typing, dur) + 0.3        # 段长 = 两者更长的那个
    ```
-   ⇒ 合成时每段的音轨 = **先 typing 秒静音，再放这段的话**（`anullsrc` + `concat`），
-   别用「按配音对齐」的写法。
+   ⇒ 合成时每段音轨 = **这一段的话（从段首就开始）+ 尾部静音补到段长**；
+   视频按 `min(typing, dur)` 变速、末尾补帧到段长（脚本：`work/mux_demo_video.py`）。
 
-### ⑤ 录屏（Playwright 的 `recordVideo`）
+   ⚠ **打字速度现在是真能兑现的**：`demoRun` 按「时间」吐字（记下下一个字该出现的时间点，
+   落后了一次补几个字）⇒ 设 30ms/字就跑 30ms/字、设 6ms/字就跑 6ms/字。
+   录屏环境实测倍率约 1.06 ⇒ 长代码段按 `dur × 1000 ÷ 字数 ÷ 1.06` 设速度即可。
+
+   ⚠ **录屏按 1080p 横屏 1920×1080**（视口和 `record_video_size` 都是 1920×1080，
+   **不要改缩放倍率**，不传 `device_scale_factor`）。
+   ⚠ 录之前确认「画面大小」是对的：演示模式被开关过之后，倍数可能退回 1 倍
+   （内容缩在画面中间）。量一下：打开演示后 `#demoInner` 的
+   `getBoundingClientRect().width` 应该是 **1240 左右**（2 倍 × 620 排版宽），
+   只有 620 就说明倍数没应用上。
+
+### ⑥ 录屏（Playwright 的 `recordVideo`）
 
 ```python
-ctx = browser.new_context(viewport={'width':1440,'height':900}, record_video_dir='/workspace/work/video', record_video_size={'width':1440,'height':900})
+# ★ 1080p 横屏：视口和录像尺寸都 1920×1080，不传 device_scale_factor
+ctx = browser.new_context(viewport={'width':1920,'height':1080}, record_video_dir='/workspace/work/video', record_video_size={'width':1920,'height':1080})
 page = ctx.new_page()
 page.goto('file:///…/index.html')
-# …在上面 ③④ 的位置用 page.evaluate 调 cmd，等它返回 …
+# …在上面 ②⑤ 的位置用 page.evaluate 调 cmd，等它返回 …
 page.wait_for_timeout(1200)          # 收尾留一点静止画面
 ctx.close()                          # 关掉 context，视频才会落盘
 ```
@@ -1741,13 +1815,13 @@ ctx.close()                          # 关掉 context，视频才会落盘
 - 打开演示模式前先 `cmd('finish')`（演示按钮只在详情态有）+ `cmd('select',{id})`（选中记录）；
 - 录制期间别用 `page.screenshot` 抢画面。
 
-### ⑥ TTS 配音（mcode-tools）
+### ⑦ TTS 配音（mcode-tools）
 
 - 用 `mcode-tools` 的语音合成工具，按稿子**逐句**生成音频（句号切分，别合成一大段 ⇒ 后面不好对轴）；
 - 每句单独一个文件，文件名带序号：`01.mp3 / 02.mp3 …`；
 - 中文用中文音色，英文用英文音色；语速和打字速度对得上（打字 30ms/字 ≈ 4~5 字/秒）。
 
-### ⑦ 剪辑（ffmpeg）
+### ⑧ 剪辑（ffmpeg）
 
 ```bash
 # 1) 音频拼成一条（等长静音补齐）
@@ -1763,8 +1837,14 @@ ffmpeg -i demo.webm -i voice.wav -c:v libx264 -crf 20 -pix_fmt yuv420p -c:a aac 
 - 完事把**成片**和**用户确认过的解读稿**一起交回，并说明视频是哪个比例、用了哪条记录。
 
 **做演示时容易踩的坑**：
+- **不摸底就写稿 ⇒ 漏掉隐藏内容**（对象名 / Create / Step 常常是分开三块）⇒
+  写完一定跑 `demoCoverage`，`missCount` 必须是 0；
 - 稿子没确认就录 ⇒ 用户改稿 ⇒ 白录一遍；
 - 用 `demoType` 的 `match` 时关键词要**足够唯一**（页面上真有的词），对不上会报错并给出提示；
+  **更稳的做法**：摸底时记下块序号，触发直接用 `demoType {index:n}`；
+- 载体默认全藏着 ⇒ 直接 `demoType` 会把字打进看不见的元素（静默失败）⇒ 先 `demoReveal`；
+- **演示模式被开关过之后，倍数可能退回 1 倍**（内容缩在画面中间、按钮却还亮着 2 倍）⇒
+  录之前量一下 `#demoInner` 的 `getBoundingClientRect().width`，2 倍下应 ≈ **1240**；
 - 录完不 `ctx.close()` ⇒ 视频文件还没落盘；
 - 忘了 `cmd('finish')` ⇒ 演示按钮不存在（编辑态没有）；
 - 演示里的内容是 `buildDetail()` 生成的**副本** ⇒ 演示中改不到原记录，别指望在演示里改内容。
@@ -10600,7 +10680,8 @@ __lang = detectLang();
         { name:'demo',         desc:'演示模式开关，参数 {open:true} / {close:true} / {ratio:"default|zoom150|zoom200"} / {speed:30}' },
         { name:'demoReveal',   desc:'放出一个代码载体（演示里默认全藏着），参数 {index:n}，不给就放下一个' },
         { name:'demoBlocks',   desc:'列出演示里可触发打字机的块（序号 / 预览文字 / 状态）' },
-        { name:'demoType',     desc:'触发某一块的打字机，参数 {index:n} 或 {match:"文字片段"}；默认等到打完再返回' }
+        { name:'demoType',     desc:'触发某一块的打字机，参数 {index:n} 或 {match:"文字片段"}；默认等到打完再返回' },
+        { name:'demoCoverage', desc:'覆盖检查：传 {covered:[块序号…]}，返回还有哪些隐藏块没讲到' }
       ], usage:'window.gml.cmd(命令名, 参数对象) → Promise<{ok, ...}>' };
     },
     state: function(){
@@ -10880,15 +10961,31 @@ __lang = detectLang();
         if(!demoState.open) return cmdFail('演示模式没开（先 cmd("demo",{open:true})）');
         var list = [];
         for(var i=0;i<demoState.blocks.length;i++){
-          var b = demoState.blocks[i];
-          var txt = b.saved.join('').replace(/\s+/g, ' ').trim();
-          list.push({ index:i, len:txt.length, preview:txt.slice(0, 60),
-                      kind:(b.el.className || '').replace('demo-mask','').trim(),
-                      state:b.el.getAttribute('data-demo-state') });
+          list.push(demoBlockInfo(i));
         }
         return { ok:true, count:list.length, blocks:list };
       }catch(e){
         return cmdFail('列演示块失败：' + String((e && e.message) || e));
+      }
+    },
+    demoCoverage: function(a){
+      /* ★ 写完稿子后做覆盖检查：把「稿子覆盖到的块序号」传进来，
+         返回还有哪些隐藏块没被讲过（漏了就补台词）。 */
+      try{
+        if(!demoState.open) return cmdFail('演示模式没开（先 cmd("demo",{open:true})）');
+        a = a || {};
+        var cov = Array.isArray(a.covered) ? a.covered.map(function(x){ return parseInt(x,10); })
+                 : (a.index != null ? [parseInt(a.index,10)] : []);
+        var set = {};
+        cov.forEach(function(x){ if(!isNaN(x)) set[x] = 1; });
+        var missing = [], hit = 0;
+        for(var i=0;i<demoState.blocks.length;i++){
+          if(set[i]) hit++; else missing.push(demoBlockInfo(i));
+        }
+        return { ok:true, total:demoState.blocks.length, covered:hit,
+                 missing:missing, missCount:missing.length };
+      }catch(e){
+        return cmdFail('覆盖检查失败：' + String((e && e.message) || e));
       }
     },
     demoType: function(a){
@@ -11058,6 +11155,34 @@ __lang = detectLang();
     requestAnimationFrame(function(){ demoRatioPending = false; demoApplyRatio(); });
   }
 
+  /* ★ 一个演示块的完整信息（demoBlocks / demoCoverage 都用它）：
+       text = 这块真正会打出来的内容（代码块只取代码列，不要行号）；
+       carrier = 它在第几个「用到的代码载体」里（-1 = 不在载体里）；
+       carrierHidden = 那个载体是不是还没放出来（没放出来 ⇒ 打字看不见）。 */
+  function demoBlockText(b){
+    if(b.codeText != null) return b.codeText;   /* 代码块：只有代码，没有行号 */
+    return b.saved.join('');
+  }
+  function demoBlockInfo(i){
+    var b = demoState.blocks[i];
+    var txt = demoBlockText(b).replace(/\s+/g, ' ').trim();
+    var carrier = -1, hidden = false, pp = b.el;
+    while(pp && pp !== document.body){
+      if(pp.classList && pp.classList.contains('carrier-group')){
+        var groups = Array.prototype.slice.call(pp.parentElement.querySelectorAll('.carrier-group'));
+        carrier = groups.indexOf(pp);
+        hidden = (pp.style.display === 'none');
+        break;
+      }
+      pp = pp.parentElement;
+    }
+    return { index:i, len:txt.length, preview:txt.slice(0, 60),
+             text:txt.slice(0, 400),
+             tlen:parseInt(b.el.getAttribute('data-demo-len') || '0', 10) || txt.length,
+             kind:(b.el.className || '').replace('demo-mask','').trim(),
+             state:b.el.getAttribute('data-demo-state'),
+             carrier:carrier, carrierHidden:hidden };
+  }
   function demoSpeedMs(){
     var v = parseInt(($('#demoSpeed') || {}).value, 10);
     if(!v || v < 1) v = 30;
@@ -11081,6 +11206,13 @@ __lang = detectLang();
     if(!nodes.length) return null;
     var saved = nodes.map(function(n){ return n.nodeValue; });
     var block = { el:el, nodes:nodes, saved:saved, ni:0, ci:0, timer:null, started:false, done:false, lastLi:-1 };
+    /* ★ 代码框：把「只有代码、不含行号」的正文先存下来。
+       （打码后文字节点被清空了，事后再取 textContent 只能取到行号列） */
+    if(el.classList.contains('codebox-body')){
+      var lcs = el.querySelectorAll('.lc'), ct = [];
+      for(var ci=0; ci<lcs.length; ci++) ct.push(lcs[ci].textContent);
+      block.codeText = ct.join('\n');
+    }
     nodes.forEach(function(n){ n.nodeValue = ''; });
     el.classList.add('demo-mask');
     el.setAttribute('data-demo-hint', T('点击逐字显示'));
@@ -11220,25 +11352,36 @@ __lang = detectLang();
   }
   function demoRun(block){
     if(block.timer) clearTimeout(block.timer);
+    /* ★ 按「时间」吐字，不是按「次数」吐字：
+         浏览器一次定时器最快 ~45ms，原来一次 tick 只吐一个字 ⇒ 速度设 12ms/字也只跑出 17ms/字，
+         长代码段永远追不上台词。
+         现在记录「下一个字该出现的时间点」，落后了就一次补几个字 ⇒ 设定的速度真能兑现。 */
+    var nextT = performance.now();
     var step = function(){
       if(demoState.typing !== block) return;          /* 已被别的接管 */
       if(block.ni >= block.nodes.length){ demoFinish(block); return; }
+      var sp = demoSpeedMs();
       var full = block.saved[block.ni];
-      if(block.ci < full.length){
+      var now = performance.now();
+      var emitted = 0;
+      while(block.ci < full.length && now >= nextT && emitted < 500){
         block.ci++;
         block.nodes[block.ni].nodeValue = full.slice(0, block.ci);
-        /* 性能：展开行/重算画幅/跟随滚动不必每字都做（每字都做会拖慢整段打字） */
+        nextT += sp;
+        emitted++;
+      }
+      if(block.ci >= full.length && block.ni < block.nodes.length){
+        block.ni++; block.ci = 0;
+        nextT = performance.now() + sp;                /* 换到下一个节点也要按速度等一下 */
+      }
+      if(emitted > 0){
+        /* 性能：展开行/重算画幅/跟随滚动按「这次 tick」做，不必每字都做 */
         var li = block.nodeLine ? block.nodeLine[block.ni] : 0;
         if(li !== block.lastLi){ block.lastLi = li; demoRevealRows(block); }   /* 代码一行一行展开 */
-        if((block.ci % 3) === 0 || block.ci === full.length){
-          demoScheduleRatio();                 /* 内容长高了 ⇒ 画幅跟着重算 */
-          demoKeepInView(block.el, 'tail', false);   /* ★ 刚打出来的字不许跑出屏幕 */
-        }
-        block.timer = setTimeout(step, demoSpeedMs());
-      }else{
-        block.ni++; block.ci = 0;
-        block.timer = setTimeout(step, demoSpeedMs());   /* 换到下一个节点也要按速度等 */
+        demoScheduleRatio();                           /* 内容长高了 ⇒ 画幅跟着重算 */
+        demoKeepInView(block.el, 'tail', false);       /* ★ 刚打出来的字不许跑出屏幕 */
       }
+      block.timer = setTimeout(step, sp);
     };
     block.timer = setTimeout(step, 0);
   }
@@ -11339,7 +11482,14 @@ __lang = detectLang();
     demoState.open = true;
     $('#demoModal').classList.add('open');
     inner.style.width = ''; inner.style.zoom = '';
-    demoState.naturalW = inner.offsetWidth;  /* 放大前的排版宽度 */
+    /* ★ 倍数状态是缓存在 demoState 里的（appliedRatio / natW / natWFor）。
+       演示模式「关掉再打开」时，DOM 重建了，可这份缓存还在 ⇒
+       demoApplyRatio 会以为「档位和列宽都没变」直接跳过 ⇒ 倍数根本没应用上：
+       画面按 1 倍显示，右上角的「2 倍」却还亮着（录视频时踩的就是这个坑）。
+       所以每次打开都把这份缓存清掉，重新量一次、重新应用。 */
+    demoState.appliedRatio = '';
+    demoState.natW = 0;
+    demoState.natWFor = -1;
     demoState.ratio = demoDefaultRatio();    /* 手机竖屏 1 倍，其它 2 倍 */
     demoApplyRatio();
     document.body.style.overflow = 'hidden';
