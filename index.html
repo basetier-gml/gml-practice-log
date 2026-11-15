@@ -1149,7 +1149,8 @@ const r = await page.evaluate(() => window.gml.cmd('screenshot'))   // {ok,dataU
 | 命令 | 参数 | 作用 |
 |---|---|---|
 | `help` / `state` | – | 命令清单 / 当前状态（昵称、设置、记录、API 库、当前练习） |
-| `clear` | – | 清空全部数据（内存 + localStorage + sessionStorage + Cache API，不用 reload）；同时打「已清空」标记，菜单里的「新手教程」就不会再灌回来 |
+| `clear` | – | 清空本项目的数据（内存 + **本项目命名空间下的 localStorage/sessionStorage + 本项目自己建的 Cache**，**不用 reload**）；**不会碰同域下别的应用的数据**；同时打「已清空」标记，菜单里的「新手教程」就不会再灌回来。返回值带 `removedKeys` / `keptKeys` / `scope` |
+| `restore` | – | 回滚上一次整站导入（用导入前自动留的快照 `gml-practice-log-v2:preImport`）；没有快照就报错，不动现有数据 |
 | `export` / `import` | `{json}` | 整站存档导出 / 导入并覆盖 |
 | `checkin` | `{name, requirement, hint}` | 打卡并打开练习过程 |
 | `set` | `{field:'name'\|'requirement'\|'hint', value}` | 改当前练习字段 |
@@ -1903,6 +1904,44 @@ python3 <skill:gml-tutorial-manual>/scripts/build_manual_site.py \
 - 生成的手册文件：屏蔽项全没、章节号正确、**先创建的章节在左边**、`cmd('mode')` 返回 `manual`；
 - **打开手册后 localStorage 仍然是空的**（存档写在文件里，不落缓存），主站的记录不受影响；
 - **缓存里就算塞了过期存档，手册也只显示自己文件里的那份**（既不读进来，也不覆盖它）。
+
+## 8.9 存储安全（清理范围 / 写入失败 / 导入保护）
+
+### 清理范围：只清本项目自己的东西
+
+站点所有数据都在 localStorage 的 **`gml-practice-log-v2:`** 命名空间下
+（`:user` `:settings` `:records` `:days` `:api` `:apiIndex` `:cleared` `:preImport`）。
+菜单「清空缓存」和命令 `clear` **只删这些键**：
+
+- ❌ 不再调用 `localStorage.clear()` / `sessionStorage.clear()`（那会连同域名下别的应用一起清掉）；
+- Cache Storage 只删本项目自己建的缓存（本项目目前不建缓存 ⇒ 实际不动）；
+- `clear` 的返回值带 `removedKeys`（删了哪些）/ `keptKeys`（留下了哪些）/ `scope`（清理范围说明）。
+
+### 写入失败要说人话
+
+`writePart()` 包了 try/catch：配额满（`QuotaExceededError`）、隐私模式禁写、序列化异常 ⇒
+**弹 toast 提示 + 记进 `state.storage.error` + 置 `backupDirty`（退出前提醒导出）**，
+不再让异常往上冒（旧版会直接抛，用户看不到任何提示）。
+
+### 导入保护
+
+- 导入前先 `looksLikeBackup()` 校验：不像存档的一律拒（现有数据不动）；
+- `inspectIncoming()` 先看一遍，给出 warnings：重复 ID / 记录 ID 相同但内容不同 /
+  缺 code / 空记录；
+- **完全相同的存档重复导入 ⇒ 不重写**（返回 `changed:false`）；
+- 覆盖前自动留快照 `gml-practice-log-v2:preImport` ⇒ 导错了用 `restore` 回滚；
+- 导入会收掉编辑态（`editingId/selectedId/formRecId`）—— 否则还开着的表单会把手里的旧值写回去。
+
+### 跨标签页
+
+`storage` 事件触发 `reloadPart()` 合并磁盘上的改动：
+别的标签页**新建**的记录会补进来；别的标签页**改过**的同一条记录也会同步过来
+（正在编辑的那条不动，别把用户正在打的字冲掉）；本标签页删掉的记录不会被磁盘旧值复活。
+
+### 自动化测试
+
+`work/test_data_safety.py`：**77 项**，T01–T14 + S01/S02，全部走真实 `window.gml.cmd()` 与真实 UI
+（导入确认、二维码读图、API 库删除按钮都是真点）。
 
 ## 9. 交付给用户什么
 
@@ -4964,6 +5003,9 @@ var I18N = {
     today_prefix: "今天 ",
     days_ago: "{n} 天前",
     archived_count: "{n} 次",
+    "浏览器存储空间不足，这次改动没能存下来": "浏览器存储空间不足，这次改动没能存下来（请先导出备份，再清理空间）",
+    "保存失败": "保存失败：",
+    "数据序列化失败": "数据序列化失败：",
     day_card: "{day} · {rel} · {n} 次",
     hist_filtered: "筛出 {n} 条 · 往期共 {d} 天 / {t} 次",
     hist_total: "往期共 {d} 天 · {t} 次打卡",
@@ -5344,6 +5386,9 @@ var I18N = {
     today_prefix: "Today ",
     days_ago: "{n} days ago",
     archived_count: "{n}",
+    "浏览器存储空间不足，这次改动没能存下来": "Browser storage is full — this change could not be saved (export a backup first, then free up space)",
+    "保存失败": "Save failed: ",
+    "数据序列化失败": "Could not serialize data: ",
     day_card: "{day} - {rel} - {n}",
     hist_filtered: "{n} of {t} check-ins across {d} days",
     hist_total: "{d} days - {t} check-ins",
@@ -5633,8 +5678,30 @@ __lang = detectLang();
       return v;
     }catch(e){ return def; }
   }
+  /* 最近一次保存失败的原因（配额满 / 禁写 / 序列化异常）⇒ 给用户看，别静默丢数据 */
+  var storageError = '';
+  var lastImportBackup = false;    /* 有没有可回滚的「导入前快照」 */
+  var lastClearInfo = null;        /* 上次清理到底删了哪些键、留下了哪些 */
   function writePart(k, val){
-    localStorage.setItem(partKey(k), JSON.stringify(val));
+    var str;
+    try{ str = JSON.stringify(val); }
+    catch(e){
+      storageError = T('数据序列化失败') + String((e && e.message) || e);
+      try{ toast(storageError); }catch(e2){}
+      return false;
+    }
+    try{
+      localStorage.setItem(partKey(k), str);
+      return true;
+    }catch(e){
+      /* 配额满（QuotaExceededError）/ 隐私模式禁写 ⇒ 明确提示 + 提醒先导出 */
+      var quota = (e && (e.name === 'QuotaExceededError' || e.code === 22));
+      storageError = quota ? T('浏览器存储空间不足，这次改动没能存下来')
+                           : (T('保存失败') + String((e && e.message) || e));
+      backupDirty = true;            /* 退出前的「记得导出」提醒 */
+      try{ toast(storageError); }catch(e2){}
+      return false;
+    }
   }
   /* ---- 序列化：把「键里已经有」的信息去掉 ---- */
   function partUser(){
@@ -5868,6 +5935,13 @@ __lang = detectLang();
         for(var id in r){
           if(!r[id] || deletedIds[id]) continue;
           if(!state.records[id]){ r[id].id = id; state.records[id] = r[id]; }
+          else if(editingId !== id){
+            /* ★ 别的标签页改了同一条记录 ⇒ 用磁盘上的新版本。
+               （原来「同一 id 以本地为准」⇒ 别的标签页改名后这边永远停在旧版本，
+                 典型表现：另一页刚建的记录，这边只看到空名字。）
+               正在编辑的那条不动 ⇒ 别把用户正在打的字冲掉。 */
+            r[id].id = id; state.records[id] = r[id];
+          }
         }
         rebuildDays();
       }
@@ -6130,6 +6204,58 @@ __lang = detectLang();
     }
     return false;
   }
+  /* 导入前先看一眼：重复 ID / 同内容重复导入 / 与现有数据冲突 */
+  function inspectIncoming(incoming){
+    var warnings = [], dupRec = 0, dupApi = 0;
+    var seenR = {}, seenA = {};
+    var rl = Array.isArray(incoming.records) ? incoming.records : (incoming.records ? Object.keys(incoming.records).map(function(k){ return incoming.records[k]; }) : []);
+    rl.forEach(function(r){
+      if(!r || !r.id) return;
+      if(seenR[r.id]) dupRec++;
+      seenR[r.id] = 1;
+      if(!r.name && !r.requirement && !(r.modules && r.modules.length)) warnings.push('记录 ' + r.id + ' 没有名称也没有内容');
+    });
+    var al = Array.isArray(incoming.apiLib) ? incoming.apiLib : (incoming.apiLib ? Object.keys(incoming.apiLib).map(function(k){ return incoming.apiLib[k]; }) : []);
+    al.forEach(function(a){
+      if(!a || !a.id) return;
+      if(seenA[a.id]) dupApi++;
+      seenA[a.id] = 1;
+      if(!a.code) warnings.push('API ' + a.id + ' 没有 code');
+    });
+    if(dupRec) warnings.push('存档里有 ' + dupRec + ' 条记录 ID 重复（后面的覆盖前面的）');
+    if(dupApi) warnings.push('存档里有 ' + dupApi + ' 条 API ID 重复（后面的覆盖前面的）');
+    /* 与现有数据冲突：同名记录 ID 但内容不一样 */
+    var conflict = 0, same = 0;
+    rl.forEach(function(r){
+      if(!r || !r.id) return;
+      var cur = state.records[r.id];
+      if(!cur) return;
+      /* 按字段比（存档里的记录带 id、内存里的不带 ⇒ 不能直接比 JSON） */
+      if(cur.name === r.name && cur.requirement === r.requirement && cur.hint === r.hint) same++;
+      else conflict++;
+    });
+    if(conflict) warnings.push(conflict + ' 条记录 ID 相同但内容不同，已用存档里的版本');
+    /* 整份内容一样 ⇒ 重复导入，没必要再写一遍（同样按 id 对齐比） */
+    var identical = false;
+    try{
+      var cur = backupData();
+      var curRecs = {}; (cur.records || []).forEach(function(r){ curRecs[r.id] = r; });
+      var curApis = {}; (cur.apiLib || []).forEach(function(a){ curApis[a.id] = a; });
+      var sameRec = rl.length === (cur.records || []).length;
+      if(sameRec) rl.forEach(function(r){
+        var c = curRecs[r.id];
+        if(!c || c.name !== r.name || c.requirement !== r.requirement || c.hint !== r.hint) sameRec = false;
+      });
+      var sameApi = al.length === (cur.apiLib || []).length;
+      if(sameApi) al.forEach(function(a){
+        var c = curApis[a.id];
+        if(!c || c.code !== a.code) sameApi = false;
+      });
+      identical = sameRec && sameApi && rl.length > 0;
+    }catch(e){}
+    return { warnings:warnings, identical:identical, conflicts:conflict, same:same,
+             recs:rl.length, apis:al.length, curRecs:recCount(), curApis:apiCount() };
+  }
   /* 覆盖：清掉当前数据，只留存档里的 */
   function replaceBackup(incoming){
     if(!looksLikeBackup(incoming)) return false;
@@ -6142,6 +6268,10 @@ __lang = detectLang();
     state.api = normalizeMap(toIdMap(incoming.apiLib), normalizeApi);
     state.settings.carrierColors = incoming.carrierColors || {};
     state.settings.customTypes = incoming.customTypes || [];
+    /* ★ 导入换掉了记录对象（新的 name/requirement 等），
+       但还开着的编辑表单里还攥着旧输入框的值 ⇒ 下一次自动保存会把旧内容写回去
+       （表现：磁盘上是新名字，页面上却是旧名字）。这里把编辑态收掉。 */
+    editingId = null; selectedId = null; formRecId = null;
     fixApiRefs(incoming.apiById || {});
     rebuildDays();
     rebuildApiIndex();
@@ -10688,22 +10818,73 @@ __lang = detectLang();
   }
   /* 清空这台设备上的全部数据 + 浏览器缓存。
      同时打上「已清空」标记，避免页面里预置的使用说明被重新灌回来。 */
-  function clearAllData(){
-    try{ localStorage.clear(); }catch(e){}
-    try{ sessionStorage.clear(); }catch(e){}
+  /* ★ 只清本项目自己的东西（2026-11-15 修：原来整片 localStorage.clear() 会把
+     同一域名下别的应用的数据一起删掉）。
+     - localStorage：只删本项目命名空间下的键（gml-practice-log-v2:*）+ 老的大 JSON 键；
+     - sessionStorage：本项目没在用 ⇒ 按命名空间扫一遍（现在等于不动）；
+     - Cache Storage：只删本项目自己建的缓存（本项目目前不建缓存 ⇒ 实际不动）。
+     绝不用 localStorage.clear() / sessionStorage.clear() 这种整片清空。 */
+  function projectOwnKeys(store){
+    var out = [];
     try{
-      if(window.caches && caches.keys){
-        caches.keys().then(function(keys){ keys.forEach(function(k){ caches.delete(k); }); });
+      for(var i=0;i<store.length;i++){
+        var k = store.key(i);
+        if(!k) continue;
+        if(k === STORE_KEY || k.indexOf(KEY_PREFIX) === 0) out.push(k);
       }
     }catch(e){}
+    return out;
+  }
+  function clearProjectStorage(){
+    var removed = [], kept = [];
+    try{
+      projectOwnKeys(localStorage).forEach(function(k){
+        try{ localStorage.removeItem(k); removed.push(k); }catch(e){}
+      });
+      projectOwnKeys(sessionStorage).forEach(function(k){
+        try{ sessionStorage.removeItem(k); removed.push(k); }catch(e){}
+      });
+    }catch(e){}
+    try{
+      for(var i=0;i<localStorage.length;i++){
+        var k2 = localStorage.key(i);
+        if(k2) kept.push(k2);
+      }
+    }catch(e){}
+    return { removed:removed, kept:kept };
+  }
+  function clearProjectCaches(){
+    /* 本项目不建 Cache Storage；万一以后建了，也只删自己命名空间下的 */
+    var mine = [], others = [];
+    try{
+      if(window.caches && caches.keys){
+        return caches.keys().then(function(keys){
+          keys.forEach(function(k){
+            if(k.indexOf('gml-practice-log') === 0) mine.push(k); else others.push(k);
+          });
+          return Promise.all(mine.map(function(k){ return caches.delete(k); }))
+            .then(function(){ return { removedCaches:mine, keptCaches:others }; });
+        });
+      }
+    }catch(e){}
+    return Promise.resolve({ removedCaches:[], keptCaches:[] });
+  }
+  function clearAllData(){
+    var cleaned = clearProjectStorage();
+    var cacheJob = clearProjectCaches();
+    lastImportBackup = false;
     var d = defaultState();
     state.user = d.user; state.settings = d.settings;
     state.settings.lang = __lang;
     state.records = {}; state.days = {}; state.api = {}; state.apiIndex = {};
     editingId = null; selectedId = null; formRecId = null; deletedIds = {};
     save(); renderAll(); applyLang();
-    try{ localStorage.setItem('gml-practice-log-v2:cleared', '1'); }catch(e){}
-    return { ok:true, cleared:true };
+    try{ localStorage.setItem(KEY_PREFIX + 'cleared', '1'); }catch(e){}
+    lastClearInfo = { removed:cleaned.removed, kept:cleaned.kept };
+    return { ok:true, cleared:true,
+             removedKeys:cleaned.removed, keptKeys:cleaned.kept,
+             scope:'只清理本项目命名空间 ' + KEY_PREFIX + '*（同域其他应用的数据保留）',
+             caches:cacheJob };
   }
   var GML_CMDS = {
     /* 列出所有命令 */
@@ -10713,6 +10894,7 @@ __lang = detectLang();
         { name:'clear',        desc:'清空全部数据（内存 + localStorage），回到干净状态' },
         { name:'export',       desc:'导出整站存档，返回 payload 对象（不触发下载）' },
         { name:'import',       desc:'导入整站存档并覆盖，参数 {json: 存档对象或 JSON 字符串}' },
+        { name:'restore',      desc:'回滚上一次整站导入（用导入前自动留的快照）' },
         { name:'checkin',      desc:'打卡并打开练习过程，参数 {name, requirement, hint}' },
         { name:'set',          desc:'改当前练习的字段，参数 {field:"name|requirement|hint", value}' },
         { name:'addModule',    desc:'加一个代码载体，参数 {type:"脚本|对象|操作描述|SVG绘图|超链接|着色器", value}' },
@@ -10748,10 +10930,23 @@ __lang = detectLang();
                    modules:(r.modules||[]).map(function(m){ return m.type; }) };
         }),
         api: allApis().map(function(a){ return { id:a.id, code:a.code, desc:a.desc || '', params:(a.params||[]).length, uses: apiUses(a.id).length }; }),
-        current: (function(){ var r = cmdCurrentRec(); return r ? r.id : null; })()
+        current: (function(){ var r = cmdCurrentRec(); return r ? r.id : null; })(),
+        storage: { error: storageError, canRestore: lastImportBackup }
       } };
     },
     clear: function(){ return clearAllData(); },
+    /* 回滚：撤销上一次整站导入（用导入前留下的快照） */
+    restore: function(a){
+      try{
+        var raw = localStorage.getItem(KEY_PREFIX + 'preImport');
+        if(!raw) return cmdFail('没有可回滚的快照（这次会话没导入过整站存档）');
+        var snap = JSON.parse(raw);
+        var inc = (snap && snap.payload) ? snap.payload : null;
+        if(!inc || !replaceBackup(inc)) return cmdFail('快照坏了，回滚失败，现有数据没动');
+        save(); renderAll(); applyLang();
+        return { ok:true, restored:true, at: snap.at };
+      }catch(e){ return cmdFail('回滚失败：' + String((e && e.message) || e)); }
+    },
     export: function(){
       var data = backupData();
       return { ok:true, payload:{
@@ -10770,11 +10965,22 @@ __lang = detectLang();
         if(!looksLikeBackup(incoming)){
           return cmdFail('这不像一份存档（没有 records / apiLib / user 等字段）—— 已拒绝，现有数据没动');
         }
+        /* 重复 ID / 同内容重复导入 / 与现有数据冲突 ⇒ 先看一遍，给出提示 */
+        var warn = inspectIncoming(incoming);
+        if(warn.identical){
+          return { ok:true, records: recCount(), api: apiCount(), changed:false, warnings:warn.warnings,
+                 inspect:warn };
+        }
+        /* ★ 覆盖前留一份快照（放在本项目命名空间里）⇒ 导错了可以回滚 */
+        var snap = { at:new Date().toISOString(), payload:backupData() };
+        try{ localStorage.setItem(KEY_PREFIX + 'preImport', JSON.stringify(snap)); lastImportBackup = true; }
+        catch(e){}
         if(!replaceBackup(incoming)){
           return cmdFail('存档结构不对，导入已拒绝，现有数据没动');
         }
         save(); renderAll(); applyLang();
-        return { ok:true, records: recCount(), api: apiCount() };
+        return { ok:true, records: recCount(), api: apiCount(), changed:true,
+                 warnings:warn.warnings, backupSaved:lastImportBackup };
       }catch(e){
         return cmdFail('存档解析失败：' + String((e && e.message) || e));
       }

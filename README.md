@@ -234,6 +234,14 @@ python3 <skill:gml-tutorial-manual>/scripts/build_manual_site.py \
 - 手册的**存档直接写进 HTML 文件本身**（不落 localStorage）⇒ 看手册不会往你的练习记录里塞章节，
   你练习记录里的东西也不会顶掉手册内容（同一浏览器里开也一样）；打开手册后浏览器缓存仍然是空的。
 
+## 存储与数据安全
+
+- **本项目的数据只在自己的命名空间里**：`gml-practice-log-v2:`（`:user` `:settings` `:records` `:days` `:api` `:apiIndex` `:cleared` `:preImport`）。
+- 菜单「清空缓存」/ 命令 `clear` **只删这些键**，**不会调用 `localStorage.clear()` 整片清空** ⇒ 同一域名下别的应用的数据不受影响；Cache Storage 也只删本项目自己建的。
+- 存储写不进去（配额满 / 隐私模式禁写）会**明确弹提示**，并提醒你导出备份，不会静默丢数据。
+- 导入前先校验：不像存档的、坏 JSON 一律拒绝，**现有数据不动**；覆盖前自动留快照，导错了用命令 `restore` 回滚。
+- 重复导入同一份存档不会重复写；导入时会提示重复 ID / 内容冲突。
+
 ## 数据与隐私
 
 - **全部存在浏览器 localStorage**，键名前缀 `gml-practice-log-v2:`，分 `user` / `settings` / `records` / `days` / `api` / `apiIndex` 六片。
