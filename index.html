@@ -740,6 +740,7 @@ textarea.field{resize:vertical;min-height:64px}
 .modal.open{display:flex}
 /* 练习过程是二级界面：层级低于截图/记录卡弹层 */
 #processCard{z-index:45}
+#exitModal{z-index:80}      /* 退出提示要盖在「演示模式」(70) 上面 */
 .process-sheet{max-height:92vh}
 .process-hint{font-size:12px;color:var(--ink-3);margin:-4px 0 12px}
 .process-hint:empty{display:none}
@@ -749,13 +750,69 @@ textarea.field{resize:vertical;min-height:64px}
   animation:up .26s cubic-bezier(.2,.8,.2,1);max-height:94vh;overflow:auto;
 }
 @keyframes up{from{transform:translateY(22px);opacity:.6}to{transform:none;opacity:1}}
-.sheet-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sheet-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;min-width:0}
+.sheet-head h3{min-width:0}
 .sheet-head h3{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em}
 .sheet-head .close{margin-left:auto}
 .preview{
   width:100%;border-radius:10px;border:1px solid var(--line);display:block;background:#262626;
 }
 .save-row{display:flex;gap:9px;margin-top:14px}
+
+/* ============ 演示模式（全屏 · 文字藏起来逐字打出来） ============ */
+.demo-modal{position:fixed;inset:0;z-index:70;display:none;flex-direction:column;background:var(--bg);isolation:isolate}
+.demo-modal.open{display:flex}
+.demo-bar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:0 0 auto;
+  padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));
+  border-bottom:1px solid var(--line);background:var(--card);
+  box-shadow:0 6px 18px -8px rgba(0,0,0,.65);
+}
+.demo-bar-l{display:flex;align-items:center;gap:8px;min-width:0}
+.demo-bar-title{font-weight:700;font-size:15px;white-space:nowrap}
+.demo-bar-tip{font-size:12px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.demo-bar-r{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.demo-speed{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.demo-ratio{display:flex;align-items:center;gap:6px;padding-right:10px;border-right:1px solid var(--line)}
+.demo-ratio-btn{
+  border:1px solid #4a4a4a;background:#2f2f2f;color:var(--ink-2);
+  font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:999px;cursor:pointer;white-space:nowrap;
+}
+.demo-ratio-btn:hover{background:var(--gm-soft);border-color:#5f88c0}
+.demo-ratio-btn.on{background:var(--gm-soft);border-color:var(--gm);color:var(--gm-deep)}
+.demo-stage{position:relative;transform-origin:top left}
+.demo-speed input{
+  width:74px;background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  color:var(--ink);font:inherit;font-size:13px;padding:4px 6px;text-align:center;
+}
+.demo-speed input:focus{outline:none;border-color:var(--gm)}
+#demoClose{flex:0 0 auto}
+.demo-body{flex:1 1 auto;overflow:auto;padding:16px 14px calc(50vh + 24px);-webkit-overflow-scrolling:touch}
+.demo-inner{max-width:620px;margin:0 auto}
+.demo-mask{position:relative;cursor:pointer;border-radius:8px;min-height:1.45em;transition:background .15s}
+.demo-mask:hover{background:var(--gm-soft-2)}
+.demo-mask::after{
+  content:attr(data-demo-hint);position:absolute;right:0;top:0;z-index:2;
+  font-size:11.5px;line-height:1.5;color:var(--ink-3);background:var(--panel);
+  border:1px dashed var(--line);border-radius:6px;padding:1px 7px;pointer-events:none;
+}
+.demo-mask[data-demo-state="typing"]::after{opacity:.4}
+/* 表格里的小格子用短提示，不然一排「点击逐字显示」太吵 */
+td.demo-mask::after{content:"···";padding:0 5px;font-size:11px}
+.demo-mask[data-demo-state="done"]::after{content:none}
+.demo-mask[data-demo-state="done"]{cursor:default}
+.demo-mask[data-demo-state="done"]:hover{background:transparent}
+.demo-carrier-ctl{display:flex;align-items:center;gap:10px;margin:10px 0 4px}
+.demo-carrier-btn{
+  border:1px solid #4a4a4a;background:#2f2f2f;color:var(--gm-deep);
+  font-size:12.5px;font-weight:600;padding:5px 14px;border-radius:999px;cursor:pointer;
+}
+.demo-carrier-btn:hover{background:var(--gm-soft);border-color:#5f88c0}
+.demo-carrier-count{font-size:12px;color:var(--ink-3)}
+.carrier-group.demo-carrier-show{animation:demoFade .28s ease both}
+@keyframes demoFade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.demo-mask[data-demo-state="hidden"]{color:transparent}
+
 .save-row .btn{flex:1;padding:13px 0;font-size:15px}
 @media (min-width:640px){
   .modal{align-items:center}
@@ -898,7 +955,7 @@ textarea.field{resize:vertical;min-height:64px}
 .btn:disabled{opacity:.42;cursor:not-allowed;box-shadow:none}
 /* 标题栏挤不下时，按钮整组换行（不拆散） */
 .sheet-head{flex-wrap:wrap}
-.head-actions{display:flex;align-items:center;gap:10px;margin-left:auto;flex:0 0 auto}
+.head-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex:0 1 auto;flex-wrap:wrap;justify-content:flex-end;min-width:0}
 .head-actions .close{margin-left:0}
 </style>
 </head>
@@ -933,15 +990,17 @@ AI 第一次拿到这个 index（用户说「把这段代码记下来」「帮�
 「帮我记一下今天 vibe coding 的过程」之类）时，**先别自己猜用途**，问一句：
 
 > 这个站你想怎么用？① 打卡（把代码和说明存成一条记录）② 教程（把操作流程一步步记下来）
-> ③ 日志（记 AI 写代码的过程）。也可以说别的。
+> ③ 日志（记 AI 写代码的过程）④ 演示（把某条练习做成一段解读视频）。
+> 也可以说别的。
 
-**三种用法分别怎么做、最后交回什么：**
+**四种用法分别怎么做、最后交回什么：**
 
 | 他说 | 怎么做 | 最后交回什么 |
 |---|---|---|
 | **① 打卡** | 用户上传的**描述**→ `requirement` / `hint`；**代码**→ 一个「脚本」载体（逐字贴，不许改一个字）；用到的官方 API → `addApi` + `refApi` | **截图 + 记录存档**：`screenshot` 存成 PNG 交回，`export` 出存档 payload 交回（用户可导入） |
 | **② 教程** | 用站里的打卡功能**写操作流程**：**一个操作步骤 = 一条记录**（名字写「第 N 步：xxx」），步骤里的代码贴进脚本/对象载体 | **带记录的 index**：把导出的存档写成种子塞进一份 index.html（启动时自动导入），交回这份 index，用户一打开就带着记录 |　自写类**建了就要在用到它的那些步骤里引用**（见 §4）
-| **③ 日志** | 把 vibe coding 的过程**按功能环节**记进打卡记录（一个环节 = 一条记录，**测通了才打卡**） | **每次打卡都立刻存一次档**（防中途丢），最后按他要的形态返回：要点 / 时间线 / 存档 / 带记录的 index |　自写类**建了就要在用到它的那些环节里引用**（见 §4）
+| **③ 日志** | 把 vibe coding 的过程**按功能环节**记进打卡记录（一个环节 = 一条记录，**测通了才打卡**） | **每次打卡都立刻存一次档**（防中途丢），最后按他要的形态返回：要点 / 时间线 / 存档 / 带记录的 index |　自写类**建了就要在用到它的那些环节里引用**（见 §4） |
+| **④ 演示** | 用户指定要演示哪条练习 ⇒ 读回记录写**解读稿件** → **用户确认** → 打开**演示模式**，按稿子逐段触发**打字机** → **录屏** → **TTS 配音** → **剪辑**（见 §8.7） | **成片视频**（mp4）+ 解读稿件（给用户确认过的那一版） |
 
 **① 打卡 —— 命令顺序**
 
@@ -1031,6 +1090,7 @@ const all = await window.gml.cmd('state')        // 全部记录的 id / 名字
 | 练习过程截图（1440 长图，**二维码固定在开头**） | 弹层标题栏「截图」`#shotBtn` |
 | 分享链接 / 二维码（网址 + `#gmlp=<压缩包>`） | `cmd('shareLink')` |
 | 单条练习存读档（导出/导入一条，含它引用的 API） | 弹层标题栏「存读档」`#pbBtn` |
+| **演示模式**：全屏演示界面，文字先藏起来，点一下用打字机逐字打出来（再点一下立刻全显；顶栏可调速度） | 弹层标题栏「演示模式」`#demoBtn`（在「存读档」左边，**只在详情态出现**） |
 | 昵称 / 头像 | 同一个菜单里 `#miRename` `#miAvatar` |
 | 整站存档（导出/导入，**导入只有覆盖**，按钮文字「覆盖现有数据」，要点两次确认） | 顶栏「菜单 ▾」`#miExport` / `#miImport` |
 | **清空缓存**：清掉这台设备的全部数据 + 浏览器缓存（**两次点击确认**） | 菜单 →「清空缓存」`#miClear` |
@@ -1100,6 +1160,7 @@ const r = await page.evaluate(() => window.gml.cmd('screenshot'))   // {ok,dataU
 | `screenshot` | – | 练习过程截图 → `{dataUrl,width,height}` |
 | `exportPractice` / `shareLink` | `{id}`（不给就是当前打开的那条） | 导出这一条 / 它的分享链接 |
 | `get` | `{id}` 或 `{name}`（不给就是当前打开的那条） | **读回一条记录的全部内容**：正文 + 载体全文 + API 引用明细 |
+| `select` | `{id}` 或 `{name}` | **选中一条记录并打开详情**（演示模式、导出单条前要先选中） |
 | `remove` | `{id}` 或 `{name}`（不给就是当前打开的那条） | **删掉一条记录**（测不过时撤销用） |
 | `find` | `{q:'关键词'}` | **按一句描述在打卡记录里定位代码**：返回命中的记录 + 位置（文件 / 类 / 方法 / 行号） |
 | `finish` / `close` / `lang` | – / – / `{lang:'zh'\|'en'}` | 结束编辑 / 关弹层 / 切语言 |
@@ -1508,6 +1569,7 @@ trail.update(x, y)
 
 `#checkinBtn` `#recordList .rec` `#processCard` `#processClose` `#pbBtn` `#pbExportBtn` `#pbImportBtn`
 `#pbQrBtn` `#shotBtn` `#shotPreview` `#shotSave` `#shotRebuild` `#menuBtn` `#userMenu .um-item`
+`#demoBtn` `#demoModal` `#demoInner` `#demoSpeed` `#demoClose`
 `#miRename` `#miAvatar` `#miLang` `#miExport` `#miImport` `#miShare` `#fullscreenBtn` `#exitModal`
 `#apiModal` `#apiCodeInput` `#apiModalSave` `#apiPicker` `#apiPickerOk`
 字段用 `[data-field="name|requirement|hint"]`，对象用 `[data-role="objectName|eventName"]`。
@@ -1541,6 +1603,171 @@ trail.update(x, y)
 - **清空缓存**会删掉 localStorage / sessionStorage / Cache API 里的东西，
   并打上 `gml-practice-log-v2:cleared` 标记 ⇒ 清空后刷新**不会**把说明灌回来 ✓。
   是破坏性操作，**两次点击确认**（第一次变成「再点一次确认清空」，4 秒后自动解除）✓。
+
+## 8.6 演示模式（详情态标题栏的「演示模式」）
+
+用户要**演示/录屏**这条练习时用：**详情态**（不是编辑态）标题栏里，
+「存读档」**左边**有个「演示模式」按钮 `#demoBtn` ✓。
+
+- 点开是**全屏二级界面** `#demoModal`（占满屏幕，盖在练习过程弹层之上）。
+- 里面是这条记录的详情，但**手写过的文字先藏起来**：
+  **练习题提示** / 操作描述 / 脚本与事件代码 / 对象名 / 预定义变量表 / API 参数说明
+  ⇒ 被藏起来的块都带 `.demo-mask` 类，**点一下就用打字机逐字打出来** ✓。
+  （**超链接载体的网址直接显示，不藏** —— 只做载体的显示/隐藏效果 ✓）
+- **记录名称和练习题要求保持可见**（不做打字机）—— 这两段是「这题要干什么」，一开始就摊开给观众看 ✓。
+- **模块载体默认全部藏着**，在「用到的代码载体」那里有个 **「显示载体」** 按钮，
+  **点一次放出来一个**（旁边有 `已显示 N / 总数` 计数）⇒ 演示时可以一段一段往外放 ✓。
+- **代码框（脚本 / 事件代码）在演示里初始只显示第一行** ⇒ 载体放出来时是一个「一行预览」，
+  点它开始打字时**一行一行展开**（打完就全部展开）✓。
+- **「显示载体」按钮不会被顶出屏幕**：放载体后、打字机打字过程中，都会检查按钮是不是被上面
+  长出来的内容顶出可视区，是就把内容往上滚一点（底部留 18px 余量）✓。
+- **再点一下同一个块 → 立刻显示全部内容** ✓。
+- **同一时刻只有一个打字机在跑**：在别处触发打字机时，前一个**直接结束**、
+  把**完整内容**显示出来（不再停在半截）✓。
+- **打字时新打出来的字不会跑出屏幕**：所有打了字机的文本块统一走同一个
+  「保持在可视区」逻辑（`demoKeepInView`）—— 文字越长越往下滚，
+  刚打出来的那一行始终留在屏幕里 ✓。
+- **触发打字机时，那一块会被移到画面中央**：正文区底部**预留了半屏空间**
+  （`padding-bottom: calc(50vh + 24px)`）⇒ 任何一块都滚得到画面正中；
+  触发时用 `demoKeepInView(el,'center')` 瞬时居中（不用平滑滚动，免得跟打字抢滚动）✓。
+- **打字机播放完毕（或被打断）⇒ 有条件地触发一次「上抬」**：
+  - **抬升高度 = 文字高度 × 2.5**（`demoLiftGap(el)`：取该块的行高 × 缩放倍数 × 2.5；
+    文字高度跟着演示画面的缩放一起放大）✓；
+  - **只有「文本框贴近屏幕底部、且距离小于抬升高度」时才触发**
+    （`demoKeepInView(el,'lift')` 里判断 `gap < 抬升高度`）；
+    触发后把块的底边抬到「屏幕下沿往上一个抬升高度」处；
+  - **不贴近底部 ⇒ 什么都不做**（不会把块往下拽）✓。
+- 顶栏有**打字速度**输入 `#demoSpeed`（毫秒/字，默认 30），**改完立刻对正在跑的打字机生效** ✓。
+- 顶栏**打字速度左边**有 3 个**倍数**按钮 `#demoRatio`：
+  **1倍 / 1.5倍 / 2倍** ✓
+  - 默认：620px 栏宽 + 正常滚动；
+  - **1倍 / 1.5倍 / 2倍**：整体放大（`zoom`）—— 字号、行高、内边距、卡片高度全都跟着放大，
+    文字是按新字号**真排版**的，不是把画面压扁/拉大 ✓；
+    - **手机竖屏（宽度 ≤ 640px 且竖向）：只放大字体**，排版宽度不动
+      （渲染宽度仍等于内容列宽，元素边界不被横向拉宽）✓；
+    - **其它屏幕**：排版宽度保持原样 ⇒ 元素边界也跟着放大（元素被横向拉开）✓；
+    - 竖向不设限（高度随内容自己长，照常滚动）✓；
+    - 这排按钮**任何屏幕都显示**（含手机竖屏）✓；
+  - **默认档位**：**手机竖屏默认 1 倍，其它情况默认 2 倍**（打开演示时自动套用）✓。
+- 关掉演示界面（关闭按钮 / 点遮罩 / `Esc`）= **退出演示模式** ✓。
+
+**自动化时的注意点**：
+- 按钮**只在详情态出现**（编辑态是 `display:none`）⇒ 先 `cmd('finish')` 再点它 ✓。
+- 演示界面里的内容是**重新 buildDetail() 生成的副本**，不是原来那块 DOM ⇒
+  演示里点「编辑这条记录」会被去掉，不会误改记录 ✓。
+- 打字机是 `setTimeout` 驱动的 ⇒ 断言「逐字增加」要按时间采样，别一次性断言。
+
+## 8.7 第 4 种用法：演示（解读稿 → 打字机 → 录屏 → 配音 → 剪辑）
+
+用户说「把这条练习演示出来」「录一段讲解视频」「做条解读视频」时走这条线。
+**六步，顺序不能跳**（第 2 步没确认就录，等于白录）：
+
+### ① 读回这条记录（别凭印象写稿）
+
+```js
+await window.gml.cmd('get', {id:'记录的 id'})   // 正文 + 载体全文 + API 引用明细
+```
+
+稿子里的每一句都要能在这份内容里找到出处 ⇒ **不要编页面上没有的东西**。
+
+### ② 生成解读稿件，**先给用户确认**
+
+- **分段**：每段 = 一句要念的话 + **它对应页面上哪一块**；
+- **按页面从上到下**排（观众跟着看才不会乱）；
+- 口语化、短句；**不念函数名 / 变量名**（念「扣血方法」，不念「hit 方法」）；
+- 一次只讲一个点，别把整条记录塞进一段；
+- **把稿子贴给用户，等他点头或改完再往下走 —— 这一步不许跳**。
+
+### ③ 打开演示模式，拿到底稿对应的「块」
+
+```js
+await window.gml.cmd('select', {id:'记录 id'})   // ★ 先选中这条记录（演示要靠它）
+await window.gml.cmd('demo', {open:true})    // 打开演示（倍数按屏幕自动：手机竖屏 1 倍，其它 2 倍）
+await window.gml.cmd('demo', {speed:30})      // 打字速度（毫秒/字，录视频建议 25~40）
+await window.gml.cmd('demoBlocks')            // 列出可触发的块：{index, len, preview, kind, state}
+```
+
+用 `demoBlocks` 的 `preview` 把稿子的每一段对到具体块上（对不上就换关键词）。
+
+### ④ 按稿子逐段触发打字机（分镜节奏）
+
+```js
+await window.gml.cmd('demoReveal', {})              // 先放出一个代码载体（演示里默认全藏着）
+await window.gml.cmd('demoReveal', {index:2})       // 或直接放到第 3 个
+await window.gml.cmd('demoType', {match:'关键词'})   // 触发打字机（默认等它打完再返回）
+await window.gml.cmd('demoType', {index:7})         // 或按块序号触发
+```
+
+- `demoType` **默认会等这块打完才返回** ⇒ 一句接一句串起来，就是现成的分镜节奏 ✓；
+- 想自己掌握节奏就传 `{wait:false}`；
+- 上一段没打完就触发下一段 ⇒ **前一段直接显示完整内容**（不会卡在半截）✓；
+- **记录名称 / 练习题要求本来就是显示的**（不做打字机），稿子里提到它们时不用触发；
+- 每放一个载体，就把它对应的块触发一次（载体内代码会**一行一行展开**）✓。
+
+**录视频时的三条实战口径**（都踩过）：
+
+1. **载体默认是藏着的** ⇒ 直接 `demoType` 打进去，等于把字打进看不见的元素（**静默失败，屏幕上什么也没有**）。
+   现在 `demoType` 会**自动把目标块所在的载体放出来**，但你仍然要按稿子顺序放（`demoReveal`），
+   观众看到的顺序才对得上解说。
+2. **打字速度在每次触发前设**（`demo({speed})` 紧挨着 `demoType`）——
+   视频里建议 **30~120 毫秒/字**：低于 30 像机器枪在扫（而且浏览器会被拖慢到 60ms/字），
+   高于 120 像逐字蹦。短段落用慢速（读得清），长代码段用 30~45。
+3. **一段 = 打字机播完 → 再说这一段的话 → 再挑下一个打字机**
+   （讲解顺序 = 页面从上到下；**练习记录的板面一律不动**，不重排任何 section）
+   （用户 2026-11-15 定稿，别改成「话先说、字后打」）：
+   ```python
+   cmd('demo', {'speed': speed})          # 先定速度
+   cmd('demoType', {'index': idx, 'wait': False})
+   pg.wait_for_function("() => document.querySelectorAll('#demoInner [data-demo-state="typing"]').length === 0")
+   typing = time.time() - t0               # 打字机播完
+   # 配音从这一刻开始 ⇒ 音轨 = 静音(typing) + 这一段的话
+   ```
+   ⇒ 合成时每段的音轨 = **先 typing 秒静音，再放这段的话**（`anullsrc` + `concat`），
+   别用「按配音对齐」的写法。
+
+### ⑤ 录屏（Playwright 的 `recordVideo`）
+
+```python
+ctx = browser.new_context(viewport={'width':1440,'height':900}, record_video_dir='/workspace/work/video', record_video_size={'width':1440,'height':900})
+page = ctx.new_page()
+page.goto('file:///…/index.html')
+# …在上面 ③④ 的位置用 page.evaluate 调 cmd，等它返回 …
+page.wait_for_timeout(1200)          # 收尾留一点静止画面
+ctx.close()                          # 关掉 context，视频才会落盘
+```
+
+- 视频文件在 `record_video_dir` 里（`.webm`），**关掉 context 后**用 `page.video.path()` 拿到路径；
+- 视口尺寸 = 视频尺寸 ⇒ 录出来不会有黑边；竖屏视频就把 viewport 换成 `{'width':720,'height':1280}`；
+- 打开演示模式前先 `cmd('finish')`（演示按钮只在详情态有）+ `cmd('select',{id})`（选中记录）；
+- 录制期间别用 `page.screenshot` 抢画面。
+
+### ⑥ TTS 配音（mcode-tools）
+
+- 用 `mcode-tools` 的语音合成工具，按稿子**逐句**生成音频（句号切分，别合成一大段 ⇒ 后面不好对轴）；
+- 每句单独一个文件，文件名带序号：`01.mp3 / 02.mp3 …`；
+- 中文用中文音色，英文用英文音色；语速和打字速度对得上（打字 30ms/字 ≈ 4~5 字/秒）。
+
+### ⑦ 剪辑（ffmpeg）
+
+```bash
+# 1) 音频拼成一条（等长静音补齐）
+ffmpeg -f concat -safe 0 -i audio.txt -c copy voice.wav
+# 2) 视频 + 音频合成（-shortest 以短的为准）
+ffmpeg -i demo.webm -i voice.wav -c:v libx264 -crf 20 -pix_fmt yuv420p -c:a aac -shortest out.mp4
+```
+
+- 对轴：把每句音频的时长和 `demoType` 的用时对齐（`chars × 打字毫秒数`），
+  音频长就留静音、短就在句间补空白；
+- 头尾各留 0.5~1 秒静止画面，别硬切；
+- 输出 **mp4（H.264 + AAC）**，竖屏就 `scale`/`crop` 成 9:16；
+- 完事把**成片**和**用户确认过的解读稿**一起交回，并说明视频是哪个比例、用了哪条记录。
+
+**做演示时容易踩的坑**：
+- 稿子没确认就录 ⇒ 用户改稿 ⇒ 白录一遍；
+- 用 `demoType` 的 `match` 时关键词要**足够唯一**（页面上真有的词），对不上会报错并给出提示；
+- 录完不 `ctx.close()` ⇒ 视频文件还没落盘；
+- 忘了 `cmd('finish')` ⇒ 演示按钮不存在（编辑态没有）；
+- 演示里的内容是 `buildDetail()` 生成的**副本** ⇒ 演示中改不到原记录，别指望在演示里改内容。
 
 ## 9. 交付给用户什么
 
@@ -1676,6 +1903,10 @@ trail.update(x, y)
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gm-deep);flex:0 0 auto"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       <h3>练习过程</h3>
       <div class="head-actions">
+        <button class="shot-btn" id="demoBtn" type="button" title="演示模式：隐藏文字，点一下逐字显示">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+          演示模式
+        </button>
         <button class="shot-btn" id="pbBtn" type="button" title="导出这一条练习 / 导入一条练习">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"/><path d="M7.5 10.5 12 15l4.5-4.5"/><path d="M4 20h16"/></svg>
           存读档
@@ -1690,6 +1921,32 @@ trail.update(x, y)
     <div class="process-hint" id="processHint">选择一条记录查看</div>
     <div id="processBody"></div>
   </div>
+</div>
+
+
+<!-- ============ 演示模式（全屏二级界面） ============ -->
+<div class="demo-modal" id="demoModal" role="dialog" aria-modal="true" aria-label="演示模式">
+  <div class="demo-bar">
+    <div class="demo-bar-l">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gm-deep);flex:0 0 auto"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+      <span class="demo-bar-title">演示模式</span>
+      <span class="demo-bar-tip" id="demoTip">点一下隐藏的文字，会逐字打出来；再点一下立刻显示全部</span>
+    </div>
+    <div class="demo-bar-r">
+      <div class="demo-ratio" id="demoRatio">
+        <button class="demo-ratio-btn on" type="button" data-mode="default">1倍</button>
+        <button class="demo-ratio-btn" type="button" data-mode="zoom150">1.5倍</button>
+        <button class="demo-ratio-btn" type="button" data-mode="zoom200">2倍</button>
+      </div>
+      <label class="demo-speed" for="demoSpeed">
+        打字速度
+        <input id="demoSpeed" type="number" min="1" max="1000" step="1" value="30" inputmode="numeric">
+        <span>毫秒/字</span>
+      </label>
+      <button class="btn btn-ghost" id="demoClose" type="button" style="padding:6px 14px;font-size:13px">关闭演示</button>
+    </div>
+  </div>
+  <div class="demo-body" id="demoBody"><div class="demo-stage" id="demoStage"><div class="demo-inner" id="demoInner"></div></div></div>
 </div>
 
 <!-- ============ 退出前提示导出 ============ -->
@@ -4214,6 +4471,20 @@ var I18N = {
     "tut_what": "说明是按打卡记录展示的：三种用法、API 库怎么用、站点怎么操作。",
     "加载完随时可以在菜单里点「清空缓存」删掉。": "加载完随时可以在菜单里点「清空缓存」删掉。",
     "tut_loaded": "新手教程已加载。",
+    "演示模式": "演示模式",
+    "演示模式：隐藏文字，点一下逐字显示": "演示模式：隐藏文字，点一下逐字显示",
+    "点击逐字显示": "点击逐字显示",
+    "显示载体": "显示载体",
+    "默认": "默认",
+    "1倍": "1倍",
+    "1.5倍": "1.5倍",
+    "2倍": "2倍",
+    "用到的代码载体": "用到的代码载体",
+    "点一下隐藏的文字，会逐字打出来；再点一下立刻显示全部": "点一下隐藏的文字，会逐字打出来；再点一下立刻显示全部",
+    "打字速度": "打字速度",
+    "毫秒/字": "毫秒/字",
+    "关闭演示": "关闭演示",
+    "先选一条记录，再点演示模式": "先选一条记录，再点演示模式",
     "清空缓存": "清空缓存",
     "清空全部数据": "清空全部数据",
     "再点一次确认清空": "再点一次确认清空",
@@ -4579,6 +4850,20 @@ var I18N = {
     "tut_what": "The guide is shown as check-in records: the three ways to use this site, the API library, and the basic interactions.",
     "加载完随时可以在菜单里点「清空缓存」删掉。": "You can remove the guide again any time with Clear cache in the menu.",
     "tut_loaded": "Guide loaded.",
+    "演示模式": "Presentation mode",
+    "演示模式：隐藏文字，点一下逐字显示": "Presentation mode: hide the text, click to type it out",
+    "点击逐字显示": "Click to type it out",
+    "显示载体": "Show carrier",
+    "默认": "Default",
+    "1倍": "1×",
+    "1.5倍": "1.5×",
+    "2倍": "2×",
+    "用到的代码载体": "Used code carriers",
+    "点一下隐藏的文字，会逐字打出来；再点一下立刻显示全部": "Click a hidden text to type it out; click it again to show it all at once",
+    "打字速度": "Typing speed",
+    "毫秒/字": "ms/char",
+    "关闭演示": "Close",
+    "先选一条记录，再点演示模式": "Pick a record first, then open presentation mode",
     "清空缓存": "Clear cache",
     "清空全部数据": "Clear all data",
     "再点一次确认清空": "Click again to confirm",
@@ -7485,6 +7770,7 @@ __lang = detectLang();
     box.innerHTML = '';
 
     $('#processClose').textContent = editingRec ? T('完成') : (isWide() ? T('清空') : T('关闭'));
+    $('#demoBtn').style.display = editingRec ? 'none' : '';   /* 演示模式只在「展示界面」出现 */
     if(editingRec){
       $('#processHint').textContent = T('填写本次练习内容 · 实时保存');
       box.appendChild(buildForm(editingRec));
@@ -8391,6 +8677,7 @@ __lang = detectLang();
       return;
     }
     $('#processCard').classList.remove('open');
+  if(typeof demoState !== 'undefined' && demoState.open) closeDemoMode();
     if(!$('#shotModal').classList.contains('open') && !$('#cardModal').classList.contains('open')){
       document.body.style.overflow = '';
     }
@@ -9998,6 +10285,7 @@ __lang = detectLang();
   });
   document.addEventListener('keydown', function(e){
     if(e.key === 'Escape'){
+      if(demoState.open){ closeDemoMode(); return; }
       if($('#svgModal').classList.contains('open')){ closeSvgBoard(); return; }
       if($('#shotModal').classList.contains('open')) return;
       if($('#importModal').classList.contains('open')){ closeImportModal(); return; }
@@ -10307,7 +10595,12 @@ __lang = detectLang();
         { name:'shareLink',    desc:'算这条练习的分享链接/二维码，返回 {url,version,size,tooLong}' },
         { name:'finish',       desc:'结束编辑（切到详情态，弹层不关）' },
         { name:'close',        desc:'关掉练习过程弹层' },
-        { name:'lang',         desc:'切语言，参数 {lang:"zh|en"}' }
+        { name:'lang',         desc:'切语言，参数 {lang:"zh|en"}' },
+        { name:'select',       desc:'选中一条记录并打开详情（演示前要先选），参数 {id} 或 {name}' },
+        { name:'demo',         desc:'演示模式开关，参数 {open:true} / {close:true} / {ratio:"default|zoom150|zoom200"} / {speed:30}' },
+        { name:'demoReveal',   desc:'放出一个代码载体（演示里默认全藏着），参数 {index:n}，不给就放下一个' },
+        { name:'demoBlocks',   desc:'列出演示里可触发打字机的块（序号 / 预览文字 / 状态）' },
+        { name:'demoType',     desc:'触发某一块的打字机，参数 {index:n} 或 {match:"文字片段"}；默认等到打完再返回' }
       ], usage:'window.gml.cmd(命令名, 参数对象) → Promise<{ok, ...}>' };
     },
     state: function(){
@@ -10513,6 +10806,148 @@ __lang = detectLang();
     },
     finish: function(){ closeProcess(); return { ok:true, editing:false }; },
     close:  function(){ closeProcess(); return { ok:true, closed:true }; },
+    /* ===== 演示模式（AI 可驱动：做解读稿 → 触发打字机 → 录屏 → 配音 → 剪辑） ===== */
+    /* 选中一条记录（打开详情）—— 演示模式、导出单条都靠它 */
+    select: function(a){
+      a = a || {};
+      try{
+        var rec = cmdFindRec(a);
+        if(!rec) return cmdFail('找不到这条记录' + (a.id ? '：' + a.id : (a.name ? '：' + a.name : '')));
+        selectedId = rec.id;
+        editingId = null;
+        renderAll();
+        openProcess();
+        return { ok:true, id:rec.id, name:rec.name };
+      }catch(e){
+        return cmdFail('选记录失败：' + String((e && e.message) || e));
+      }
+    },
+    demo: function(a){
+      a = a || {};
+      try{
+        if(a.speed != null){
+          var sp = parseInt(a.speed, 10);
+          if(!sp || sp < 1) sp = 30;
+          if(sp > 1000) sp = 1000;
+          $('#demoSpeed').value = String(sp);
+        }
+        if(a.ratio != null){
+          var map = {'default':'default','1':'default','1x':'default','1倍':'default',
+                     '1.5':'zoom150','1.5x':'zoom150','zoom150':'zoom150','1.5倍':'zoom150',
+                     '2':'zoom200','2x':'zoom200','zoom200':'zoom200','2倍':'zoom200'};
+          var m = map[String(a.ratio).trim().toLowerCase()];
+          if(!m) return cmdFail('倍数只能是 default / zoom150 / zoom200（1倍 / 1.5倍 / 2倍）');
+          demoState.ratio = m;
+          if(demoState.open) demoApplyRatio();
+        }
+        if(a.close){
+          if(demoState.open) closeDemoMode();
+          return { ok:true, open:false };
+        }
+        if(a.open){
+          if(!selectedId && !editingId) return cmdFail('先选一条记录再打开演示模式（cmd("demo",{open:true})）');
+          if(demoState.open){
+            demoState.ratio = demoDefaultRatio();
+            demoApplyRatio();
+          }else{
+            openDemoMode();
+          }
+          return { ok:true, open:true, ratio:demoState.ratio, speed:demoSpeedMs(),
+                   blocks:demoState.blocks.length };
+        }
+        return { ok:true, open:demoState.open, ratio:demoState.ratio, speed:demoSpeedMs() };
+      }catch(e){
+        return cmdFail('演示模式出错：' + String((e && e.message) || e));
+      }
+    },
+    demoReveal: function(a){
+      a = a || {};
+      try{
+        if(!demoState.open) return cmdFail('演示模式没开（先 cmd("demo",{open:true})）');
+        if(!demoState.carriers) return { ok:true, revealed:0, total:0, note:'这条记录没有代码载体' };
+        var total = demoState.carriers.total;
+        var before = demoState.carriers.shown();
+        demoState.carriers.reveal(a.index != null ? parseInt(a.index, 10) : null);
+        var after = demoState.carriers.shown();
+        return { ok:true, revealed:after, total:total, added:after-before,
+                 preview:(after > 0 ? demoState.carriers.preview(after-1) : '') };
+      }catch(e){
+        return cmdFail('放载体失败：' + String((e && e.message) || e));
+      }
+    },
+    demoBlocks: function(){
+      try{
+        if(!demoState.open) return cmdFail('演示模式没开（先 cmd("demo",{open:true})）');
+        var list = [];
+        for(var i=0;i<demoState.blocks.length;i++){
+          var b = demoState.blocks[i];
+          var txt = b.saved.join('').replace(/\s+/g, ' ').trim();
+          list.push({ index:i, len:txt.length, preview:txt.slice(0, 60),
+                      kind:(b.el.className || '').replace('demo-mask','').trim(),
+                      state:b.el.getAttribute('data-demo-state') });
+        }
+        return { ok:true, count:list.length, blocks:list };
+      }catch(e){
+        return cmdFail('列演示块失败：' + String((e && e.message) || e));
+      }
+    },
+    demoType: function(a){
+      a = a || {};
+      try{
+        if(!demoState.open) return cmdFail('演示模式没开（先 cmd("demo",{open:true})）');
+        var idx = -1;
+        if(a.index != null) idx = parseInt(a.index, 10);
+        else if(a.match != null){
+          var q = String(a.match);
+          for(var i=0;i<demoState.blocks.length;i++){
+            if(demoState.blocks[i].saved.join('').indexOf(q) >= 0){ idx = i; break; }
+          }
+          if(idx < 0) return cmdFail('演示块里找不到这段文字：' + q);
+        }else{
+          return cmdFail('要给 index（块序号）或 match（文字片段）');
+        }
+        var b = demoState.blocks[idx];
+        if(!b) return cmdFail('没有第 ' + idx + ' 个演示块');
+        /* ★ 目标块若在还没放出来的载体里 ⇒ 先把它放出来。
+           否则字打进了隐藏元素，屏幕上什么也看不见（静默失败，最容易踩）。 */
+        var grp = null, pp = b.el;
+        while(pp && pp !== document.body){
+          if(pp.classList && pp.classList.contains('carrier-group')){ grp = pp; break; }
+          pp = pp.parentElement;
+        }
+        if(grp && grp.style.display === 'none' && demoState.carriers && demoState.carriers.total){
+          var gs = Array.prototype.slice.call(grp.parentElement.querySelectorAll('.carrier-group'));
+          var gi = gs.indexOf(grp);
+          /* 只放目标这一个（不连带把上面的全放出来）⇒ 画面严格从上到下 */
+          if(gi >= 0) demoState.carriers.revealGroup(gi);
+        }
+        /* 同一时刻只跑一个：前一个直接结束、显示完整内容 */
+        if(demoState.typing && demoState.typing !== b) demoFinish(demoState.typing);
+        var chars = b.saved.join('').length;
+        if(!b.done && !b.started){
+          b.started = true;
+          b.el.setAttribute('data-demo-state', 'typing');
+        }
+        if(!b.done){
+          demoState.typing = b;
+          demoKeepInView(b.el, 'center', false);
+          demoRun(b);
+        }
+        if(a.wait === false){
+          return { ok:true, index:idx, chars:chars, waited:false, state:b.el.getAttribute('data-demo-state') };
+        }
+        var ms = chars * demoSpeedMs() + 200;
+        return new Promise(function(resolve){
+          setTimeout(function(){
+            resolve({ ok:true, index:idx, chars:chars, waited:true,
+                      state:b.el.getAttribute('data-demo-state'),
+                      preview:b.saved.join('').replace(/\s+/g,' ').trim().slice(0,60) });
+          }, ms);
+        });
+      }catch(e){
+        return cmdFail('触发打字机失败：' + String((e && e.message) || e));
+      }
+    },
     lang: function(a){
       var l = String((typeof a === 'string' ? a : (a && a.lang)) || '').trim();
       if(l !== 'zh' && l !== 'en') return cmdFail('lang 只能是 zh / en');
@@ -10539,6 +10974,398 @@ __lang = detectLang();
     commands: GML_CMDS,
     state: function(){ return state; }
   };
+
+
+  /* ============================================================
+     演示模式：全屏演示界面
+     —— 所有「输入框里的文字」先藏起来，点一下用打字机逐字打出来；
+        再点一下立刻显示全部；同一时刻只会有一个打字机在跑；
+        顶栏可以自定义打字速度（毫秒/字）；关掉界面就退出演示模式。
+     ============================================================ */
+  var DEMO_TARGETS = [
+    ['.carrier-item.plain', null],    /* 操作描述 */
+    ['.codebox-body', '.ln'],         /* 脚本 / 事件代码（行号不藏） */
+    ['.obj-detail-name', null],       /* 对象名 */
+    ['.obj-detail-table td', null],   /* 预定义变量表 */
+    ['.api-param .txt', null],        /* API 参数说明 */
+  ];
+  var demoState = { open:false, blocks:[], typing:null, ratio:'default' };
+  var demoRatioPending = false;
+  function demoIsPhonePortrait(){
+    return !!(window.matchMedia && window.matchMedia('(max-width:640px) and (orientation:portrait)').matches);
+  }
+  /* 默认缩放档位：手机竖屏 1 倍，其它情况 2 倍 */
+  function demoDefaultRatio(){
+    return demoIsPhonePortrait() ? 'default' : 'zoom200';
+  }
+  function demoApplyRatio(){
+    var stage = $('#demoStage'), inner = $('#demoInner'), body = $('#demoBody');
+    if(!stage || !inner || !body) return;
+    var btns = document.querySelectorAll('#demoModal .demo-ratio-btn');
+    for(var i=0;i<btns.length;i++){
+      btns[i].classList.toggle('on', btns[i].getAttribute('data-mode') === demoState.ratio);
+    }
+    if(demoState.ratio === 'default'){
+      inner.style.transform = '';
+      inner.style.width = '';
+      inner.style.zoom = '';
+      body.classList.remove('demo-fit');
+      demoState.appliedRatio = 'default';
+      return;
+    }
+    body.classList.add('demo-fit');
+    /* ★ 倍数 = 整体放大（zoom）：
+         字号、行高、内边距、卡片高度全都跟着放大 —— 文字是按新字号真排的，
+         不是把画面压扁/拉大。
+       手机竖屏：只放大字体，宽度不动（排版宽度收窄，渲染出来仍然正好铺满画面），
+       元素边界不会被横向拉宽；
+       其它屏幕：排版宽度保持原样 ⇒ 元素边界也跟着放大（元素被横向拉开）。 */
+    inner.style.transform = '';
+    var zoom = 1;
+    if(demoState.ratio === 'zoom150') zoom = 1.5;
+    else if(demoState.ratio === 'zoom200') zoom = 2;
+    var bw = body.clientWidth;                /* 可见框宽度 */
+    if(!bw) return;
+    var cs = getComputedStyle(body);
+    var padL = parseFloat(cs.paddingLeft) || 0, padR = parseFloat(cs.paddingRight) || 0;
+    var colW = bw - padL - padR;              /* 内容列宽（左右 padding 之内） */
+    /* ★ 打字时每帧都会调到这里：倍数和列宽都没变 ⇒ 直接跳过。
+       （反复写 inner.style.zoom 会触发整棵布局重算，把打字拖成 60ms/字） */
+    if(demoState.appliedRatio === demoState.ratio && demoState.natWFor === colW) return;
+    inner.style.zoom = zoom;
+    /* 量「自然排版宽度」：只在内容列宽变了的时候重量一次。
+       （每帧都清一次 width/zoom 会让布局抖动，滚动位置被重置 ⇒ 新字跑出屏幕） */
+    if(demoState.natWFor !== colW){
+      var savedW = inner.style.width, savedZ = inner.style.zoom;
+      inner.style.width = ''; inner.style.zoom = '';
+      demoState.natW = inner.offsetWidth || colW;
+      inner.style.width = savedW; inner.style.zoom = savedZ;
+      demoState.natWFor = colW;
+    }
+    demoState.appliedRatio = demoState.ratio;
+    var naturalW = demoState.natW || colW;
+    /* 排版宽度：不超过「画面宽 ÷ 倍数」⇒ 放大后不会溢出画面。
+       桌面等宽屏：自然宽度本来就窄 ⇒ 元素边界跟着放大（被横向拉开）；
+       手机竖屏：画面窄 ⇒ 只能收窄排版宽度 ⇒ 渲染宽度仍是画面宽 ⇒ 只放大字体。 */
+    var layoutW = Math.min(naturalW, colW / zoom);
+    var wantW = layoutW + 'px', wantZ = (zoom === 1 ? '' : String(zoom));
+    if(inner.style.width !== wantW) inner.style.width = wantW;
+    if(inner.style.zoom !== wantZ) inner.style.zoom = wantZ;
+  }
+  function demoScheduleRatio(){
+    if(demoRatioPending) return;
+    demoRatioPending = true;
+    requestAnimationFrame(function(){ demoRatioPending = false; demoApplyRatio(); });
+  }
+
+  function demoSpeedMs(){
+    var v = parseInt(($('#demoSpeed') || {}).value, 10);
+    if(!v || v < 1) v = 30;
+    if(v > 1000) v = 1000;
+    return v;
+  }
+  function demoTextNodes(el, skipSel){
+    var out = [], walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null), n;
+    while((n = walker.nextNode())){
+      if(!n.nodeValue) continue;
+      if(skipSel){
+        var p = n.parentElement;
+        if(p && p.closest(skipSel)) continue;
+      }
+      out.push(n);
+    }
+    return out;
+  }
+  function demoMaskBlock(el, skipSel){
+    var nodes = demoTextNodes(el, skipSel);
+    if(!nodes.length) return null;
+    var saved = nodes.map(function(n){ return n.nodeValue; });
+    var block = { el:el, nodes:nodes, saved:saved, ni:0, ci:0, timer:null, started:false, done:false, lastLi:-1 };
+    nodes.forEach(function(n){ n.nodeValue = ''; });
+    el.classList.add('demo-mask');
+    el.setAttribute('data-demo-hint', T('点击逐字显示'));
+    el.setAttribute('data-demo-state', 'hidden');
+    el.setAttribute('data-demo-len', String(saved.join('').length));
+    /* 代码框初始只显示第一行，打字时再一行一行展开 */
+    var rows = null, nodeLine = null;
+    if(el.classList.contains('codebox-body')){
+      rows = Array.prototype.slice.call(el.querySelectorAll('.cl'));
+      if(rows.length > 1){
+        rows.forEach(function(r,i){ if(i > 0) r.style.display = 'none'; });
+        nodeLine = nodes.map(function(n){
+          var p = n.parentElement, row = p ? p.closest('.cl') : null;
+          return row ? rows.indexOf(row) : 0;
+        });
+      }else{ rows = null; nodeLine = null; }
+    }
+    block.rows = rows;
+    block.nodeLine = nodeLine;
+    el.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      ev.preventDefault();          /* 超链接载体：别让它真的跳转 */
+      demoBlockClick(block);
+    });
+    demoState.blocks.push(block);
+    return block;
+  }
+  function demoMaskAll(root){
+    demoState.blocks = [];
+    /* 记录名称和练习题要求保持可见；只有「练习题提示」走打字机 */
+    var hintTitle = T('练习题提示');
+    var targets = [];
+    root.querySelectorAll('.detail-sec').forEach(function(sec){
+      var h4 = sec.querySelector('h4'), body = sec.querySelector('.detail-body');
+      if(!h4 || !body) return;
+      if((h4.textContent || '').trim() === hintTitle) targets.push({ el:body, skip:null });
+    });
+    DEMO_TARGETS.forEach(function(pair){
+      var nodes = root.querySelectorAll(pair[0]);
+      for(var i=0;i<nodes.length;i++) targets.push({ el:nodes[i], skip:pair[1] });
+    });
+    /* ★ 按页面顺序（DOM 顺序 = 从上到下）排好再打码
+       ⇒ 块序号 = 视觉顺序，demoBlocks 列出来的顺序跟观众看到的一致 */
+    targets.sort(function(a, b){
+      if(a.el === b.el) return 0;
+      var r = a.el.compareDocumentPosition(b.el);
+      return (r & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
+    });
+    targets.forEach(function(t){ demoMaskBlock(t.el, t.skip); });
+  }
+  function demoStopTyping(block){
+    if(!block || !block.timer) return;
+    clearTimeout(block.timer);
+    block.timer = null;
+    if(demoState.typing === block){
+      demoState.typing = null;
+      block.el.setAttribute('data-demo-state', 'paused');
+    }
+  }
+  function demoRevealRows(block){
+    if(!block.rows) return;
+    var li = block.nodeLine ? block.nodeLine[block.ni] : 0;
+    for(var i=0;i<=li && i<block.rows.length;i++){
+      if(block.rows[i].style.display === 'none') block.rows[i].style.display = '';
+    }
+  }
+  function demoFinish(block){
+    if(block.timer){ clearTimeout(block.timer); block.timer = null; }
+    if(block.rows) block.rows.forEach(function(r){ r.style.display = ''; });
+    block.nodes.forEach(function(n,i){ n.nodeValue = block.saved[i]; });
+    block.done = true; block.started = true;
+    block.el.setAttribute('data-demo-state', 'done');
+    if(demoState.typing === block) demoState.typing = null;
+    demoKeepInView(block.el, 'lift', false);   /* ★ 打完（被打断也一样）→ 上抬，留出按钮位置 */
+  }
+  /* 文字高度（行高，**缩放后**的视觉高度）—— 抬升高度按它的 2.5 倍算 */
+  function demoTextHeight(el){
+    if(!el) return 24;
+    var cs = getComputedStyle(el);
+    var lh = parseFloat(cs.lineHeight);
+    if(!lh || isNaN(lh)) lh = parseFloat(cs.fontSize) * 1.4;
+    if(!lh || isNaN(lh)) lh = 24;
+    var inner = document.querySelector('#demoInner');
+    var z = parseFloat(getComputedStyle(inner).zoom || '1');
+    if(isNaN(z) || z <= 0) z = 1;
+    return lh * z;
+  }
+  /* 默认抬升高度 = 文字高度 × 2.5 */
+  function demoLiftGap(el){
+    return demoTextHeight(el) * 2.5;
+  }
+  /* ★ 统一的「保持在屏幕里」——
+     所有打了字机的文本块、展开的代码行、放出来的载体，都走这一个函数：
+       mode 'tail'：正在打字的那块 ⇒ 保证它的**下沿**（刚打出来的字）留在可视区里；
+       mode 'box' ：普通元素（如「显示载体」按钮）⇒ 保证整个元素在可视区里。
+     注：放大（zoom）时滚动空间本身就是放大后的像素，rect 差值可以直接加到 scrollTop。 */
+  function demoKeepInView(el, mode, smooth){
+    var body = $('#demoBody');
+    if(!body || !el) return;
+    var br = body.getBoundingClientRect();
+    var er = el.getBoundingClientRect();
+    if(!er.width && !er.height) return;
+    var margin = 14;
+    var delta = 0;
+    if(mode === 'center'){
+      /* ★ 触发打字机时，把这一块移到画面中央（正文区底部留了半屏空间，滚得动） */
+      delta = ((er.top + er.bottom) / 2) - ((br.top + br.bottom) / 2);
+      if(Math.abs(delta) <= 2) return;
+    }else if(mode === 'lift'){
+      /* ★ 上抬（**有条件**）：只有「文本框贴近屏幕底部、且距离小于抬升高度」时才触发。
+         抬升高度 = 文字高度 × 2.5（缩放后算），
+         触发后把块的底边抬到「屏幕下沿往上一个抬升高度」处；
+         不贴近底部 ⇒ 什么都不做（不把块往下拽）。 */
+      var g = demoLiftGap(el);
+      var gapNow = br.bottom - er.bottom;          /* 当前间隙（负数 = 已经超出下沿） */
+      if(gapNow >= g) return;                      /* 不够贴近 ⇒ 不触发 */
+      delta = er.bottom - (br.bottom - g);         /* 正数 = 往上滚，把块抬起来 */
+    }else if(mode === 'tail'){
+      /* 只往下滚：打字过程中不要把正在打的文字拽回屏幕上方 */
+      delta = er.bottom - (br.bottom - margin);
+      if(delta <= 0) return;
+    }else{
+      var down = er.bottom - (br.bottom - margin);
+      var up   = (br.top + margin) - er.top;
+      if(down > 0) delta = down;                                   /* 下方出屏 ⇒ 往下滚 */
+      else if(up > 0) delta = (er.height > (br.height - margin*2)) ? up : -up;  /* 上方出屏 ⇒ 往上滚 */
+      else return;                                                /* 本来就在可视区里 ⇒ 不动 */
+    }
+    if(!delta) return;
+    try{ body.scrollTo({ top: body.scrollTop + delta, behavior: smooth ? 'smooth' : 'auto' }); }
+    catch(e){ body.scrollTop += delta; }
+  }
+  function demoKeepCtlVisible(smooth){
+    /* 「显示载体」按钮不能被上面长出来的内容顶出屏幕 */
+    var ctl = document.querySelector('.demo-carrier-ctl');
+    if(ctl) demoKeepInView(ctl, 'box', smooth);
+  }
+  function demoRun(block){
+    if(block.timer) clearTimeout(block.timer);
+    var step = function(){
+      if(demoState.typing !== block) return;          /* 已被别的接管 */
+      if(block.ni >= block.nodes.length){ demoFinish(block); return; }
+      var full = block.saved[block.ni];
+      if(block.ci < full.length){
+        block.ci++;
+        block.nodes[block.ni].nodeValue = full.slice(0, block.ci);
+        /* 性能：展开行/重算画幅/跟随滚动不必每字都做（每字都做会拖慢整段打字） */
+        var li = block.nodeLine ? block.nodeLine[block.ni] : 0;
+        if(li !== block.lastLi){ block.lastLi = li; demoRevealRows(block); }   /* 代码一行一行展开 */
+        if((block.ci % 3) === 0 || block.ci === full.length){
+          demoScheduleRatio();                 /* 内容长高了 ⇒ 画幅跟着重算 */
+          demoKeepInView(block.el, 'tail', false);   /* ★ 刚打出来的字不许跑出屏幕 */
+        }
+        block.timer = setTimeout(step, demoSpeedMs());
+      }else{
+        block.ni++; block.ci = 0;
+        block.timer = setTimeout(step, demoSpeedMs());   /* 换到下一个节点也要按速度等 */
+      }
+    };
+    block.timer = setTimeout(step, 0);
+  }
+  function demoBlockClick(block){
+    if(block.done) return;
+    if(demoState.typing === block){ demoFinish(block); return; }   /* 再点一下 → 立刻显示全部 */
+    if(demoState.typing && demoState.typing !== block){
+      /* ★ 同一时刻只有一个打字机：在别处触发 ⇒ 前一个直接结束，把完整内容显示出来 */
+      demoFinish(demoState.typing);
+    }
+    if(!block.started){
+      block.started = true;
+      block.el.setAttribute('data-demo-state', 'typing');
+    }
+    demoState.typing = block;
+    demoKeepInView(block.el, 'center', false);  /* ★ 触发时把这一块移到画面中央（立刻，别跟打字抢滚动） */
+    demoRun(block);
+  }
+  function demoSetupCarriers(root){
+    /* 模块载体默认全藏着，点一次「显示载体」放出来一个 */
+    var secs = Array.prototype.slice.call(root.querySelectorAll('.detail-sec'));
+    var sec = secs.filter(function(s){
+      var h = s.querySelector('h4');
+      return h && (h.textContent || '').trim() === T('用到的代码载体');
+    })[0];
+    if(!sec) return;
+    var groups = Array.prototype.slice.call(sec.querySelectorAll('.carrier-group'));
+    if(!groups.length) return;
+    var ctl = el('div', 'demo-carrier-ctl');
+    var btn = el('button', 'demo-carrier-btn', T('显示载体'));
+    btn.type = 'button';
+    var cnt = el('span', 'demo-carrier-count', '0 / ' + groups.length);
+    ctl.appendChild(btn);
+    ctl.appendChild(cnt);
+    groups.forEach(function(g){ g.style.display = 'none'; });
+    sec.insertBefore(ctl, groups[0]);
+    var shownSet = {};          /* 已经放出来的载体（按序号） */
+    var shown = 0;              /* 已放出的个数 */
+    function placeCtl(){
+      /* 按钮放在「最后一个放出来的载体」下面 ⇒ 下一次点击继续往下放（从上到下） */
+      var lastG = null;
+      for(var i=groups.length-1;i>=0;i--){ if(shownSet[i]){ lastG = groups[i]; break; } }
+      if(!lastG) return;
+      if(lastG.nextSibling) sec.insertBefore(ctl, lastG.nextSibling); else sec.appendChild(ctl);
+    }
+    function showGroup(i){
+      if(i == null || i < 0 || i >= groups.length) return false;
+      if(shownSet[i]) return false;
+      var g = groups[i];
+      shownSet[i] = true; shown++;
+      g.style.display = '';
+      g.classList.add('demo-carrier-show');
+      cnt.textContent = shown + ' / ' + groups.length;
+      placeCtl();
+      if(shown >= groups.length) btn.style.display = 'none';
+      /* 新载体把按钮顶到屏幕外了 ⇒ 滚一下，保证按钮完整留在屏幕里 */
+      demoKeepCtlVisible(true);
+      demoScheduleRatio();
+      return true;
+    }
+    function revealOne(){
+      /* ★ 严格从上到下：放第一个还没放出来的载体 */
+      for(var i=0;i<groups.length;i++){ if(!shownSet[i]) return showGroup(i); }
+      return false;
+    }
+    btn.addEventListener('click', revealOne);
+    /* 暴露给命令接口：AI 要按稿子逐个放载体 */
+    demoState.carriers = {
+      total: groups.length,
+      shown: function(){ return shown; },
+      reveal: function(i){
+        if(i == null) return revealOne() ? shown : shown;
+        while(shown < i){ if(!revealOne()) break; }
+        return shown;
+      },
+      /* 只放指定的那一个（不连带放上面的）—— 稿子从上往下讲时，一段只出现一段 */
+      revealGroup: function(i){ showGroup(i); return shown; },
+      preview: function(i){
+        var g = groups[i];
+        if(!g) return '';
+        var t = (g.textContent || '').replace(/\s+/g,' ').trim();
+        return t.slice(0, 60);
+      }
+    };
+  }
+  function openDemoMode(){
+    var rec = selectedId ? findRec(selectedId) : null;
+    if(!rec && editingId) rec = findRec(editingId);
+    if(!rec){ toast(T('先选一条记录，再点演示模式')); return; }
+    var inner = $('#demoInner');
+    inner.innerHTML = '';
+    var box = buildDetail(rec);
+    var acts = box.querySelector('.detail-actions');
+    if(acts && acts.parentNode) acts.parentNode.removeChild(acts);   /* 演示里不让「编辑这条记录」 */
+    inner.appendChild(box);
+    demoSetupCarriers(inner);
+    demoMaskAll(inner);
+    demoState.open = true;
+    $('#demoModal').classList.add('open');
+    inner.style.width = ''; inner.style.zoom = '';
+    demoState.naturalW = inner.offsetWidth;  /* 放大前的排版宽度 */
+    demoState.ratio = demoDefaultRatio();    /* 手机竖屏 1 倍，其它 2 倍 */
+    demoApplyRatio();
+    document.body.style.overflow = 'hidden';
+  }
+  function closeDemoMode(){
+    demoState.blocks.forEach(function(b){ if(b.timer) clearTimeout(b.timer); });
+    demoState.blocks = []; demoState.typing = null; demoState.open = false;
+    $('#demoModal').classList.remove('open');
+    $('#demoInner').innerHTML = '';
+    document.body.style.overflow = '';
+  }
+  $('#demoRatio').addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('.demo-ratio-btn') : null;
+    if(!b) return;
+    demoState.ratio = b.getAttribute('data-mode');
+    demoApplyRatio();
+  });
+  window.addEventListener('resize', function(){ if(demoState.open) demoScheduleRatio(); });
+  $('#demoBtn').addEventListener('click', openDemoMode);
+  $('#demoClose').addEventListener('click', closeDemoMode);
+  $('#demoModal').addEventListener('click', function(e){
+    if(e.target === $('#demoModal')) closeDemoMode();
+  });
+  $('#demoSpeed').addEventListener('input', function(){
+    if(demoState.typing) demoRun(demoState.typing);   /* 正在打字时改速度立刻生效 */
+  });
 
   initAvatar();
   renderAll();
