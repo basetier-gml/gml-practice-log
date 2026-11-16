@@ -1938,9 +1938,15 @@ python3 <skill:gml-tutorial-manual>/scripts/build_manual_site.py \
 别的标签页**新建**的记录会补进来；别的标签页**改过**的同一条记录也会同步过来
 （正在编辑的那条不动，别把用户正在打的字冲掉）；本标签页删掉的记录不会被磁盘旧值复活。
 
+### API 的 desc（用途说明）也会丢字段（已修）
+
+`partApi()` 原来只写 `{code, params}` ⇒ **desc 在保存时就没了**（刷新后描述消失）。
+同一个毛病还有三处：单条导出 `practicePayload()`、单条导入新建 API、单条导入更新 API。
+⇒ 现在四条路都带 `desc`；单条导入时「文件里没有 desc 就保留库里原来的」，不抹掉已有描述。
+
 ### 自动化测试
 
-`work/test_data_safety.py`：**77 项**，T01–T14 + S01/S02，全部走真实 `window.gml.cmd()` 与真实 UI
+`work/test_data_safety.py`：**82 项**，T01–T14（含 T03b：API 的 desc 不丢）+ S01/S02，全部走真实 `window.gml.cmd()` 与真实 UI
 （导入确认、二维码读图、API 库删除按钮都是真点）。
 
 ## 9. 交付给用户什么
@@ -5745,7 +5751,7 @@ __lang = detectLang();
     for(var id in state.api){
       var a = state.api[id];
       if(!a) continue;
-      out[id] = { code: a.code || '', params: a.params || [] };
+      out[id] = { code: a.code || '', desc: a.desc || '', params: a.params || [] };
     }
     return out;
   }
@@ -6346,7 +6352,7 @@ __lang = detectLang();
     practiceApiIds(rec).forEach(function(id){
       var it = apiItem(id);
       if(it){
-        apis.push({id:it.id, code:it.code, params:it.params});
+        apis.push({id:it.id, code:it.code, desc:it.desc || '', params:it.params});
         apiById[it.id] = it.code;
       }
     });
@@ -6684,7 +6690,7 @@ __lang = detectLang();
     var addedApi = 0, updatedApi = 0;
     var lib = state.api = state.api || {};
     p.adds.forEach(function(item){
-      var it = {id:uid(), code:item.file.code, params:normParams(item.file.params)};
+      var it = {id:uid(), code:item.file.code, desc:item.file.desc || '', params:normParams(item.file.params)};
       lib[it.id] = it;
       apiIndexSet(it);
       if(item.file.id) map[item.file.id] = it.id;
@@ -6694,6 +6700,8 @@ __lang = detectLang();
       if(c.choice === 'update'){
         apiIndexDel(c.local);
         c.local.code = c.file.code;
+        /* 文件里有描述就用文件的；没有（旧文件）就保留库里原来的，别抹掉 */
+        if(c.file.desc != null && String(c.file.desc).trim() !== '') c.local.desc = String(c.file.desc);
         c.local.params = normParams(c.file.params);
         apiIndexSet(c.local);
         updatedApi++;
