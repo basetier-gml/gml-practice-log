@@ -12841,6 +12841,16 @@ __lang = detectLang();
     demoState.ratio = demoDefaultRatio();    /* 手机竖屏 1 倍，其它 2 倍 */
     demoApplyRatio();
     document.body.style.overflow = 'hidden';
+    demoBlurInnerFocus();     /* 焦点别留在输入框里，否则 ←/→ 和空格会被吃掉 */
+  }
+  /* ★ 把焦点从演示弹层里的输入框上拿走：
+       速度上下限那两个框点过之后，焦点会一直留在那儿（关掉再开也还在）⇒
+       ←/→ 和空格会被输入框吃掉，滑动条调不动、空格也不放 ⇒ 打开/关闭时都清一下。 */
+  function demoBlurInnerFocus(){
+    try{
+      var ae = document.activeElement;
+      if(ae && ae !== document.body && $('#demoModal').contains(ae)) ae.blur();
+    }catch(e){}
   }
   function closeDemoMode(){
     demoState.blocks.forEach(function(b){ if(b.timer) clearTimeout(b.timer); });
@@ -12848,6 +12858,7 @@ __lang = detectLang();
     $('#demoModal').classList.remove('open');
     $('#demoInner').innerHTML = '';
     document.body.style.overflow = '';
+    demoBlurInnerFocus();
   }
   $('#demoRatio').addEventListener('click', function(e){
     var b = e.target.closest ? e.target.closest('.demo-ratio-btn') : null;

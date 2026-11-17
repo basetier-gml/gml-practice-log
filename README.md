@@ -5,6 +5,8 @@
 
 - **打开就能用**：整个站点就是一个 `index.html`，双击即开，不需要服务器、不需要注册、不联网也能用。
 - **数据在你自己浏览器里**：localStorage 存储，页面里没有任何上报逻辑。
+- ⚠ **唯一的外部请求是 Google Fonts**（Outfit + JetBrains Mono 两个字体）⇒
+  断网时它会自动失败并退回系统字体，功能不受影响；除此之外站点不加载任何外部资源。
 - **给 AI 用的接口**：页面内置一份 AI skill，并暴露 `window.gml.cmd(...)` 命令接口，AI 不必去抠 DOM。
 
 在线版：<https://basetier-gml.github.io/gml-practice-log/>
