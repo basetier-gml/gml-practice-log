@@ -367,6 +367,32 @@ textarea.field{resize:vertical;min-height:64px}
   border-radius:50%;font-size:15px;line-height:1;cursor:pointer;flex:0 0 24px;
 }
 .mod-del:hover{background:#402a2a;color:#e06c75}
+/* 代码框数量（代码载体可自定义几个代码框） */
+.codeboxes-field{display:flex;flex-direction:column;gap:8px}
+.codeboxes-ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.codeboxes-label{font-size:12px;color:var(--ink-3)}
+.codeboxes-add{
+  border:1px solid var(--gm);background:transparent;color:var(--gm);
+  font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:999px;cursor:pointer;
+}
+.codeboxes-add:hover:not(:disabled){background:var(--gm-soft)}
+.codeboxes-add:disabled{opacity:.35;cursor:not-allowed}
+.codeboxes-num{min-width:20px;text-align:center;font-size:13px;font-weight:700;color:var(--ink-2)}
+.codebox-item{border:1px solid var(--line);border-radius:9px;padding:8px 9px 9px;background:#2b2b2b}
+.codebox-item-head{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.codebox-prefix{font-size:12px;color:var(--ink-3);font-family:var(--mono);white-space:nowrap;flex:0 0 auto}
+.codebox-namein{
+  flex:1 1 auto;min-width:0;background:#242424;border:1px solid #4a4a4a;border-radius:7px;
+  padding:5px 9px;color:var(--ink);font-size:12.5px;font-family:var(--mono);
+}
+.codebox-namein:focus{outline:none;border-color:var(--gm);box-shadow:0 0 0 3px rgba(74,144,226,.22)}
+.codebox-namein::placeholder{color:#7e7e7e}
+.codeboxes-del{
+  margin-left:auto;border:none;background:#3a3a3a;color:var(--ink-3);width:22px;height:22px;
+  border-radius:50%;font-size:13px;line-height:1;cursor:pointer;flex:0 0 22px;
+}
+.codeboxes-del:hover:not(:disabled){background:#402a2a;color:#e06c75}
+.codeboxes-del:disabled{opacity:.3;cursor:not-allowed}
 .type-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
 .type-tab{
   border:1.5px solid var(--line);background:#2f2f2f;color:var(--ink-2);
@@ -781,14 +807,21 @@ textarea.field{resize:vertical;min-height:64px}
 .demo-ratio-btn:hover{background:var(--gm-soft);border-color:#5f88c0}
 .demo-ratio-btn.on{background:var(--gm-soft);border-color:var(--gm);color:var(--gm-deep)}
 .demo-stage{position:relative;transform-origin:top left}
-.demo-speed input{
-  width:74px;background:var(--panel);border:1px solid var(--line);border-radius:8px;
+.demo-speed-lab{font-weight:600}
+.demo-speed-b{display:inline-flex;align-items:center;gap:4px;color:var(--ink-3)}
+.demo-speed input[type=number]{
+  width:60px;background:var(--panel);border:1px solid var(--line);border-radius:8px;
   color:var(--ink);font:inherit;font-size:13px;padding:4px 6px;text-align:center;
 }
+.demo-speed input[type=range]{width:170px;accent-color:var(--gm);cursor:pointer;background:transparent;padding:0}
+.demo-speed-val{font-weight:700;color:var(--gm-deep);min-width:36px;text-align:right;font-variant-numeric:tabular-nums}
+.demo-speed-unit{color:var(--ink-3)}
 .demo-speed input:focus{outline:none;border-color:var(--gm)}
 #demoClose{flex:0 0 auto}
 .demo-body{flex:1 1 auto;overflow:auto;padding:16px 14px calc(50vh + 24px);-webkit-overflow-scrolling:touch}
 .demo-inner{max-width:620px;margin:0 auto}
+.qr-slim-row{display:flex;align-items:center;gap:8px;margin:10px 0 2px;font-size:12.5px;color:var(--ink-2);cursor:pointer}
+.qr-slim-row input{width:15px;height:15px;accent-color:var(--gm);cursor:pointer}
 .demo-mask{position:relative;cursor:pointer;border-radius:8px;min-height:1.45em;transition:background .15s}
 .demo-mask:hover{background:var(--gm-soft-2)}
 .demo-mask::after{
@@ -797,8 +830,10 @@ textarea.field{resize:vertical;min-height:64px}
   border:1px dashed var(--line);border-radius:6px;padding:1px 7px;pointer-events:none;
 }
 .demo-mask[data-demo-state="typing"]::after{opacity:.4}
-/* 表格里的小格子用短提示，不然一排「点击逐字显示」太吵 */
-td.demo-mask::after{content:"···";padding:0 5px;font-size:11px}
+/* 表格里的一整行用短提示，不然一排「点击逐字显示」太吵 */
+tr.demo-mask::after{content:"···";padding:0 5px;font-size:11px}
+/* 行级遮罩：td 自己带颜色 ⇒ 得单独压掉（不然藏不住字） */
+tr.demo-mask[data-demo-state="hidden"] td{color:transparent}
 .demo-mask[data-demo-state="done"]::after{content:none}
 .demo-mask[data-demo-state="done"]{cursor:default}
 .demo-mask[data-demo-state="done"]:hover{background:transparent}
@@ -980,7 +1015,9 @@ description: GML 练习记录站（https://basetier-gml.github.io/gml-practice-l
 线上 https://basetier-gml.github.io/gml-practice-log/ ｜工程内 `/workspace/output/gml-practice-log/index.html`。
 本页这份 skill 嵌在 HTML 里（`#gml-ai-skill`），浏览器型 AI 可直接取
 `window.GML_AI_SKILL` 或 `document.getElementById('gml-ai-skill').textContent`；
-同一份内容另存为 `AI-SKILL.md`。
+同一份内容另存两份**逐字一致**的副本：`AI-SKILL.md`（工程里）、
+`.skills/gml-practice-log/SKILL.md`（技能库那份）——
+改了页内块就用 `work/sync_skill.py` 同步并校验 md5（**别让三份跑偏**）。
 
 ---
 
@@ -1000,7 +1037,7 @@ AI 第一次拿到这个 index（用户说「把这段代码记下来」「帮�
 | **① 打卡** | 用户上传的**描述**→ `requirement` / `hint`；**代码**→ 一个「脚本」载体（逐字贴，不许改一个字）；用到的官方 API → `addApi` + `refApi` | **截图 + 记录存档**：`screenshot` 存成 PNG 交回，`export` 出存档 payload 交回（用户可导入） |
 | **② 教程** | 用站里的打卡功能**写操作流程**：**一个操作步骤 = 一条记录**（名字写「第 N 步：xxx」），步骤里的代码贴进脚本/对象载体 | **带记录的 index**：把导出的存档写成种子塞进一份 index.html（启动时自动导入），交回这份 index，用户一打开就带着记录 |　自写类**建了就要在用到它的那些步骤里引用**（见 §4）
 | **③ 日志** | 把 vibe coding 的过程**按功能环节**记进打卡记录（一个环节 = 一条记录，**测通了才打卡**） | **每次打卡都立刻存一次档**（防中途丢），最后按他要的形态返回：要点 / 时间线 / 存档 / 带记录的 index |　自写类**建了就要在用到它的那些环节里引用**（见 §4） |
-| **④ 演示** | 用户指定要演示哪条练习 ⇒ **①进预览模式摸底**（`demoBlocks` 拿块清单 + 逐个触发看清每块）→ **②按块写解读稿**（一块一句，页面从上到下）→ **③覆盖检查**（`demoCoverage` 确认没漏）→ **④用户确认稿子** → **⑤按稿子逐段触发打字机** → **⑥录屏（1080p 横屏）** → **⑦TTS 配音** → **⑧剪辑**（见 §8.7） | **成片视频**（mp4）+ 解读稿件（给用户确认过的那一版） |
+| **④ 演示** | 用户指定要演示哪条练习 ⇒ **①进播放模式摸底**（`demoBlocks` 拿块清单 + **连按空格把整页走一遍**看清每块）→ **②按块写解读稿**（一块一句，页面从上到下）→ **③覆盖检查**（`demoCoverage` 确认没漏）→ **④用户确认稿子** → **⑤先 TTS 配音**（记下每句时长）→ **⑥重进播放模式，按配音时长调速度滑动条**（**帧/字 = 配音秒数 × 60 ÷ 字数**）→ **⑦按稿子逐段触发打字机** → **⑧录屏（1080p 横屏）** → **⑨剪辑**（见 §8.7） | **成片视频**（mp4）+ 解读稿件（给用户确认过的那一版） |
 
 **① 打卡 —— 命令顺序**
 
@@ -1015,6 +1052,19 @@ await window.gml.cmd('refApi',   { code:'draw_text' })                     // �
 await window.gml.cmd('finish')                     // 结束编辑（弹层不关）
 const shot = await window.gml.cmd('screenshot')     // → { dataUrl, width:1440 }，存成 PNG 交回
 const save = await window.gml.cmd('export')         // → 整站存档 payload，交回
+```
+
+**★ 一个脚本 + 它的方法 ⇒ 放同一个脚本载体，每个代码框起名字**（这一版的新能力，见 §2.2）：
+
+```js
+// 第 1 框 = 这个脚本的整体展示（构造函数写全，里面的方法只写原型、且原型写在构造函数体内部）
+// 后面的框 = 每个方法的完整实现，框名 = 方法名
+await window.gml.cmd('addModule', { type:'脚本', boxes:[
+  { code:'// class_gun.gml\n' + 整体代码(构造函数写全 + 方法原型写在构造函数体内部), name:'class_gun' },
+  { code:方法1的完整代码,                                  name:'shoot'  },
+  { code:方法2的完整代码,                                  name:'reload' }
+]})
+// 详情页 / 截图 / 演示里显示成 class_gun.shoot、class_gun.reload ✓
 ```
 
 **② 教程 —— 命令顺序**
@@ -1086,11 +1136,12 @@ const all = await window.gml.cmd('state')        // 全部记录的 id / 名字
 | 练习过程弹层：题面 / 提示 / API 引用 / 代码载体 | `#processCard`（编辑态→详情态） |
 | 代码载体 6 种：脚本、对象、操作描述、SVG绘图、超链接、着色器 | 弹层里「＋ 类型」按钮 |
 | 对象载体：对象名 + 预定义变量表 + 多个事件代码框 | 载体类型「对象」 |
+| **脚本载体可放多个代码框**（1~20 个），**每个框能起名字**：第 1 框 = 脚本名、后面 = 方法名，显示成 `class_gun.shoot` | 脚本载体的代码框区：「添加代码框」/ 每框的「×」/ 每框的名字输入框 |
 | API 库（引用式）：建 API → 练习引用它；每条有 **代码 + 用途说明 + 参数清单**；**列表每页 10 条**（`state` 一次返回全部，不受分页影响） | 主界面「API 库」卡片 |
 | 练习过程截图（1440 长图，**二维码固定在开头**） | 弹层标题栏「截图」`#shotBtn` |
 | 分享链接 / 二维码（网址 + `#gmlp=<压缩包>`） | `cmd('shareLink')` |
-| 单条练习存读档（导出/导入一条，含它引用的 API） | 弹层标题栏「存读档」`#pbBtn` |
-| **演示模式**：全屏演示界面，文字先藏起来，点一下用打字机逐字打出来（再点一下立刻全显；顶栏可调速度） | 弹层标题栏「演示模式」`#demoBtn`（在「存读档」左边，**只在详情态出现**） |
+| 单条练习存读档（导出/导入一条，含它引用的 API） | 弹层标题栏「存读档」`#pbBtn`；**导入 = 新建一条记录**（永远不覆盖本地已有的那条，同一个存档导两次 = 两条记录；**新记录的创建时间 = 现在**，不是存档里的旧时间） |
+| **演示模式**：全屏演示界面，文字先藏起来，点一下用打字机逐字打出来（再点一下立刻全显；顶栏可调速度；**连按空格可依次播放**） | 弹层标题栏「演示模式」`#demoBtn`（在「存读档」左边，**只在详情态出现**） |
 | 昵称 / 头像 | 同一个菜单里 `#miRename` `#miAvatar` |
 | 整站存档（导出/导入，**导入只有覆盖**，按钮文字「覆盖现有数据」，要点两次确认） | 顶栏「菜单 ▾」`#miExport` / `#miImport` |
 | **清空缓存**：清掉这台设备的全部数据 + 浏览器缓存（**两次点击确认**） | 菜单 →「清空缓存」`#miClear` |
@@ -1154,17 +1205,18 @@ const r = await page.evaluate(() => window.gml.cmd('screenshot'))   // {ok,dataU
 | `export` / `import` | `{json}` | 整站存档导出 / 导入并覆盖 |
 | `checkin` | `{name, requirement, hint}` | 打卡并打开练习过程 |
 | `set` | `{field:'name'\|'requirement'\|'hint', value}` | 改当前练习字段 |
-| `addModule` | `{type, value}` | 加一个代码载体 |
+| `addModule` | `{type, value}` 或 `{type:'脚本', boxes:[{code,name}]}` / `{codes:['…','…']}` 或 `{type:'着色器', shader:{vertex,fragment}}` | 加一个代码载体（**脚本载体可以一次给多个代码框**；`name` = 第 1 框的**脚本名**、后面框的**方法名**，显示成 `根名.方法名`，见 §2.2） |
 | `addObject` | `{name, fields:[[变量名,参数,说明]], events:[{name,code}]}` | 加对象载体 |
 | `addApi` / `refApi` / `unrefApi` | `{code, desc, params}` / `{code}` | 建 API / 引用 / 取消引用（`desc` = 用途说明） |
 | `setNick` / `setAvatar` | `{name}` / `{dataUrl}` | 昵称 / 头像 |
 | `screenshot` | – | 练习过程截图 → `{dataUrl,width,height}` |
 | `exportPractice` / `shareLink` | `{id}`（不给就是当前打开的那条） | 导出这一条 / 它的分享链接 |
-| `get` | `{id}` 或 `{name}`（不给就是当前打开的那条） | **读回一条记录的全部内容**：正文 + 载体全文 + API 引用明细 |
+| `get` | `{id}` 或 `{name}`（不给就是当前打开的那条） | **读回一条记录的全部内容**：正文 + 载体全文 + API 引用明细（脚本载体的多框结构是 `boxes:[{code,name}]`；老记录仍是 `{value}`，**不迁移**） |
 | `select` | `{id}` 或 `{name}` | **选中一条记录并打开详情**（演示模式、导出单条前要先选中） |
 | `remove` | `{id}` 或 `{name}`（不给就是当前打开的那条） | **删掉一条记录**（测不过时撤销用） |
 | `find` | `{q:'关键词'}` | **按一句描述在打卡记录里定位代码**：返回命中的记录 + 位置（文件 / 类 / 方法 / 行号） |
 | `finish` / `close` / `lang` | – / – / `{lang:'zh'\|'en'}` | 结束编辑 / 关弹层 / 切语言 |
+| `demo` / `demoReveal` / `demoBlocks` / `demoType` / `demoCoverage` | 见 §8.6 | **演示模式**：开关 / 放载体 / 列块 / 触发打字机 / 覆盖检查（这一版的三个变化见 §2.3） |
 
 ⚠ **`state` 只给摘要**（name / 载体类型 / API 数量），**读不回正文** ——
 要核对刚写进去的内容、要汇总某一步的代码，一律用 `get`（别去抠 DOM）。
@@ -1205,6 +1257,191 @@ const r = await page.evaluate(() => window.gml.cmd('find', {q:'冷却'}))
 用户的话里往往含中文，最好挑**代码里真有的那个词**（函数名、变量名、状态名）再搜一次；
 搜不到就换词（`hp`、`invuln`、`cd_max`、`charge` 这类）✓。
 
+### 2.2 新功能①：一个脚本载体装「一个脚本 / 一个构造函数」，每个代码框起名字
+
+这一版脚本载体支持**多个代码框**（默认 1 个，最多 20 个），而且**每个框能起名字**。
+AI 写练习时**先照这三条规矩写代码，再考虑起名字**：
+
+**规矩一：一个脚本载体只服务一个脚本 / 一个构造函数**
+- 一个载体 = 工程里的**一个文件**（一个类文件，或一个独立脚本文件）。
+- **两个不同的类 / 两个不同的文件 ⇒ 两个载体**，别塞进同一个载体。
+
+**规矩二：第 1 个代码框 = 这个脚本的整体展示**
+- 它是「这个脚本长什么样」的完整骨架：构造函数（或主流程）的实现、成员变量都在里面；
+- ★ **构造函数必须带 `constructor` 声明关键词**：
+  `function 类名(参数) constructor { … }` —— GML 2.3+ 只有带这个词的函数才能用 `new` 构造实例 ✓；
+  独立脚本（不是类）就不写这个词 ✓；
+- 但**脚本里的静态方法 / 功能函数，在这一框里只写函数原型**（不写实现体），
+  免得同一段代码在两个框里重复一大篇。
+- GML 的函数原型就是这么写：**`function 方法名(参数);`**（分号结尾、没有花括号）✓。
+- ★ **原型行写在构造函数体内部**（和成员变量、初始化代码**同级**，缩进一层），
+  不要写在构造函数的右花括号**外面** ⇒ 整个骨架读下来是「一个构造函数 + 它声明的方法」，
+  一眼看得出这个脚本对外提供哪些方法 ✓。
+
+```gml
+// class_gun.gml
+function class_gun(_owner) constructor
+{
+  self._owner = _owner;
+  self._cd = 0;
+
+  /// 触发一次射击
+  function shoot(_target);      // ← 原型：只有签名，写在构造函数体内部
+  /// 重新装填
+  function reload();            // ← 原型
+}
+```
+
+**规矩三：完整的静态方法 / 功能函数 ⇒ 在同一个脚本载体里另开一个代码框单独展示**
+- 一个方法一个框，框名 = 方法名；这个框里放**完整的实现代码**。
+
+⇒ 框名因此是：
+- **第 1 框 = 脚本名 / 构造函数名**（如 `class_gun`）；
+- **后面各框 = 方法名**（如 `shoot`）；
+- 详情页 / 练习过程截图 / 演示模式里一律显示成 **`class_gun.shoot`**（根名 + `.` + 方法名）✓。
+
+```js
+// ★ 一个类文件（class_gun.gml）+ 它的两个方法 ⇒ 一个载体、三个框
+await window.gml.cmd('addModule', {
+  type: '脚本',
+  boxes: [
+    { name: 'class_gun', code:
+      '// class_gun.gml\n' +
+      'function class_gun(_owner) constructor{\n' +
+      '  self._owner = _owner;\n' +
+      '  self._cd = 0;\n' +
+      '\n' +
+      '  /// 触发一次射击\n' +
+      '  function shoot(_target);\n' +   // ← 原型：只有签名，**写在构造函数体内部**
+      '  /// 重新装填\n' +
+      '  function reload();\n' +         // ← 原型
+      '}\n'
+    },
+    { name: 'shoot',  code: 'function shoot(_target){\n  with(_target){ hp -= 10; }\n}\n' },
+    { name: 'reload', code: 'function reload(){\n  self._cd = 0;\n}\n' }
+  ]
+})
+```
+
+- **这个脚本里没有静态方法 / 功能函数** ⇒ 只有第 1 框，代码照旧一次给全 ✓；
+- **`name` 不是文件名** —— 文件名仍按老约定写在代码首行 `// 文件名`（`find` 靠它定位工程文件）✓；
+- 不写 `name` 也行：退回旧标题（脚本 / 脚本 1 / 脚本 2），跟以前完全一样 ✓；
+- 只想给代码不想给名字：`{codes:['…','…']}` ✓；
+- ⚠ **第 1 框是「整体展示」**：它里面那些原型行**不是完整代码**，
+  要看完整实现得翻到对应的方法框 —— 这正是「原型 + 单独框」的用意，别把整个方法体又抄回第 1 框。
+
+**读回的形状**（`get`）：
+
+```js
+const one = await window.gml.cmd('get', { id: rec.id })
+// one.record.modules[0].boxes = [{code:'…', name:'class_gun'}, {code:'…', name:'shoot'}]
+// 老记录没有 boxes ⇒ 仍是 {value:'…'}（**不迁移**，照旧能用）
+```
+
+⚠ **`value` 始终等于第 1 框的代码**（导出 / 二维码 / 分享链接 / `find` 都靠它）⇒ 别把方法代码塞进 `value`。
+
+**界面上手动用**（不写命令、直接点的时候）：
+
+- 脚本载体的代码框区有个「**添加代码框**」按钮（最多 **20** 个），每个框右上角一个「**×**」删掉那一框
+  （**只剩 1 框时 × 禁用**；到 20 个时「添加代码框」按钮禁用）✓；
+- 每个框上面有个**名字输入框**：第 1 个的提示是「脚本名，例如 class_gun（整体展示）」，
+  后面的是「方法名，例如 shoot（完整实现）」—— **提示语里就写着两条规矩** ✓；
+- 后面的框**前面自带 `class_gun.` 前缀**（你只填方法名）—— **改根名时前缀立刻跟着变** ✓；
+- 选择器：编辑器里的名字输入框是 **`.codebox-namein`**；
+  详情页里显示名字的元素是 **`.codebox-name`**（两个别搞混）；
+  代码正文仍是 `[data-role="moduleValue"][data-box-index="0|1|…"]`（下标从 0 开始）。
+
+### 2.3 新功能②：演示模式的三个变化（录屏前必读）
+
+这一版演示模式有三处变化，**写解读稿 / 录屏时按这个口径**：
+
+1. **一次空格 = 界面的一次点击 = 讲一块**（连按空格依次播放）：
+   顺序 = 页面顺序（练习题提示 → 操作描述 → 脚本/事件代码 → 对象名 → 预定义变量表 → API 参数说明）；
+   正在打字时按空格 = 立刻显示全部；全都讲完了会提示「演示已播完」✓。
+2. **对象载体的「事件代码框」整块藏着**，要先点「**查看事件**」按钮（`[data-demo-gate]`）才放出来 ⇒
+   **稿子要分两步**：先讲对象名 + 变量表，再讲事件代码。
+3. **预定义变量表按「行」遮罩** —— **一次交互出一整行**（变量名 / 参数 / 说明 三个格子一起出来），
+   表头一直可见 ⇒ **稿子里一行算一段**，别按格子写；
+   `demoBlocks` 里这类块的 `kind` = **`obj-detail-row`** ✓。
+
+**做演示的标准流程**（这一版照这个走）：
+
+```js
+await window.gml.cmd('select', { id: rec.id })     // 先选中
+await window.gml.cmd('finish')                    // 详情态（演示按钮只在详情态）
+await window.gml.cmd('demo', { open:true })       // 开演示
+const b = await window.gml.cmd('demoBlocks')      // ① 拿块清单（顺序 = 视觉顺序）
+// ② 按块写解读稿：b.blocks[i].kind / .text / .carrierHidden
+await window.gml.cmd('demoReveal', { index:0 })   // ③ 放出一个个代码载体（默认全藏着）
+await window.gml.cmd('demoType', { index:3 })     // ④ 触发某块的打字机
+const cov = await window.gml.cmd('demoCoverage', { covered:[0,1,2] })  // ⑤ 覆盖检查
+// cov.missCount > 0 ⇒ 还有块没讲到，补稿
+```
+
+⚠ `demoBlocks` 里 `carrierHidden:true` = 这个块所在的载体**还没放出来** ⇒ 打字也看不见，
+先 `demoReveal` 再讲 ✓。
+
+### 2.3b 着色器载体：两段代码都要写全
+
+着色器载体（`type:'着色器'`）的内容是**顶点着色器 + 片段着色器两段**，用 `shader:{vertex, fragment}` 写：
+
+```js
+await window.gml.cmd('addModule', { type:'着色器', shader:{
+  vertex:'varying vec2 vUV;\nvoid vertex(){\n  vUV = UV;\n}',
+  fragment:'uniform vec4 flashColor;\nvoid fragment(){\n  gl_FragColor = flashColor;\n}'
+}})
+```
+⚠ 两段都要在**读档**里活着：导出文件、分享链接/二维码、整站存档三种都会带着它们 ✓
+（`cmd('get')` 读回的 `modules[].shader.vertex / .fragment` 也在 ✓）。
+
+### 2.4 导出文件 / 分享二维码的格式（v4，别再手拼旧格式）
+
+这一版把「单条练习的存档」瘦身了，**三种形态各司其职**：
+
+| 形态 | 用在哪 | 长什么样 |
+|---|---|---|
+| **可读版 v3** | `cmd('exportPractice')` 导出的**文件** | `{app,qrMark,version:3,kind,exportedAt,record:{id,ts,name,requirement,hint,modules},apis}` —— 键名照旧，**文件是一行紧凑 JSON**（不再缩进） |
+| **紧凑版 v4** | 分享链接 / 二维码里的内容 | `{v:4,k:'practice',z:'GML-PRACTICE',m:'full',r:[id,ts,name,requirement,hint,mods],a:[[id,code,desc,params]]}` —— **整条都是数组**，没有长键名 ⇒ 同内容更短（内容恒定 = 完整的一条，不分精简） |
+| **压缩层** | 上面紧凑版再压一遍 | **LZMA（7-Zip 的算法，页面自带一份 lzma-js）+ base64url**；编码串**第一个字符是标记位**：`~`=LZMA、`.`=deflate、**没有标记**=最早那版（照样能读） |
+
+三边的**内容完全一样**，只是写法不同 ⇒ 二维码更小、扫得更快。
+**导入口全都认**（`importPractice` / 扫码 / 分享链接 / 文件），旧版 v2、v3 的存档也照样能导进去 ✓。
+⚠ **单条导入 = 新建一条练习记录**（不覆盖本地已有的那条；**创建时间 = 现在**）⇒ 同一个存档导两次就是两条记录；
+**整站存档导入才是「恢复 / 覆盖」语义**（`cmd('import')` ✓，带快照可 `restore` 回滚）。
+
+⚠ **压缩换算法了**：以前是 deflate，现在是 LZMA（`~` 开头）。
+**别自己拼压缩串** ⇒ 一律走 `shareLink` / 站点自己的编码，标记位由它加。
+
+**v3 去掉了三处冗余**（所以文件更小）：
+1. 多代码框载体的 `value` 与 `boxes[0].code` 重复 ⇒ **只留 `boxes`**（导入时自动还原 `value`）；
+2. `record.apis` 与 `apis[]` 重复 ⇒ **只留 `apis`**（导入时按 `apis[].id` 重建引用）；
+3. `apiById` 与 `apis[].id/code` 重复 ⇒ **不再单独存**（导入时现算）。
+
+**v4 又进一步**（紧凑版改成数组）：
+- 记录本体 = 数组 `[id, ts, name, requirement, hint, modules]`；
+- 每个模块 = 数组 `[type, …]`：脚本 = `[type, [[code, name], …]]`、对象 = `[type, value, fields[], events[]]`、api = `[type, refId, code]`；
+- `m:'full'` = 完整（**现在只出这一种**）；旧的 `m:'slim'` 载荷仍能读（导入时会提示「精简版练习」），但不再生成。
+
+**精简模式怎么用**：截图弹层（`#shotModal`）里有一个「精简排版」开关（`#shotQrSlim`）⇒
+勾上后**立刻**重画（不用点「重新生成」），两种版式随时来回切：
+- **完整版**：长图 = 站点/日期 + 标题 + 时间 + 练习题要求 + 提示 + API 胶囊 + 各个载体内容 + 二维码；
+- **精简版**：短卡片 = **只有「练习题标题 + 练习题要求 + 二维码」**（实测图高 1602 → 752，约 -53%）。
+
+⚠★ **两种版式的二维码是同一个**：二维码内容**恒定 = 完整的一条**（题面 + 提示 + 全部载体 + API）
+⇒ 「精简」**只改截图排版，不改二维码内容** ⇒ 扫精简图导进来，提示、操作描述**一样都不会少** ✓
+（早期版本曾把精简做进载荷里，导致扫码回来少了提示 —— 那条路已经废掉）。
+
+```js
+// 导出这一条（文件）—— 返回可读版 v3
+const ex = await window.gml.cmd('exportPractice', {id: rec.id})
+// ex.payload = {version:3, record:{…}, apis:[…]}
+// 同一个键也能拿到二维码内容（紧凑版 v4 + LZMA + base64url）
+const sl = await window.gml.cmd('shareLink', {id: rec.id})
+// sl = {url:'…#gmlp=~<压缩包>', version:<二维码版本>, size:<画出来的像素>, tooLong:false}
+```
+
+⚠ **二维码放不下时** `tooLong:true`（`url` 为空）⇒ 改用「存读档」导成文件传过去。
+
 ---
 
 ## 3. 把一份定稿代码变成一条练习
@@ -1214,6 +1451,21 @@ const r = await page.evaluate(() => window.gml.cmd('find', {q:'冷却'}))
 3. **填题面**：名称 / 练习题要求 / 练习题提示（内容实时保存，没有保存按钮；编辑态标题栏是「完成」`#processClose`，点它切详情态但弹层不关）。
 4. **加载体**（顺序 = 定稿代码的顺序，一个文件一个载体，代码逐字照抄）：
    - 构造函数 / 独立脚本 → **脚本**载体；
+     - **一个载体只服务一个脚本 / 一个构造函数**（= 工程里的一个文件）；
+     - **构造函数必须写 `constructor` 声明关键词**：`function 类名(参数) constructor { … }`
+       （GML 2.3+ 只有带这个词的函数才能 `new` 出来；独立脚本不写）；
+       两个不同的类 / 两个文件 ⇒ **两个载体** ✓；
+     - **第 1 个代码框 = 这个脚本的整体展示**：构造函数（或主流程）的实现写全，
+       但**里面的静态方法 / 功能函数只写函数原型**（`function 方法名(参数);`，不写实现体），
+       **且这些原型行写在构造函数体内部**（和成员变量同级、缩进一层，不写在右花括号外面）；
+     - **完整的静态方法 / 功能函数 ⇒ 在同一个载体里另开一个代码框单独展示**（一个方法一个框）；
+     - **每个框起名字**：第 1 框是**脚本名**（如 `class_gun`），后面的框是**方法名**（如 `shoot`），
+       显示时自动拼成 **`class_gun.shoot`**（后面框的输入框前面自带 `class_gun.` 前缀）；
+     - 命令接口一次给多个：
+       `cmd('addModule', {type:'脚本', boxes:[{code:'…', name:'class_gun'}, {code:'…', name:'shoot'}]})`
+       （或 `{codes:['…','…']}`）⇒ 一个载体装「一个脚本 + 它的几个方法」时用这个，不必拆成好几个载体。
+       ⚠ `name` 是**方法名/脚本名**，不是文件名；文件名仍按老约定写在代码首行 `// 文件名`。
+       ⚠ 第 1 框里的原型行**不是完整代码**，别把方法体又抄回第 1 框（详见 §2.2）。
    - 挂载对象 → **对象**载体：对象名 `[data-role="objectName"]`，
      事件名 `[data-role="eventName"]`（Create / Step / Draw / Alarm 0 / Clean Up / Collision…），
      代码填进该事件框。
@@ -1570,10 +1822,12 @@ trail.update(x, y)
 
 `#checkinBtn` `#recordList .rec` `#processCard` `#processClose` `#pbBtn` `#pbExportBtn` `#pbImportBtn`
 `#pbQrBtn` `#shotBtn` `#shotPreview` `#shotSave` `#shotRebuild` `#menuBtn` `#userMenu .um-item`
-`#demoBtn` `#demoModal` `#demoInner` `#demoSpeed` `#demoClose`
+`#demoBtn` `#demoModal` `#demoInner` `#demoSpeed` `#demoSpeedMin` `#demoSpeedMax` `#demoSpeedVal` `#demoClose`
 `#miRename` `#miAvatar` `#miLang` `#miExport` `#miImport` `#miShare` `#fullscreenBtn` `#exitModal`
 `#apiModal` `#apiCodeInput` `#apiModalSave` `#apiPicker` `#apiPickerOk`
-字段用 `[data-field="name|requirement|hint"]`，对象用 `[data-role="objectName|eventName"]`。
+字段用 `[data-field="name|requirement|hint"]`，对象用 `[data-role="objectName|eventName"]`，
+代码载体的每个代码框用 `[data-role="moduleValue"][data-box-index="0|1|…"]`（下标从 0 开始），
+代码框的名字输入框用 `.codebox-namein`（第 1 个是脚本名，后面是方法名）。
 
 ---
 
@@ -1592,6 +1846,11 @@ trail.update(x, y)
 10. **API 库的 `code` 是大小写不敏感的**（内部统一转小写后建索引）：
     `World`（类）和 `world`（同名函数）只差大小写 ⇒ **后登的那条会把先登的 desc 覆盖掉**，
     库最后只剩一条。登记前先 `state()` 查一下；同一个东西不要拆成两条登记。
+11. **刷新页面后，站点不记得「当前打开的是哪条记录」**（选中状态只存在内存里）⇒
+    刷新后想改东西，**先 `cmd('select', {id})`**，否则 `cmd('set')` / `cmd('addModule')`
+    会直接回「现在没有打开的练习，先执行 checkin」（这不是 bug，是口径）✓。
+12. **单条练习的存档文件现在是「一行紧凑 JSON」**（不缩进）—— 体积小很多，
+    仍是标准 JSON，导入器照样认 ✓；要看清楚内容就自己 `JSON.stringify(x, null, 2)` 再看。
 
 ## 8.5 菜单里的「新手教程」和「清空缓存」
 
@@ -1620,6 +1879,12 @@ trail.update(x, y)
   **点一次放出来一个**（旁边有 `已显示 N / 总数` 计数）⇒ 演示时可以一段一段往外放 ✓。
 - **代码框（脚本 / 事件代码）在演示里初始只显示第一行** ⇒ 载体放出来时是一个「一行预览」，
   点它开始打字时**一行一行展开**（打完就全部展开）✓。
+- **对象载体的「预定义变量表」按「行」藏**：**一次交互 = 一整行**
+  （变量名 / 参数 / 说明 三个格子一起出来），不是一格一格点 ⇒
+  表格行的遮罩类是 `.demo-mask.obj-detail-row`（行级），表头一直可见 ✓。
+- **对象载体的「事件代码框」在演示里整块藏着**，只给一个 **「查看事件」** 按钮 ✓
+  （点一下才把 Create / Step 这些事件的代码框放出来；放出来后代码框仍然是「只藏字」的状态，
+  要再点一下（或按空格）才逐字打出来 ⇒ 演示时能分两步讲：先讲对象名和变量表，再讲事件代码）。
 - **「显示载体」按钮不会被顶出屏幕**：放载体后、打字机打字过程中，都会检查按钮是不是被上面
   长出来的内容顶出可视区，是就把内容往上滚一点（底部留 18px 余量）✓。
 - **再点一下同一个块 → 立刻显示全部内容** ✓。
@@ -1638,7 +1903,11 @@ trail.update(x, y)
     （`demoKeepInView(el,'lift')` 里判断 `gap < 抬升高度`）；
     触发后把块的底边抬到「屏幕下沿往上一个抬升高度」处；
   - **不贴近底部 ⇒ 什么都不做**（不会把块往下拽）✓。
-- 顶栏有**打字速度**输入 `#demoSpeed`（毫秒/字，默认 30），**改完立刻对正在跑的打字机生效** ✓。
+- 顶栏有**打字速度**控件（单位 = **帧/字**，页面默认 60fps ⇒ 1 帧 ≈ 16.7ms）：
+  - `#demoSpeedMin` = **下限**（默认 **1** 帧/字 = 最快）、`#demoSpeedMax` = **上限**（默认 **300** 帧/字 = 最慢），**可以自己改**；
+  - `#demoSpeed` = 滑动条（在上下限之间拖），`#demoSpeedVal` = 当前帧数；
+  - **按住 ←/→ 也能连续调滑动条**（不用先点它）：← 更快＝帧数变小，→ 更慢＝帧数变大，**按住越久走得越快**；
+  - **改完立刻对正在跑的打字机生效** ✓；上下限冲突时（下限 > 上限）**上限跟着抬**，不会把范围弄反。
 - 顶栏**打字速度左边**有 3 个**倍数**按钮 `#demoRatio`：
   **1倍 / 1.5倍 / 2倍** ✓
   - 默认：620px 栏宽 + 正常滚动；
@@ -1651,12 +1920,22 @@ trail.update(x, y)
     - 这排按钮**任何屏幕都显示**（含手机竖屏）✓；
   - **默认档位**：**手机竖屏默认 1 倍，其它情况默认 2 倍**（打开演示时自动套用）✓。
 - 关掉演示界面（关闭按钮 / 点遮罩 / `Esc`）= **退出演示模式** ✓。
+- **播放快捷键：连按空格 = 按顺序交互一次** ✓
+  - 打开演示模式后**直接连着按空格**，藏起来的内容就一段一段按页面顺序放出来
+    （练习题提示 → 操作描述 → 脚本/事件代码 → 对象名 → 预定义变量表 → API 参数说明）；
+  - **一次空格 = 界面的一次点击**：
+    - 正在打字 ⇒ **立刻显示全部**（相当于再点一下那一块）；
+    - 还没开始 ⇒ **先把藏着的载体放出来**，或者**开始打字**（下一个还没讲的东西）；
+    - 全都讲完了 ⇒ 提示「演示已播完」；
+  - 顺序 = **页面顺序**（观众看到的顺序），载体本身也算一步；
+  - 手动点了哪一块，**空格就从那块往后播**（不会跳回前面）；
+  - 空格不会让画面滚动；输入框里打字时空格照常是「输入空格」。
 
 **演示相关的命令**（自动化一律走命令，别抠 DOM）：
 
 | 命令 | 参数 | 作用 |
 |---|---|---|
-| `demo` | `{open:true}` / `{close:true}` / `{speed:毫秒}` / `{ratio:'default'\|'zoom150'\|'zoom200'}` | 开/关演示模式、改打字速度、改倍数 |
+| `demo` | `{open:true}` / `{close:true}` / `{speed:帧数}` / `{speedMin:帧数, speedMax:帧数}` / `{ratio:'default'\|'zoom150'\|'zoom200'}` | 开/关演示模式、改打字速度（**帧/字**）、改上下限、改倍数 |
 | `demoBlocks` | – | **块清单**：`{index,kind,len,preview,text,tlen,state,carrier,carrierHidden}`（`text`=内容全文、`carrier`=在第几个载体、`carrierHidden`=载体还没放出来） |
 | `demoReveal` | `{index:n}`（不给就放下一个） | 放出一个代码载体（默认全藏着） |
 | `demoType` | `{index:n}` 或 `{match:'文字'}` / `{wait:false}` | 触发打字机（默认等它打完再返回） |
@@ -1684,14 +1963,13 @@ await window.gml.cmd('get', {id:'记录的 id'})   // 正文 + 载体全文 + AP
 
 稿子里的每一句都要能在这份内容里找到出处 ⇒ **不要编页面上没有的东西**。
 
-### ② 先进预览模式「摸底」：把所有被隐藏的内容逐个触发一遍
+### ② 先进播放模式「摸底」：**用空格键把整页走一遍**
 
 **先看清页面上到底藏着什么，再动笔写台词。** 不摸底就写稿 ⇒ 一定会漏。
 
 ```js
 await window.gml.cmd('select', {id:'记录 id'})   // ★ 先选中这条记录（演示要靠它）
-await window.gml.cmd('demo', {open:true})        // 打开演示（倍数按屏幕自动：手机竖屏 1 倍，其它 2 倍）
-await window.gml.cmd('demo', {speed:30})         // 打字速度（毫秒/字，录视频建议 25~40）
+await window.gml.cmd('demo', {open:true})        // 打开播放模式（倍数按屏幕自动：手机竖屏 1 倍，其它 2 倍）
 await window.gml.cmd('demoBlocks')               // ★ 块清单
 ```
 
@@ -1705,20 +1983,21 @@ await window.gml.cmd('demoBlocks')               // ★ 块清单
 | `carrier` | 它在第几个「用到的代码载体」里（-1 = 不在载体里） |
 | `carrierHidden` | 那个载体是不是**还没放出来**（没放出来 ⇒ 直接打字等于打进黑洞） |
 
-**然后逐个触发，亲眼看清每块是什么、怎么触发**：
+**然后连着按空格，把整条记录从头到尾看一遍**（这就是观众看到的顺序）：
 
-```js
-await window.gml.cmd('demoType', {index:0});    // 触发第 0 块（默认等它打完再返回）
-await window.gml.cmd('demoReveal', {index:2});  // 第 3 个载体放出来
-await window.gml.cmd('demoType', {index:5});    // 再触发它里面的块
+```python
+while True:
+    await page.keyboard.press('Space')      # ← 空格 = 界面的一次点击
+    await page.wait_for_timeout(800)        # 看清这一块出了什么再按下一次
 ```
 
-- **载体默认全藏着** ⇒ 要看某个载体里的块，先 `demoReveal` 把它放出来
-  （`demoType` 也会自动放目标那个载体，但**只放目标那一个**，前面的载体仍藏着
-  ⇒ 观众看到的先后顺序要靠 `demoReveal` 自己排）；
+- 一次空格 = 界面的一次点击：**正在打字 ⇒ 立刻显示全部；还没开始 ⇒ 放出下一个藏起来的东西**；
+- 每按一次都**亲眼看一眼**屏幕上出了什么（哪块是打字机、哪块是藏着的载体、每块多少字）；
+- 按到「演示已播完」为止 ⇒ 整条记录的**完整内容**你都看过了 ⇒ 稿子才有依据；
+- 想单独看某一块，也可以用 `cmd('demoType',{index:n})` / `cmd('demoReveal',{index:n})`；
+  **载体默认全藏着** ⇒ 要看某个载体里的块，先 `demoReveal` 把它放出来；
 - 触发完 `state` 从 `hidden` 变成 `done` ⇒ **再触发同一个块不会重打**
-  （想重来就关掉演示再打开）；
-- 摸底时**每一块都触发一次**，看清它在讲什么 ⇒ 稿子才有依据。
+  （想重来就关掉播放模式再打开）。
 
 ⇒ 这一步结束时，你手上应该有**一份块清单**（每块：是什么、多少字、在第几个载体、怎么触发）。
 
@@ -1746,7 +2025,27 @@ await window.gml.cmd('demoCoverage', {covered:[0,1,2,3,4,5,6,7,8,9,10,11,12,13]}
 - 补完再跑一次，`missCount` 必须是 0（或者能说清为什么漏）；
 - **这一步不许跳** —— 用户 2026-11-15 明确：漏掉需要显示的隐藏内容 = 成片里有内容没被讲到。
 
-### ⑤ 按稿子逐段触发打字机（分镜节奏）
+### ⑤ 写好台词 ⇒ **先 TTS 配音**（配音在前，定速度在后）
+
+- 用 `mcode-tools` 的语音合成工具，按稿子**逐句**生成音频（句号切分，别合成一大段 ⇒ 后面不好对轴）；
+- 每句单独一个文件，文件名带序号：`01.mp3 / 02.mp3 …`；
+- 中文用中文音色，英文用英文音色；
+- **记下每句的时长（秒）** —— 下一步用它倒推打字速度。
+
+### ⑥ 按配音时长定打字速度（**重进播放模式**，把滑动条调到匹配的值）
+
+**口径：先有配音，再定速度。** 速度不是拍脑袋定的，是按「这段话要讲多久」倒推出来的。
+
+- 每段需要的速度：**帧/字 = 该段配音秒数 × 60 ÷ 该段字数**
+  （60 = 页面 60fps；1 帧 ≈ 16.7ms ⇒ 帧/字 = 段时长毫秒 ÷ 字数 ÷ 16.7）；
+- 逐段算：`demoBlocks` 的 `len`/`tlen` 就是每块字数，配上对应那句配音的时长 ⇒ 每段一个目标帧数；
+- **重进播放模式**（关掉再打开 ⇒ 块状态重置），把速度滑动条调到那个值：
+  - 直接设值：`cmd('demo', {speed:帧数})`（超范围会被夹在上下限内）；
+  - 手动微调：**按住 ←/→ 调滑动条**（← 更快＝帧数变小，→ 更慢＝帧数变大；**按住越久走得越快**），
+    边看边调，打字节奏和配音对上就停；
+- 定完速**按空格从头走一遍**，确认「字出现的节奏」和「配音的节奏」是同一件事。
+
+### ⑦ 录屏：按稿子逐段触发打字机（分镜节奏）
 
 ```js
 await window.gml.cmd('demoReveal', {})              // 先放出一个代码载体（演示里默认全藏着）
@@ -1757,7 +2056,6 @@ await window.gml.cmd('demoType', {index:7})         // 或按块序号触发
 
 - `demoType` **默认会等这块打完再返回** ⇒ 一句接一句串起来，就是现成的分镜节奏 ✓；
 - 想自己掌握节奏就传 `{wait:false}`；
-- 上一段没打完就触发下一段 ⇒ **前一段直接显示完整内容**（不会卡在半截）✓；
 - **记录名称 / 练习题要求本来就是显示的**（不做打字机），稿子里提到它们时不用触发；
 - 每放一个载体，就把它对应的块触发一次（载体内代码会**一行一行展开**）✓。
 
@@ -1766,9 +2064,10 @@ await window.gml.cmd('demoType', {index:7})         // 或按块序号触发
 1. **载体默认是藏着的** ⇒ 直接 `demoType` 打进去，等于把字打进看不见的元素（**静默失败，屏幕上什么也没有**）。
    现在 `demoType` 会**自动把目标块所在的载体放出来**，但你仍然要按稿子顺序放（`demoReveal`），
    观众看到的顺序才对得上解说。
-2. **打字速度在每次触发前设**（`demo({speed})` 紧挨着 `demoType`）——
-   视频里建议 **30~120 毫秒/字**：低于 30 像机器枪在扫，高于 120 像逐字蹦。
-   短段落用慢速（读得清），长代码段用 30~45。
+2. **打字速度在每段触发前设**（`demo({speed})` 紧挨着 `demoType`）——
+   速度单位是**帧/字**（页面 60fps ⇒ 30 帧 = 0.5 秒/字），值填 ⑥ 算出来的那个；
+   滑动条范围 = 下限（默认 **1** 帧/字，最快）到上限（默认 **300** 帧/字，最慢），
+   **按住 ←/→ 可连续微调**（← 更快，→ 更慢）。
 3. **一段 = 打字机 + 这一段的话并行 → 两个都完了才切下一个**
    （讲解顺序 = 页面从上到下；**练习记录的板面一律不动**，不重排任何 section）
 
@@ -1779,7 +2078,7 @@ await window.gml.cmd('demoType', {index:7})         // 或按块序号触发
      配音时长不动；台词比打字机长 ⇒ 视频原速，末尾补最后一帧到台词讲完。
 
    ```python
-   cmd('demo', {'speed': speed})          # 先定速度
+   cmd('demo', {'speed': speed})          # 先定速度（帧/字）
    cmd('demoType', {'index': idx, 'wait': False})
    pg.wait_for_function("() => document.querySelectorAll('#demoInner [data-demo-state=\"typing\"]').length === 0")
    typing = time.time() - t0               # 打字机时长
@@ -1788,18 +2087,18 @@ await window.gml.cmd('demoType', {index:7})         // 或按块序号触发
    ⇒ 合成时每段音轨 = **这一段的话（从段首就开始）+ 尾部静音补到段长**；
    视频按 `min(typing, dur)` 变速、末尾补帧到段长（脚本：`work/mux_demo_video.py`）。
 
-   ⚠ **打字速度现在是真能兑现的**：`demoRun` 按「时间」吐字（记下下一个字该出现的时间点，
-   落后了一次补几个字）⇒ 设 30ms/字就跑 30ms/字、设 6ms/字就跑 6ms/字。
-   录屏环境实测倍率约 1.06 ⇒ 长代码段按 `dur × 1000 ÷ 字数 ÷ 1.06` 设速度即可。
+   ⚠ **打字速度是按时间兑现的**：`demoRun` 记下「下一个字该出现的时间点」，落后了一次补几个字
+   ⇒ 设 30 帧/字就跑 30 帧/字、设 1 帧/字就跑 1 帧/字。
+   录屏环境实测倍率约 1.06 ⇒ 长代码段按 `dur × 1000 ÷ 字数 ÷ 1.06` 折算毫秒再 ÷ 16.7 换帧。
 
    ⚠ **录屏按 1080p 横屏 1920×1080**（视口和 `record_video_size` 都是 1920×1080，
    **不要改缩放倍率**，不传 `device_scale_factor`）。
-   ⚠ 录之前确认「画面大小」是对的：演示模式被开关过之后，倍数可能退回 1 倍
+   ⚠ 录之前确认「画面大小」是对的：播放模式被开关过之后，倍数可能退回 1 倍
    （内容缩在画面中间）。量一下：打开演示后 `#demoInner` 的
    `getBoundingClientRect().width` 应该是 **1240 左右**（2 倍 × 620 排版宽），
    只有 620 就说明倍数没应用上。
 
-### ⑥ 录屏（Playwright 的 `recordVideo`）
+### ⑧ 录屏（Playwright 的 `recordVideo`）
 
 ```python
 # ★ 1080p 横屏：视口和录像尺寸都 1920×1080，不传 device_scale_factor
@@ -1816,13 +2115,7 @@ ctx.close()                          # 关掉 context，视频才会落盘
 - 打开演示模式前先 `cmd('finish')`（演示按钮只在详情态有）+ `cmd('select',{id})`（选中记录）；
 - 录制期间别用 `page.screenshot` 抢画面。
 
-### ⑦ TTS 配音（mcode-tools）
-
-- 用 `mcode-tools` 的语音合成工具，按稿子**逐句**生成音频（句号切分，别合成一大段 ⇒ 后面不好对轴）；
-- 每句单独一个文件，文件名带序号：`01.mp3 / 02.mp3 …`；
-- 中文用中文音色，英文用英文音色；语速和打字速度对得上（打字 30ms/字 ≈ 4~5 字/秒）。
-
-### ⑧ 剪辑（ffmpeg）
+### ⑨ 剪辑（ffmpeg）
 
 ```bash
 # 1) 音频拼成一条（等长静音补齐）
@@ -1831,7 +2124,7 @@ ffmpeg -f concat -safe 0 -i audio.txt -c copy voice.wav
 ffmpeg -i demo.webm -i voice.wav -c:v libx264 -crf 20 -pix_fmt yuv420p -c:a aac -shortest out.mp4
 ```
 
-- 对轴：把每句音频的时长和 `demoType` 的用时对齐（`chars × 打字毫秒数`），
+- 对轴：每段的打字时长 = **字数 × 帧/字 ÷ 60 秒**（帧/字按 ⑥ 算好），
   音频长就留静音、短就在句间补空白；
 - 头尾各留 0.5~1 秒静止画面，别硬切；
 - 输出 **mp4（H.264 + AAC）**，竖屏就 `scale`/`crop` 成 9:16；
@@ -2110,7 +2403,7 @@ python3 <skill:gml-tutorial-manual>/scripts/build_manual_site.py \
     <div class="demo-bar-l">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gm-deep);flex:0 0 auto"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
       <span class="demo-bar-title">演示模式</span>
-      <span class="demo-bar-tip" id="demoTip">点一下隐藏的文字，会逐字打出来；再点一下立刻显示全部</span>
+      <span class="demo-bar-tip" id="demoTip">点一下逐字打出来，再点一下立刻显示全部；连按空格可依次播放；←/→ 调打字速度</span>
     </div>
     <div class="demo-bar-r">
       <div class="demo-ratio" id="demoRatio">
@@ -2118,11 +2411,18 @@ python3 <skill:gml-tutorial-manual>/scripts/build_manual_site.py \
         <button class="demo-ratio-btn" type="button" data-mode="zoom150">1.5倍</button>
         <button class="demo-ratio-btn" type="button" data-mode="zoom200">2倍</button>
       </div>
-      <label class="demo-speed" for="demoSpeed">
-        打字速度
-        <input id="demoSpeed" type="number" min="1" max="1000" step="1" value="30" inputmode="numeric">
-        <span>毫秒/字</span>
-      </label>
+      <div class="demo-speed" id="demoSpeedBox">
+        <span class="demo-speed-lab">打字速度</span>
+        <label class="demo-speed-b" for="demoSpeedMin">下限
+          <input id="demoSpeedMin" type="number" min="1" max="6000" step="1" value="1" inputmode="numeric">
+        </label>
+        <label class="demo-speed-b" for="demoSpeedMax">上限
+          <input id="demoSpeedMax" type="number" min="1" max="6000" step="1" value="300" inputmode="numeric">
+        </label>
+        <input id="demoSpeed" type="range" min="1" max="300" step="1" value="1" aria-label="打字速度">
+        <span class="demo-speed-val" id="demoSpeedVal">1</span>
+        <span class="demo-speed-unit">帧/字</span>
+      </div>
       <button class="btn btn-ghost" id="demoClose" type="button" style="padding:6px 14px;font-size:13px">关闭演示</button>
     </div>
   </div>
@@ -2285,6 +2585,8 @@ python3 <skill:gml-tutorial-manual>/scripts/build_manual_site.py \
       <button class="btn btn-primary" id="shotSave" type="button">保存图片</button>
       <button class="btn btn-ghost" id="shotRebuild" type="button">重新生成</button>
     </div>
+    <label class="qr-slim-row"><input type="checkbox" id="shotQrSlim"><span id="shotQrSlimText">精简排版（只显示标题与练习题要求）</span></label>
+    <p class="note" id="shotQrInfo"></p>
     <p class="note">手机上也可以长按上面的图片，直接保存到相册。</p>
   </div>
 </div>
@@ -2311,6 +2613,7 @@ python3 <skill:gml-tutorial-manual>/scripts/build_manual_site.py \
 
     <div id="pbImport" style="display:none">
       <p class="import-line" id="pbRecInfo">练习：</p>
+      <p class="import-line" id="pbNewNote">practice_new_note</p>
       <p class="import-line" id="pbApiInfo">它引用了 0 个 API。</p>
       <div id="pbApiList"></div>
       <p class="pb-note" id="pbHint">库里已有同名的 API，逐个选一下：用存档里的，还是保留库里现在的。</p>
@@ -2323,6 +2626,15 @@ python3 <skill:gml-tutorial-manual>/scripts/build_manual_site.py \
 </div>
 <input type="file" id="practiceFile" accept="application/json,.json" class="hidden-file">
 <input type="file" id="qrFile" accept="image/*" class="hidden-file">
+
+<script>
+/* === LZMA 编解码器（7-Zip 的 LZMA 算法，Nathan Rugg 的 lzma-js，MIT） ===
+   用于把练习存档压得更小 ⇒ 二维码能装下更多内容 */
+(function(){
+var e=function(){"use strict";function r(e,r){postMessage({action:xt,cbn:r,result:e})}function t(e){var r=[];return r[e-1]=void 0,r}function o(e,r){return i(e[0]+r[0],e[1]+r[1])}function n(e,r){return u(~~Math.max(Math.min(e[1]/Ot,2147483647),-2147483648)&~~Math.max(Math.min(r[1]/Ot,2147483647),-2147483648),c(e)&c(r))}function s(e,r){var t,o;return e[0]==r[0]&&e[1]==r[1]?0:(t=0>e[1],o=0>r[1],t&&!o?-1:!t&&o?1:h(e,r)[1]<0?-1:1)}function i(e,r){var t,o;for(r%=0x10000000000000000,e%=0x10000000000000000,t=r%Ot,o=Math.floor(e/Ot)*Ot,r=r-t+o,e=e-o+t;0>e;)e+=Ot,r-=Ot;for(;e>4294967295;)e-=Ot,r+=Ot;for(r%=0x10000000000000000;r>0x7fffffff00000000;)r-=0x10000000000000000;for(;-0x8000000000000000>r;)r+=0x10000000000000000;return[e,r]}function _(e,r){return e[0]==r[0]&&e[1]==r[1]}function a(e){return e>=0?[e,0]:[e+Ot,-Ot]}function c(e){return e[0]>=2147483648?~~Math.max(Math.min(e[0]-Ot,2147483647),-2147483648):~~Math.max(Math.min(e[0],2147483647),-2147483648)}function u(e,r){var t,o;return t=e*Ot,o=r,0>r&&(o+=Ot),[o,t]}function f(e){return 30>=e?1<<e:f(30)*f(e-30)}function m(e,r){var t,o,n,s;if(r&=63,_(e,Ht))return r?Gt:e;if(0>e[1])throw Error("Neg");return s=f(r),o=e[1]*s%0x10000000000000000,n=e[0]*s,t=n-n%Ot,o+=t,n-=t,o>=0x8000000000000000&&(o-=0x10000000000000000),[n,o]}function d(e,r){var t;return r&=63,t=f(r),i(Math.floor(e[0]/t),e[1]/t)}function p(e,r){var t;return r&=63,t=d(e,r),0>e[1]&&(t=o(t,m([2,0],63-r))),t}function h(e,r){return i(e[0]-r[0],e[1]-r[1])}function P(e,r){return e.Mc=r,e.Lc=0,e.Yb=r.length,e}function l(e){return e.Lc>=e.Yb?-1:255&e.Mc[e.Lc++]}function v(e,r,t,o){return e.Lc>=e.Yb?-1:(o=Math.min(o,e.Yb-e.Lc),M(e.Mc,e.Lc,r,t,o),e.Lc+=o,o)}function B(e){return e.Mc=t(32),e.Yb=0,e}function S(e){var r=e.Mc;return r.length=e.Yb,r}function g(e,r){e.Mc[e.Yb++]=r<<24>>24}function k(e,r,t,o){M(r,t,e.Mc,e.Yb,o),e.Yb+=o}function R(e,r,t,o,n){var s;for(s=r;t>s;++s)o[n++]=e.charCodeAt(s)}function M(e,r,t,o,n){for(var s=0;n>s;++s)t[o+s]=e[r+s]}function D(e,r){Ar(r,1<<e.s),r.n=e.f,Hr(r,e.m),r.eb=0,r.fb=3,r.Y=2,r.y=3}function b(r,t,o,n,i){var _,a;if(s(n,At)<0)throw Error("invalid length "+n);for(r.Tb=n,_=Dr({}),D(i,_),_.Gc=void 0===e.disableEndMark,Gr(_,o),a=0;64>a;a+=8)g(o,255&c(d(n,a)));r.yb=(_.W=0,_.oc=t,_.pc=0,Mr(_),_.d.Ab=o,Fr(_),wr(_),br(_),_.$.rb=_.n+1-2,Qr(_.$,1<<_.Y),_.i.rb=_.n+1-2,Qr(_.i,1<<_.Y),void(_.g=Gt),X({},_))}function w(e,r,t){return e.Nb=B({}),b(e,P({},r),e.Nb,a(r.length),t),e}function E(e,r,t){var o,n,s,i,_="",c=[];for(n=0;5>n;++n){if(s=l(r),-1==s)throw Error("truncated input");c[n]=s<<24>>24}if(o=ir({}),!ar(o,c))throw Error("corrupted input");for(n=0;64>n;n+=8){if(s=l(r),-1==s)throw Error("truncated input");s=s.toString(16),1==s.length&&(s="0"+s),_=s+""+_}/^0+$|^f+$/i.test(_)?e.Tb=At:(i=parseInt(_,16),e.Tb=i>4294967295?At:a(i)),e.yb=nr(o,r,t,e.Tb)}function L(e,r){return e.Nb=B({}),E(e,P({},r),e.Nb),e}function y(e,r,o,n){var s;e.Bc=r,e._b=o,s=r+o+n,(null==e.c||e.Kb!=s)&&(e.c=null,e.Kb=s,e.c=t(e.Kb)),e.H=e.Kb-o}function C(e,r){return e.c[e.f+e.o+r]}function z(e,r,t,o){var n,s;for(e.T&&e.o+r+o>e.h&&(o=e.h-(e.o+r)),++t,s=e.f+e.o+r,n=0;o>n&&e.c[s+n]==e.c[s+n-t];++n);return n}function F(e){return e.h-e.o}function I(e){var r,t,o;for(o=e.f+e.o-e.Bc,o>0&&--o,t=e.f+e.h-o,r=0;t>r;++r)e.c[r]=e.c[o+r];e.f-=o}function x(e){var r;++e.o,e.o>e.zb&&(r=e.f+e.o,r>e.H&&I(e),N(e))}function N(e){var r,t,o;if(!e.T)for(;;){if(o=-e.f+e.Kb-e.h,!o)return;if(r=v(e.cc,e.c,e.f+e.h,o),-1==r)return e.zb=e.h,t=e.f+e.zb,t>e.H&&(e.zb=e.H-e.f),void(e.T=1);e.h+=r,e.h>=e.o+e._b&&(e.zb=e.h-e._b)}}function O(e,r){e.f+=r,e.zb-=r,e.o-=r,e.h-=r}function A(e,r,o,n,s){var i,_,a;1073741567>r&&(e.Fc=16+(n>>1),a=~~((r+o+n+s)/2)+256,y(e,r+o,n+s,a),e.ob=n,i=r+1,e.p!=i&&(e.L=t(2*(e.p=i))),_=65536,e.qb&&(_=r-1,_|=_>>1,_|=_>>2,_|=_>>4,_|=_>>8,_>>=1,_|=65535,_>16777216&&(_>>=1),e.Ec=_,++_,_+=e.R),_!=e.rc&&(e.ub=t(e.rc=_)))}function H(e,r){var t,o,n,s,i,_,a,c,u,f,m,d,p,h,P,l,v,B,S,g,k;if(e.h>=e.o+e.ob)h=e.ob;else if(h=e.h-e.o,e.xb>h)return W(e),0;for(v=0,P=e.o>e.p?e.o-e.p:0,o=e.f+e.o,l=1,c=0,u=0,e.qb?(k=Tt[255&e.c[o]]^255&e.c[o+1],c=1023&k,k^=(255&e.c[o+2])<<8,u=65535&k,f=(k^Tt[255&e.c[o+3]]<<5)&e.Ec):f=255&e.c[o]^(255&e.c[o+1])<<8,n=e.ub[e.R+f]||0,e.qb&&(s=e.ub[c]||0,i=e.ub[1024+u]||0,e.ub[c]=e.o,e.ub[1024+u]=e.o,s>P&&e.c[e.f+s]==e.c[o]&&(r[v++]=l=2,r[v++]=e.o-s-1),i>P&&e.c[e.f+i]==e.c[o]&&(i==s&&(v-=2),r[v++]=l=3,r[v++]=e.o-i-1,s=i),0!=v&&s==n&&(v-=2,l=1)),e.ub[e.R+f]=e.o,S=(e.k<<1)+1,g=e.k<<1,d=p=e.w,0!=e.w&&n>P&&e.c[e.f+n+e.w]!=e.c[o+e.w]&&(r[v++]=l=e.w,r[v++]=e.o-n-1),t=e.Fc;;){if(P>=n||0==t--){e.L[S]=e.L[g]=0;break}if(a=e.o-n,_=(e.k>=a?e.k-a:e.k-a+e.p)<<1,B=e.f+n,m=p>d?d:p,e.c[B+m]==e.c[o+m]){for(;++m!=h&&e.c[B+m]==e.c[o+m];);if(m>l&&(r[v++]=l=m,r[v++]=a-1,m==h)){e.L[g]=e.L[_],e.L[S]=e.L[_+1];break}}(255&e.c[o+m])>(255&e.c[B+m])?(e.L[g]=n,g=_+1,n=e.L[g],p=m):(e.L[S]=n,S=_,n=e.L[S],d=m)}return W(e),v}function G(e){e.f=0,e.o=0,e.h=0,e.T=0,N(e),e.k=0,O(e,-1)}function W(e){var r;++e.k>=e.p&&(e.k=0),x(e),1073741823==e.o&&(r=e.o-e.p,T(e.L,2*e.p,r),T(e.ub,e.rc,r),O(e,r))}function T(e,r,t){var o,n;for(o=0;r>o;++o)n=e[o]||0,t>=n?n=0:n-=t,e[o]=n}function Z(e,r){e.qb=r>2,e.qb?(e.w=0,e.xb=4,e.R=66560):(e.w=2,e.xb=3,e.R=0)}function Y(e,r){var t,o,n,s,i,_,a,c,u,f,m,d,p,h,P,l,v;do{if(e.h>=e.o+e.ob)d=e.ob;else if(d=e.h-e.o,e.xb>d){W(e);continue}for(p=e.o>e.p?e.o-e.p:0,o=e.f+e.o,e.qb?(v=Tt[255&e.c[o]]^255&e.c[o+1],_=1023&v,e.ub[_]=e.o,v^=(255&e.c[o+2])<<8,a=65535&v,e.ub[1024+a]=e.o,c=(v^Tt[255&e.c[o+3]]<<5)&e.Ec):c=255&e.c[o]^(255&e.c[o+1])<<8,n=e.ub[e.R+c],e.ub[e.R+c]=e.o,P=(e.k<<1)+1,l=e.k<<1,f=m=e.w,t=e.Fc;;){if(p>=n||0==t--){e.L[P]=e.L[l]=0;break}if(i=e.o-n,s=(e.k>=i?e.k-i:e.k-i+e.p)<<1,h=e.f+n,u=m>f?f:m,e.c[h+u]==e.c[o+u]){for(;++u!=d&&e.c[h+u]==e.c[o+u];);if(u==d){e.L[l]=e.L[s],e.L[P]=e.L[s+1];break}}(255&e.c[o+u])>(255&e.c[h+u])?(e.L[l]=n,l=s+1,n=e.L[l],m=u):(e.L[P]=n,P=s,n=e.L[P],f=u)}W(e)}while(0!=--r)}function V(e,r,t){var o=e.o-r-1;for(0>o&&(o+=e.M);0!=t;--t)o>=e.M&&(o=0),e.Lb[e.o++]=e.Lb[o++],e.o>=e.M&&$(e)}function j(e,r){(null==e.Lb||e.M!=r)&&(e.Lb=t(r)),e.M=r,e.o=0,e.h=0}function $(e){var r=e.o-e.h;r&&(k(e.cc,e.Lb,e.h,r),e.o>=e.M&&(e.o=0),e.h=e.o)}function K(e,r){var t=e.o-r-1;return 0>t&&(t+=e.M),e.Lb[t]}function q(e,r){e.Lb[e.o++]=r,e.o>=e.M&&$(e)}function J(e){$(e),e.cc=null}function Q(e){return e-=2,4>e?e:3}function U(e){return 4>e?0:10>e?e-3:e-6}function X(e,r){return e.cb=r,e.Z=null,e.zc=1,e}function er(e,r){return e.Z=r,e.cb=null,e.zc=1,e}function rr(e){if(!e.zc)throw Error("bad state");return e.cb?or(e):tr(e),e.zc}function tr(e){var r=sr(e.Z);if(-1==r)throw Error("corrupted input");e.Pb=At,e.Pc=e.Z.g,(r||s(e.Z.Nc,Gt)>=0&&s(e.Z.g,e.Z.Nc)>=0)&&($(e.Z.B),J(e.Z.B),e.Z.e.Ab=null,e.zc=0)}function or(e){Rr(e.cb,e.cb.Xb,e.cb.uc,e.cb.Kc),e.Pb=e.cb.Xb[0],e.cb.Kc[0]&&(Or(e.cb),e.zc=0)}function nr(e,r,t,o){return e.e.Ab=r,J(e.B),e.B.cc=t,_r(e),e.U=0,e.ib=0,e.Jc=0,e.Ic=0,e.Qc=0,e.Nc=o,e.g=Gt,e.jc=0,er({},e)}function sr(e){var r,t,n,i,_,u;if(u=c(e.g)&e.Dc,vt(e.e,e.Gb,(e.U<<4)+u)){if(vt(e.e,e.Zb,e.U))n=0,vt(e.e,e.Cb,e.U)?(vt(e.e,e.Db,e.U)?(vt(e.e,e.Eb,e.U)?(t=e.Qc,e.Qc=e.Ic):t=e.Ic,e.Ic=e.Jc):t=e.Jc,e.Jc=e.ib,e.ib=t):vt(e.e,e.pb,(e.U<<4)+u)||(e.U=7>e.U?9:11,n=1),n||(n=mr(e.sb,e.e,u)+2,e.U=7>e.U?8:11);else if(e.Qc=e.Ic,e.Ic=e.Jc,e.Jc=e.ib,n=2+mr(e.Rb,e.e,u),e.U=7>e.U?7:10,_=at(e.kb[Q(n)],e.e),_>=4){if(i=(_>>1)-1,e.ib=(2|1&_)<<i,14>_)e.ib+=ut(e.kc,e.ib-_-1,e.e,i);else if(e.ib+=Bt(e.e,i-4)<<4,e.ib+=ct(e.Fb,e.e),0>e.ib)return-1==e.ib?1:-1}else e.ib=_;if(s(a(e.ib),e.g)>=0||e.ib>=e.nb)return-1;V(e.B,e.ib,n),e.g=o(e.g,a(n)),e.jc=K(e.B,0)}else r=Pr(e.gb,c(e.g),e.jc),e.jc=7>e.U?vr(r,e.e):Br(r,e.e,K(e.B,e.ib)),q(e.B,e.jc),e.U=U(e.U),e.g=o(e.g,Wt);return 0}function ir(e){e.B={},e.e={},e.Gb=t(192),e.Zb=t(12),e.Cb=t(12),e.Db=t(12),e.Eb=t(12),e.pb=t(192),e.kb=t(4),e.kc=t(114),e.Fb=_t({},4),e.Rb=dr({}),e.sb=dr({}),e.gb={};for(var r=0;4>r;++r)e.kb[r]=_t({},6);return e}function _r(e){e.B.h=0,e.B.o=0,gt(e.Gb),gt(e.pb),gt(e.Zb),gt(e.Cb),gt(e.Db),gt(e.Eb),gt(e.kc),lr(e.gb);for(var r=0;4>r;++r)gt(e.kb[r].G);pr(e.Rb),pr(e.sb),gt(e.Fb.G),St(e.e)}function ar(e,r){var t,o,n,s,i,_,a;if(5>r.length)return 0;for(a=255&r[0],n=a%9,_=~~(a/9),s=_%5,i=~~(_/5),t=0,o=0;4>o;++o)t+=(255&r[1+o])<<8*o;return t>99999999||!ur(e,n,s,i)?0:cr(e,t)}function cr(e,r){return 0>r?0:(e.Ob!=r&&(e.Ob=r,e.nb=Math.max(e.Ob,1),j(e.B,Math.max(e.nb,4096))),1)}function ur(e,r,t,o){if(r>8||t>4||o>4)return 0;hr(e.gb,t,r);var n=1<<o;return fr(e.Rb,n),fr(e.sb,n),e.Dc=n-1,1}function fr(e,r){for(;r>e.O;++e.O)e.ec[e.O]=_t({},3),e.hc[e.O]=_t({},3)}function mr(e,r,t){if(!vt(r,e.wc,0))return at(e.ec[t],r);var o=8;return o+=vt(r,e.wc,1)?8+at(e.tc,r):at(e.hc[t],r)}function dr(e){return e.wc=t(2),e.ec=t(16),e.hc=t(16),e.tc=_t({},8),e.O=0,e}function pr(e){gt(e.wc);for(var r=0;e.O>r;++r)gt(e.ec[r].G),gt(e.hc[r].G);gt(e.tc.G)}function hr(e,r,o){var n,s;if(null==e.V||e.u!=o||e.I!=r)for(e.I=r,e.qc=(1<<r)-1,e.u=o,s=1<<e.u+e.I,e.V=t(s),n=0;s>n;++n)e.V[n]=Sr({})}function Pr(e,r,t){return e.V[((r&e.qc)<<e.u)+((255&t)>>>8-e.u)]}function lr(e){var r,t;for(t=1<<e.u+e.I,r=0;t>r;++r)gt(e.V[r].Ib)}function vr(e,r){var t=1;do t=t<<1|vt(r,e.Ib,t);while(256>t);return t<<24>>24}function Br(e,r,t){var o,n,s=1;do if(n=t>>7&1,t<<=1,o=vt(r,e.Ib,(1+n<<8)+s),s=s<<1|o,n!=o){for(;256>s;)s=s<<1|vt(r,e.Ib,s);break}while(256>s);return s<<24>>24}function Sr(e){return e.Ib=t(768),e}function gr(e,r){var t,o,n,s;e.jb=r,n=e.a[r].r,o=e.a[r].j;do e.a[r].t&&(st(e.a[n]),e.a[n].r=n-1,e.a[r].Ac&&(e.a[n-1].t=0,e.a[n-1].r=e.a[r].r2,e.a[n-1].j=e.a[r].j2)),s=n,t=o,o=e.a[s].j,n=e.a[s].r,e.a[s].j=t,e.a[s].r=r,r=s;while(r>0);return e.mb=e.a[0].j,e.q=e.a[0].r}function kr(e){e.l=0,e.J=0;for(var r=0;4>r;++r)e.v[r]=0}function Rr(e,r,t,n){var i,u,f,m,d,p,P,l,v,B,S,g,k,R,M;if(r[0]=Gt,t[0]=Gt,n[0]=1,e.oc&&(e.b.cc=e.oc,G(e.b),e.W=1,e.oc=null),!e.pc){if(e.pc=1,R=e.g,_(e.g,Gt)){if(!F(e.b))return void Er(e,c(e.g));xr(e),k=c(e.g)&e.y,kt(e.d,e.C,(e.l<<4)+k,0),e.l=U(e.l),f=C(e.b,-e.s),rt(Xr(e.A,c(e.g),e.J),e.d,f),e.J=f,--e.s,e.g=o(e.g,Wt)}if(!F(e.b))return void Er(e,c(e.g));for(;;){if(P=Lr(e,c(e.g)),B=e.mb,k=c(e.g)&e.y,u=(e.l<<4)+k,1==P&&-1==B)kt(e.d,e.C,u,0),f=C(e.b,-e.s),M=Xr(e.A,c(e.g),e.J),7>e.l?rt(M,e.d,f):(v=C(e.b,-e.v[0]-1-e.s),tt(M,e.d,v,f)),e.J=f,e.l=U(e.l);else{if(kt(e.d,e.C,u,1),4>B){if(kt(e.d,e.bb,e.l,1),B?(kt(e.d,e.hb,e.l,1),1==B?kt(e.d,e.Ub,e.l,0):(kt(e.d,e.Ub,e.l,1),kt(e.d,e.vc,e.l,B-2))):(kt(e.d,e.hb,e.l,0),1==P?kt(e.d,e._,u,0):kt(e.d,e._,u,1)),1==P?e.l=7>e.l?9:11:(Kr(e.i,e.d,P-2,k),e.l=7>e.l?8:11),m=e.v[B],0!=B){for(p=B;p>=1;--p)e.v[p]=e.v[p-1];e.v[0]=m}}else{for(kt(e.d,e.bb,e.l,0),e.l=7>e.l?7:10,Kr(e.$,e.d,P-2,k),B-=4,g=Tr(B),l=Q(P),mt(e.K[l],e.d,g),g>=4&&(d=(g>>1)-1,i=(2|1&g)<<d,S=B-i,14>g?Pt(e.Sb,i-g-1,e.d,d,S):(Rt(e.d,S>>4,d-4),pt(e.S,e.d,15&S),++e.Qb)),m=B,p=3;p>=1;--p)e.v[p]=e.v[p-1];e.v[0]=m,++e.Mb}e.J=C(e.b,P-1-e.s)}if(e.s-=P,e.g=o(e.g,a(P)),!e.s){if(e.Mb>=128&&wr(e),e.Qb>=16&&br(e),r[0]=e.g,t[0]=Mt(e.d),!F(e.b))return void Er(e,c(e.g));if(s(h(e.g,R),[4096,0])>=0)return e.pc=0,void(n[0]=0)}}}}function Mr(e){var r,t;e.b||(r={},t=4,e.X||(t=2),Z(r,t),e.b=r),Ur(e.A,e.eb,e.fb),(e.ab!=e.wb||e.Hb!=e.n)&&(A(e.b,e.ab,4096,e.n,274),e.wb=e.ab,e.Hb=e.n)}function Dr(e){var r;for(e.v=t(4),e.a=[],e.d={},e.C=t(192),e.bb=t(12),e.hb=t(12),e.Ub=t(12),e.vc=t(12),e._=t(192),e.K=[],e.Sb=t(114),e.S=ft({},4),e.$=qr({}),e.i=qr({}),e.A={},e.m=[],e.P=[],e.lb=[],e.nc=t(16),e.x=t(4),e.Q=t(4),e.Xb=[Gt],e.uc=[Gt],e.Kc=[0],e.fc=t(5),e.yc=t(128),e.vb=0,e.X=1,e.D=0,e.Hb=-1,e.mb=0,r=0;4096>r;++r)e.a[r]={};for(r=0;4>r;++r)e.K[r]=ft({},6);return e}function br(e){for(var r=0;16>r;++r)e.nc[r]=ht(e.S,r);e.Qb=0}function wr(e){var r,t,o,n,s,i,_,a;for(n=4;128>n;++n)i=Tr(n),o=(i>>1)-1,r=(2|1&i)<<o,e.yc[n]=lt(e.Sb,r-i-1,o,n-r);for(s=0;4>s;++s){for(t=e.K[s],_=s<<6,i=0;e.$b>i;++i)e.P[_+i]=dt(t,i);for(i=14;e.$b>i;++i)e.P[_+i]+=(i>>1)-1-4<<6;for(a=128*s,n=0;4>n;++n)e.lb[a+n]=e.P[_+n];for(;128>n;++n)e.lb[a+n]=e.P[_+Tr(n)]+e.yc[n]}e.Mb=0}function Er(e,r){Nr(e),Wr(e,r&e.y);for(var t=0;5>t;++t)bt(e.d)}function Lr(e,r){var t,o,n,s,i,_,a,c,u,f,m,d,p,h,P,l,v,B,S,g,k,R,M,D,b,w,E,L,y,I,x,N,O,A,H,G,W,T,Z,Y,V,j,$,K,q,J,Q,X,er,rr;if(e.jb!=e.q)return p=e.a[e.q].r-e.q,e.mb=e.a[e.q].j,e.q=e.a[e.q].r,p;if(e.q=e.jb=0,e.N?(d=e.vb,e.N=0):d=xr(e),E=e.D,b=F(e.b)+1,2>b)return e.mb=-1,1;for(b>273&&(b=273),Y=0,u=0;4>u;++u)e.x[u]=e.v[u],e.Q[u]=z(e.b,-1,e.x[u],273),e.Q[u]>e.Q[Y]&&(Y=u);if(e.Q[Y]>=e.n)return e.mb=Y,p=e.Q[Y],Ir(e,p-1),p;if(d>=e.n)return e.mb=e.m[E-1]+4,Ir(e,d-1),d;if(a=C(e.b,-1),v=C(e.b,-e.v[0]-1-1),2>d&&a!=v&&2>e.Q[Y])return e.mb=-1,1;if(e.a[0].Hc=e.l,A=r&e.y,e.a[1].z=Yt[e.C[(e.l<<4)+A]>>>2]+nt(Xr(e.A,r,e.J),e.l>=7,v,a),st(e.a[1]),B=Yt[2048-e.C[(e.l<<4)+A]>>>2],Z=B+Yt[2048-e.bb[e.l]>>>2],v==a&&(V=Z+zr(e,e.l,A),e.a[1].z>V&&(e.a[1].z=V,it(e.a[1]))),m=d>=e.Q[Y]?d:e.Q[Y],2>m)return e.mb=e.a[1].j,1;e.a[1].r=0,e.a[0].bc=e.x[0],e.a[0].ac=e.x[1],e.a[0].dc=e.x[2],e.a[0].lc=e.x[3],f=m;do e.a[f--].z=268435455;while(f>=2);for(u=0;4>u;++u)if(T=e.Q[u],!(2>T)){G=Z+Cr(e,u,e.l,A);do s=G+Jr(e.i,T-2,A),x=e.a[T],x.z>s&&(x.z=s,x.r=0,x.j=u,x.t=0);while(--T>=2)}if(D=B+Yt[e.bb[e.l]>>>2],f=e.Q[0]>=2?e.Q[0]+1:2,d>=f){for(L=0;f>e.m[L];)L+=2;for(;c=e.m[L+1],s=D+yr(e,c,f,A),x=e.a[f],x.z>s&&(x.z=s,x.r=0,x.j=c+4,x.t=0),f!=e.m[L]||(L+=2,L!=E);++f);}for(t=0;;){if(++t,t==m)return gr(e,t);if(S=xr(e),E=e.D,S>=e.n)return e.vb=S,e.N=1,gr(e,t);if(++r,O=e.a[t].r,e.a[t].t?(--O,e.a[t].Ac?($=e.a[e.a[t].r2].Hc,$=4>e.a[t].j2?7>$?8:11:7>$?7:10):$=e.a[O].Hc,$=U($)):$=e.a[O].Hc,O==t-1?$=e.a[t].j?U($):7>$?9:11:(e.a[t].t&&e.a[t].Ac?(O=e.a[t].r2,N=e.a[t].j2,$=7>$?8:11):(N=e.a[t].j,$=4>N?7>$?8:11:7>$?7:10),I=e.a[O],4>N?N?1==N?(e.x[0]=I.ac,e.x[1]=I.bc,e.x[2]=I.dc,e.x[3]=I.lc):2==N?(e.x[0]=I.dc,e.x[1]=I.bc,e.x[2]=I.ac,e.x[3]=I.lc):(e.x[0]=I.lc,e.x[1]=I.bc,e.x[2]=I.ac,e.x[3]=I.dc):(e.x[0]=I.bc,e.x[1]=I.ac,e.x[2]=I.dc,e.x[3]=I.lc):(e.x[0]=N-4,e.x[1]=I.bc,e.x[2]=I.ac,e.x[3]=I.dc)),e.a[t].Hc=$,e.a[t].bc=e.x[0],e.a[t].ac=e.x[1],e.a[t].dc=e.x[2],e.a[t].lc=e.x[3],_=e.a[t].z,a=C(e.b,-1),v=C(e.b,-e.x[0]-1-1),A=r&e.y,o=_+Yt[e.C[($<<4)+A]>>>2]+nt(Xr(e.A,r,C(e.b,-2)),$>=7,v,a),R=e.a[t+1],g=0,R.z>o&&(R.z=o,R.r=t,R.j=-1,R.t=0,g=1),B=_+Yt[2048-e.C[($<<4)+A]>>>2],Z=B+Yt[2048-e.bb[$]>>>2],v!=a||t>R.r&&!R.j||(V=Z+(Yt[e.hb[$]>>>2]+Yt[e._[($<<4)+A]>>>2]),R.z>=V&&(R.z=V,R.r=t,R.j=0,R.t=0,g=1)),w=F(e.b)+1,w=w>4095-t?4095-t:w,b=w,!(2>b)){if(b>e.n&&(b=e.n),!g&&v!=a&&(q=Math.min(w-1,e.n),P=z(e.b,0,e.x[0],q),P>=2)){for(K=U($),H=r+1&e.y,M=o+Yt[2048-e.C[(K<<4)+H]>>>2]+Yt[2048-e.bb[K]>>>2],y=t+1+P;y>m;)e.a[++m].z=268435455;s=M+(J=Jr(e.i,P-2,H),J+Cr(e,0,K,H)),x=e.a[y],x.z>s&&(x.z=s,x.r=t+1,x.j=0,x.t=1,x.Ac=0)}for(j=2,W=0;4>W;++W)if(h=z(e.b,-1,e.x[W],b),!(2>h)){l=h;do{for(;t+h>m;)e.a[++m].z=268435455;s=Z+(Q=Jr(e.i,h-2,A),Q+Cr(e,W,$,A)),x=e.a[t+h],x.z>s&&(x.z=s,x.r=t,x.j=W,x.t=0)}while(--h>=2);if(h=l,W||(j=h+1),w>h&&(q=Math.min(w-1-h,e.n),P=z(e.b,h,e.x[W],q),P>=2)){for(K=7>$?8:11,H=r+h&e.y,n=Z+(X=Jr(e.i,h-2,A),X+Cr(e,W,$,A))+Yt[e.C[(K<<4)+H]>>>2]+nt(Xr(e.A,r+h,C(e.b,h-1-1)),1,C(e.b,h-1-(e.x[W]+1)),C(e.b,h-1)),K=U(K),H=r+h+1&e.y,k=n+Yt[2048-e.C[(K<<4)+H]>>>2],M=k+Yt[2048-e.bb[K]>>>2],y=h+1+P;t+y>m;)e.a[++m].z=268435455;s=M+(er=Jr(e.i,P-2,H),er+Cr(e,0,K,H)),x=e.a[t+y],x.z>s&&(x.z=s,x.r=t+h+1,x.j=0,x.t=1,x.Ac=1,x.r2=t,x.j2=W)}}if(S>b){for(S=b,E=0;S>e.m[E];E+=2);e.m[E]=S,E+=2}if(S>=j){for(D=B+Yt[e.bb[$]>>>2];t+S>m;)e.a[++m].z=268435455;for(L=0;j>e.m[L];)L+=2;for(h=j;;++h)if(i=e.m[L+1],s=D+yr(e,i,h,A),x=e.a[t+h],x.z>s&&(x.z=s,x.r=t,x.j=i+4,x.t=0),h==e.m[L]){if(w>h&&(q=Math.min(w-1-h,e.n),P=z(e.b,h,i,q),P>=2)){for(K=7>$?7:10,H=r+h&e.y,n=s+Yt[e.C[(K<<4)+H]>>>2]+nt(Xr(e.A,r+h,C(e.b,h-1-1)),1,C(e.b,h-(i+1)-1),C(e.b,h-1)),K=U(K),H=r+h+1&e.y,k=n+Yt[2048-e.C[(K<<4)+H]>>>2],M=k+Yt[2048-e.bb[K]>>>2],y=h+1+P;t+y>m;)e.a[++m].z=268435455;s=M+(rr=Jr(e.i,P-2,H),rr+Cr(e,0,K,H)),x=e.a[t+y],x.z>s&&(x.z=s,x.r=t+h+1,x.j=0,x.t=1,x.Ac=1,x.r2=t,x.j2=i+4)}if(L+=2,L==E)break}}}}}function yr(e,r,t,o){var n,s=Q(t);return n=128>r?e.lb[128*s+r]:e.P[(s<<6)+Zr(r)]+e.nc[15&r],n+Jr(e.$,t-2,o)}function Cr(e,r,t,o){var n;return r?(n=Yt[2048-e.hb[t]>>>2],1==r?n+=Yt[e.Ub[t]>>>2]:(n+=Yt[2048-e.Ub[t]>>>2],n+=wt(e.vc[t],r-2))):(n=Yt[e.hb[t]>>>2],n+=Yt[2048-e._[(t<<4)+o]>>>2]),n}function zr(e,r,t){return Yt[e.hb[r]>>>2]+Yt[e._[(r<<4)+t]>>>2]}function Fr(e){kr(e),Dt(e.d),gt(e.C),gt(e._),gt(e.bb),gt(e.hb),gt(e.Ub),gt(e.vc),gt(e.Sb),et(e.A);for(var r=0;4>r;++r)gt(e.K[r].G);jr(e.$,1<<e.Y),jr(e.i,1<<e.Y),gt(e.S.G),e.N=0,e.jb=0,e.q=0,e.s=0}function Ir(e,r){r>0&&(Y(e.b,r),e.s+=r)}function xr(e){var r=0;return e.D=H(e.b,e.m),e.D>0&&(r=e.m[e.D-2],r==e.n&&(r+=z(e.b,r-1,e.m[e.D-1],273-r))),++e.s,r}function Nr(e){e.b&&e.W&&(e.b.cc=null,e.W=0)}function Or(e){Nr(e),e.d.Ab=null}function Ar(e,r){e.ab=r;for(var t=0;r>1<<t;++t);e.$b=2*t}function Hr(e,r){var t=e.X;e.X=r,e.b&&t!=e.X&&(e.wb=-1,e.b=null)}function Gr(e,r){e.fc[0]=9*(5*e.Y+e.eb)+e.fb<<24>>24;for(var t=0;4>t;++t)e.fc[1+t]=e.ab>>8*t<<24>>24;k(r,e.fc,0,5)}function Wr(e,r){if(e.Gc){kt(e.d,e.C,(e.l<<4)+r,1),kt(e.d,e.bb,e.l,0),e.l=7>e.l?7:10,Kr(e.$,e.d,0,r);var t=Q(2);mt(e.K[t],e.d,63),Rt(e.d,67108863,26),pt(e.S,e.d,15)}}function Tr(e){return 2048>e?Zt[e]:2097152>e?Zt[e>>10]+20:Zt[e>>20]+40}function Zr(e){return 131072>e?Zt[e>>6]+12:134217728>e?Zt[e>>16]+32:Zt[e>>26]+52}function Yr(e,r,t,o){8>t?(kt(r,e.db,0,0),mt(e.Vb[o],r,t)):(t-=8,kt(r,e.db,0,1),8>t?(kt(r,e.db,1,0),mt(e.Wb[o],r,t)):(kt(r,e.db,1,1),mt(e.ic,r,t-8)))}function Vr(e){e.db=t(2),e.Vb=t(16),e.Wb=t(16),e.ic=ft({},8);for(var r=0;16>r;++r)e.Vb[r]=ft({},3),e.Wb[r]=ft({},3);return e}function jr(e,r){gt(e.db);for(var t=0;r>t;++t)gt(e.Vb[t].G),gt(e.Wb[t].G);gt(e.ic.G)}function $r(e,r,t,o,n){var s,i,_,a,c;for(s=Yt[e.db[0]>>>2],i=Yt[2048-e.db[0]>>>2],_=i+Yt[e.db[1]>>>2],a=i+Yt[2048-e.db[1]>>>2],c=0,c=0;8>c;++c){if(c>=t)return;o[n+c]=s+dt(e.Vb[r],c)}for(;16>c;++c){if(c>=t)return;o[n+c]=_+dt(e.Wb[r],c-8)}for(;t>c;++c)o[n+c]=a+dt(e.ic,c-8-8)}function Kr(e,r,t,o){Yr(e,r,t,o),0==--e.sc[o]&&($r(e,o,e.rb,e.Cc,272*o),e.sc[o]=e.rb)}function qr(e){return Vr(e),e.Cc=[],e.sc=[],e}function Jr(e,r,t){return e.Cc[272*t+r]}function Qr(e,r){for(var t=0;r>t;++t)$r(e,t,e.rb,e.Cc,272*t),e.sc[t]=e.rb}function Ur(e,r,o){var n,s;if(null==e.V||e.u!=o||e.I!=r)for(e.I=r,e.qc=(1<<r)-1,e.u=o,s=1<<e.u+e.I,e.V=t(s),n=0;s>n;++n)e.V[n]=ot({})}function Xr(e,r,t){return e.V[((r&e.qc)<<e.u)+((255&t)>>>8-e.u)]}function et(e){var r,t=1<<e.u+e.I;for(r=0;t>r;++r)gt(e.V[r].tb)}function rt(e,r,t){var o,n,s=1;for(n=7;n>=0;--n)o=t>>n&1,kt(r,e.tb,s,o),s=s<<1|o}function tt(e,r,t,o){var n,s,i,_,a=1,c=1;for(s=7;s>=0;--s)n=o>>s&1,_=c,a&&(i=t>>s&1,_+=1+i<<8,a=i==n),kt(r,e.tb,_,n),c=c<<1|n}function ot(e){return e.tb=t(768),e}function nt(e,r,t,o){var n,s,i=1,_=7,a=0;if(r)for(;_>=0;--_)if(s=t>>_&1,n=o>>_&1,a+=wt(e.tb[(1+s<<8)+i],n),i=i<<1|n,s!=n){--_;break}for(;_>=0;--_)n=o>>_&1,a+=wt(e.tb[i],n),i=i<<1|n;return a}function st(e){e.j=-1,e.t=0}function it(e){e.j=0,e.t=0}function _t(e,r){return e.F=r,e.G=t(1<<r),e}function at(e,r){var t,o=1;for(t=e.F;0!=t;--t)o=(o<<1)+vt(r,e.G,o);return o-(1<<e.F)}function ct(e,r){var t,o,n=1,s=0;for(o=0;e.F>o;++o)t=vt(r,e.G,n),n<<=1,n+=t,s|=t<<o;return s}function ut(e,r,t,o){var n,s,i=1,_=0;for(s=0;o>s;++s)n=vt(t,e,r+i),i<<=1,i+=n,_|=n<<s;return _}function ft(e,r){return e.F=r,e.G=t(1<<r),e}function mt(e,r,t){var o,n,s=1;for(n=e.F;0!=n;)--n,o=t>>>n&1,kt(r,e.G,s,o),s=s<<1|o}function dt(e,r){var t,o,n=1,s=0;for(o=e.F;0!=o;)--o,t=r>>>o&1,s+=wt(e.G[n],t),n=(n<<1)+t;return s}function pt(e,r,t){var o,n,s=1;for(n=0;e.F>n;++n)o=1&t,kt(r,e.G,s,o),s=s<<1|o,t>>=1}function ht(e,r){var t,o,n=1,s=0;for(o=e.F;0!=o;--o)t=1&r,r>>>=1,s+=wt(e.G[n],t),n=n<<1|t;return s}function Pt(e,r,t,o,n){var s,i,_=1;for(i=0;o>i;++i)s=1&n,kt(t,e,r+_,s),_=_<<1|s,n>>=1}function lt(e,r,t,o){var n,s,i=1,_=0;for(s=t;0!=s;--s)n=1&o,o>>>=1,_+=Yt[(2047&(e[r+i]-n^-n))>>>2],i=i<<1|n;return _}function vt(e,r,t){var o,n=r[t];return o=(e.E>>>11)*n,(-2147483648^o)>(-2147483648^e.Bb)?(e.E=o,r[t]=n+(2048-n>>>5)<<16>>16,-16777216&e.E||(e.Bb=e.Bb<<8|l(e.Ab),e.E<<=8),0):(e.E-=o,e.Bb-=o,r[t]=n-(n>>>5)<<16>>16,-16777216&e.E||(e.Bb=e.Bb<<8|l(e.Ab),e.E<<=8),1)}function Bt(e,r){var t,o,n=0;for(t=r;0!=t;--t)e.E>>>=1,o=e.Bb-e.E>>>31,e.Bb-=e.E&o-1,n=n<<1|1-o,-16777216&e.E||(e.Bb=e.Bb<<8|l(e.Ab),e.E<<=8);return n}function St(e){e.Bb=0,e.E=-1;for(var r=0;5>r;++r)e.Bb=e.Bb<<8|l(e.Ab)}function gt(e){for(var r=e.length-1;r>=0;--r)e[r]=1024}function kt(e,r,t,s){var i,_=r[t];i=(e.E>>>11)*_,s?(e.xc=o(e.xc,n(a(i),[4294967295,0])),e.E-=i,r[t]=_-(_>>>5)<<16>>16):(e.E=i,r[t]=_+(2048-_>>>5)<<16>>16),-16777216&e.E||(e.E<<=8,bt(e))}function Rt(e,r,t){for(var n=t-1;n>=0;--n)e.E>>>=1,1==(r>>>n&1)&&(e.xc=o(e.xc,a(e.E))),-16777216&e.E||(e.E<<=8,bt(e))}function Mt(e){return o(o(a(e.Jb),e.mc),[4,0])}function Dt(e){e.mc=Gt,e.xc=Gt,e.E=-1,e.Jb=1,e.Oc=0}function bt(e){var r,t=c(p(e.xc,32));if(0!=t||s(e.xc,[4278190080,0])<0){e.mc=o(e.mc,a(e.Jb)),r=e.Oc;do g(e.Ab,r+t),r=255;while(0!=--e.Jb);e.Oc=c(e.xc)>>>24}++e.Jb,e.xc=m(n(e.xc,[16777215,0]),8)}function wt(e,r){return Yt[(2047&(e-r^-r))>>>2]}function Et(e){for(var r,t,o,n=0,s=0,i=e.length,_=[],a=[];i>n;++n,++s){if(r=255&e[n],128&r)if(192==(224&r)){if(n+1>=i)return e;if(t=255&e[++n],128!=(192&t))return e;a[s]=(31&r)<<6|63&t}else{if(224!=(240&r))return e;
+if(n+2>=i)return e;if(t=255&e[++n],128!=(192&t))return e;if(o=255&e[++n],128!=(192&o))return e;a[s]=(15&r)<<12|(63&t)<<6|63&o}else{if(!r)return e;a[s]=r}16383==s&&(_.push(String.fromCharCode.apply(String,a)),s=-1)}return s>0&&(a.length=s,_.push(String.fromCharCode.apply(String,a))),_.join("")}function Lt(e){var r,t,o,n=[],s=0,i=e.length;if("object"==typeof e)return e;for(R(e,0,i,n,0),o=0;i>o;++o)r=n[o],r>=1&&127>=r?++s:s+=!r||r>=128&&2047>=r?2:3;for(t=[],s=0,o=0;i>o;++o)r=n[o],r>=1&&127>=r?t[s++]=r<<24>>24:!r||r>=128&&2047>=r?(t[s++]=(192|r>>6&31)<<24>>24,t[s++]=(128|63&r)<<24>>24):(t[s++]=(224|r>>12&15)<<24>>24,t[s++]=(128|r>>6&63)<<24>>24,t[s++]=(128|63&r)<<24>>24);return t}function yt(e){return e[1]+e[0]}function Ct(e,t,o,n){function s(){try{for(var e,r=(new Date).getTime();rr(a.c.yb);)if(i=yt(a.c.yb.Pb)/yt(a.c.Tb),(new Date).getTime()-r>200)return n(i),Nt(s,0),0;n(1),e=S(a.c.Nb),Nt(o.bind(null,e),0)}catch(t){o(null,t)}}var i,_,a={},c=void 0===o&&void 0===n;if("function"!=typeof o&&(_=o,o=n=0),n=n||function(e){return void 0!==_?r(e,_):void 0},o=o||function(e,r){return void 0!==_?postMessage({action:Ft,cbn:_,result:e,error:r}):void 0},c){for(a.c=w({},Lt(e),Vt(t));rr(a.c.yb););return S(a.c.Nb)}try{a.c=w({},Lt(e),Vt(t)),n(0)}catch(u){return o(null,u)}Nt(s,0)}function zt(e,t,o){function n(){try{for(var e,r=0,i=(new Date).getTime();rr(c.d.yb);)if(++r%1e3==0&&(new Date).getTime()-i>200)return _&&(s=yt(c.d.yb.Z.g)/a,o(s)),Nt(n,0),0;o(1),e=Et(S(c.d.Nb)),Nt(t.bind(null,e),0)}catch(u){t(null,u)}}var s,i,_,a,c={},u=void 0===t&&void 0===o;if("function"!=typeof t&&(i=t,t=o=0),o=o||function(e){return void 0!==i?r(_?e:-1,i):void 0},t=t||function(e,r){return void 0!==i?postMessage({action:It,cbn:i,result:e,error:r}):void 0},u){for(c.d=L({},e);rr(c.d.yb););return Et(S(c.d.Nb))}try{c.d=L({},e),a=yt(c.d.Tb),_=a>-1,o(0)}catch(f){return t(null,f)}Nt(n,0)}var Ft=1,It=2,xt=3,Nt="function"==typeof setImmediate?setImmediate:setTimeout,Ot=4294967296,At=[4294967295,-Ot],Ht=[0,-0x8000000000000000],Gt=[0,0],Wt=[1,0],Tt=function(){var e,r,t,o=[];for(e=0;256>e;++e){for(t=e,r=0;8>r;++r)0!=(1&t)?t=t>>>1^-306674912:t>>>=1;o[e]=t}return o}(),Zt=function(){var e,r,t,o=2,n=[0,1];for(t=2;22>t;++t)for(r=1<<(t>>1)-1,e=0;r>e;++e,++o)n[o]=t<<24>>24;return n}(),Yt=function(){var e,r,t,o,n=[];for(r=8;r>=0;--r)for(o=1<<9-r-1,e=1<<9-r,t=o;e>t;++t)n[t]=(r<<6)+(e-t<<6>>>9-r-1);return n}(),Vt=function(){var e=[{s:16,f:64,m:0},{s:20,f:64,m:0},{s:19,f:64,m:1},{s:20,f:64,m:1},{s:21,f:128,m:1},{s:22,f:128,m:1},{s:23,f:128,m:1},{s:24,f:255,m:1},{s:25,f:255,m:1}];return function(r){return e[r-1]||e[6]}}();return"undefined"==typeof onmessage||"undefined"!=typeof window&&void 0!==window.document||!function(){onmessage=function(r){r&&r.gc&&(r.gc.action==It?e.decompress(r.gc.gc,r.gc.cbn):r.gc.action==Ft&&e.compress(r.gc.gc,r.gc.Rc,r.gc.cbn))}}(),{compress:Ct,decompress:zt}}();this.LZMA=this.LZMA_WORKER=e;
+})();
+</script>
 
 <script>
 /* =====================================================================
@@ -4655,14 +4967,20 @@ var I18N = {
     "演示模式：隐藏文字，点一下逐字显示": "演示模式：隐藏文字，点一下逐字显示",
     "点击逐字显示": "点击逐字显示",
     "显示载体": "显示载体",
+    "查看事件": "查看事件",
     "默认": "默认",
     "1倍": "1倍",
     "1.5倍": "1.5倍",
     "2倍": "2倍",
     "用到的代码载体": "用到的代码载体",
-    "点一下隐藏的文字，会逐字打出来；再点一下立刻显示全部": "点一下隐藏的文字，会逐字打出来；再点一下立刻显示全部",
+    "点一下逐字打出来，再点一下立刻显示全部；连按空格可依次播放": "点一下逐字打出来，再点一下立刻显示全部；连按空格可依次播放",
+    "点一下逐字打出来，再点一下立刻显示全部；连按空格可依次播放；←/→ 调打字速度": "点一下逐字打出来，再点一下立刻显示全部；连按空格可依次播放；←/→ 调打字速度",
+    "演示已播完": "演示已播完",
     "打字速度": "打字速度",
     "毫秒/字": "毫秒/字",
+    "下限": "下限",
+    "上限": "上限",
+    "帧/字": "帧/字",
     "关闭演示": "关闭演示",
     "先选一条记录，再点演示模式": "先选一条记录，再点演示模式",
     "清空缓存": "清空缓存",
@@ -4808,6 +5126,11 @@ var I18N = {
     "这张图片打不开，换一张试试": "这张图片打不开，换一张试试",
     "函数名，例如 ds_list_create": "函数名，例如 ds_list_create",
     "脚本资源名，例如 scr_bag_init": "脚本资源名，例如 scr_bag_init",
+    "代码框数量": "代码框数量",
+    "添加代码框": "添加代码框",
+    "脚本名，例如 class_gun（整体展示）": "脚本名，例如 class_gun（整体展示）",
+    "方法名，例如 shoot（完整实现）": "方法名，例如 shoot（完整实现）",
+    "删掉这个代码框": "删掉这个代码框",
     "对象名，例如 obj_player": "对象名，例如 obj_player",
     "这一步做了什么，例如：初始化背包列表": "这一步做了什么，例如：初始化背包列表",
     "名称 / 说明": "名称 / 说明",
@@ -4896,6 +5219,9 @@ var I18N = {
     "把这条练习过程生成一张图片": "把这条练习过程生成一张图片",
     "挑战记录卡预览": "挑战记录卡预览",
     "保存图片": "保存图片",
+    "二维码精简（只带题面与代码）": "二维码精简（只带题面与代码）",
+    "精简排版（只显示标题与练习题要求）": "精简排版（只显示标题与练习题要求）",
+    "二维码：版本 {v} · {n} 个模块 · 内容 {b} 字节": "二维码：版本 {v} · {n} 个模块 · 内容 {b} 字节",
     "重新生成": "重新生成",
     "手机上也可以长按上面的图片，直接保存到相册。": "手机上也可以长按上面的图片，直接保存到相册。",
     "参数说明（编号可自定义 + 简单描述）": "参数说明（编号可自定义 + 简单描述）",
@@ -4976,6 +5302,7 @@ var I18N = {
     "已导出这一条练习": "已导出这一条练习",
     practice_rec_info: "练习：{name}",
     practice_apis_count: "它引用了 {n} 个 API。",
+    practice_new_note: "导入会新建一条练习记录（不会覆盖你已有的练习）。",
     practice_added: "已导入新练习：{name}",
     practice_updated: "已覆盖同名练习：{name}",
     practice_api_counts: "新增 {a} 个 API，更新 {u} 个 API。",
@@ -5037,14 +5364,20 @@ var I18N = {
     "演示模式：隐藏文字，点一下逐字显示": "Presentation mode: hide the text, click to type it out",
     "点击逐字显示": "Click to type it out",
     "显示载体": "Show carrier",
+    "查看事件": "Show events",
     "默认": "Default",
     "1倍": "1×",
     "1.5倍": "1.5×",
     "2倍": "2×",
     "用到的代码载体": "Used code carriers",
-    "点一下隐藏的文字，会逐字打出来；再点一下立刻显示全部": "Click a hidden text to type it out; click it again to show it all at once",
+    "点一下逐字打出来，再点一下立刻显示全部；连按空格可依次播放": "Click to type it out, click again to show it all; press Space repeatedly to play through",
+    "点一下逐字打出来，再点一下立刻显示全部；连按空格可依次播放；←/→ 调打字速度": "Click to type it out, click again to show it all; press Space repeatedly to play through; ←/→ adjusts typing speed",
+    "演示已播完": "Demo finished",
     "打字速度": "Typing speed",
     "毫秒/字": "ms/char",
+    "下限": "Min",
+    "上限": "Max",
+    "帧/字": "frames/char",
     "关闭演示": "Close",
     "先选一条记录，再点演示模式": "Pick a record first, then open presentation mode",
     "清空缓存": "Clear cache",
@@ -5191,6 +5524,11 @@ var I18N = {
     "这张图片打不开，换一张试试": "This image will not open, try another one",
     "函数名，例如 ds_list_create": "Function name, e.g. ds_list_create",
     "脚本资源名，例如 scr_bag_init": "Script resource name, e.g. scr_bag_init",
+    "代码框数量": "Code boxes",
+    "添加代码框": "Add code box",
+    "脚本名，例如 class_gun（整体展示）": "Script name, e.g. class_gun (full view)",
+    "方法名，例如 shoot（完整实现）": "Method name, e.g. shoot (full body)",
+    "删掉这个代码框": "Delete this code box",
     "对象名，例如 obj_player": "Object name, e.g. obj_player",
     "这一步做了什么，例如：初始化背包列表": "What this step does, e.g. initialise the inventory list",
     "名称 / 说明": "Name / Description",
@@ -5279,6 +5617,9 @@ var I18N = {
     "把这条练习过程生成一张图片": "Turn this practice detail into an image",
     "挑战记录卡预览": "Challenge record card preview",
     "保存图片": "Save image",
+    "二维码精简（只带题面与代码）": "Slim QR code (title + code only)",
+    "精简排版（只显示标题与练习题要求）": "Slim layout (title + requirement only)",
+    "二维码：版本 {v} · {n} 个模块 · 内容 {b} 字节": "QR: version {v} · {n} modules · {b} bytes",
     "重新生成": "Regenerate",
     "手机上也可以长按上面的图片，直接保存到相册。": "On a phone you can also press and hold the image above to save it to your gallery.",
     "参数说明（编号可自定义 + 简单描述）": "Parameter docs (custom number + short description)",
@@ -5359,6 +5700,7 @@ var I18N = {
     "已导出这一条练习": "Practice exported",
     practice_rec_info: "Practice: {name}",
     practice_apis_count: "It references {n} APIs.",
+    practice_new_note: "Importing creates a new practice record (your existing ones are kept).",
     practice_added: "New practice imported: {name}",
     practice_updated: "Existing practice updated: {name}",
     practice_api_counts: "Added {a} APIs, updated {u} APIs.",
@@ -6346,33 +6688,276 @@ __lang = detectLang();
     return t.slice(0, 24);
   }
   /* 单条练习的存档内容（导出文件 / 生成二维码共用同一份） */
-  function practicePayload(rec){
+  /* ============================================================
+     单条练习的存档格式（三个版本，读的时候都认）
+       v2（旧·可读）：{app,qrMark,version,kind,exportedAt,
+                      record:{id,ts,name,requirement,hint,apis,modules},
+                      apis,apiById}
+       v3（新·可读）：同 v2 的骨架，但**去掉冗余**（给导出的文件用）
+       v3q（新·紧凑）：{v,k,z,r:{i,t,n,q,h,m:[…]},a:[…]}（给二维码用，机器读）
+     v3 去掉的冗余：
+       ① module.value 与 boxes[0].code 重复（多代码框时只留 boxes）
+       ② record.apis 与 apis[] 重复（导入时按 apis[].id 重建）
+       ③ apiById 与 apis[].id/code 重复（导入时按 apis[] 现算）
+     ============================================================ */
+  var PAYLOAD_VERSION = 3;      /* 可读版（导出文件）的格式版本 */
+  var COMPACT_VERSION = 4;      /* 紧凑版（二维码/分享链接）的格式版本：数组式 */
+  function slimModuleReadable(m){
+    var o = {};
+    for(var k in m){
+      if(!Object.prototype.hasOwnProperty.call(m, k)) continue;
+      if(k === 'value' && m.boxes && m.boxes.length) continue;   /* 与 boxes[0].code 重复 */
+      if(k === 'boxes'){
+        var bs = [];
+        for(var i=0;i<m.boxes.length;i++){
+          var b = m.boxes[i] || {};
+          var ob = { code: b.code || '' };
+          if(b.name) ob.name = b.name;                            /* 空名字就不占地方 */
+          bs.push(ob);
+        }
+        o.boxes = bs;
+        continue;
+      }
+      o[k] = m[k];
+    }
+    return o;
+  }
+  function compactModule(m){
+    var o = {};
+    for(var k in m){
+      if(!Object.prototype.hasOwnProperty.call(m, k)) continue;
+      if(k === 'value' && m.boxes && m.boxes.length) continue;
+      if(k === 'boxes'){
+        var bs = [];
+        for(var i=0;i<m.boxes.length;i++){
+          var b = m.boxes[i] || {};
+          var ob = { c: b.code || '' };
+          if(b.name) ob.n = b.name;
+          bs.push(ob);
+        }
+        o.b = bs;
+        continue;
+      }
+      switch(k){
+        case 'type':   o.t = m[k]; break;
+        case 'value':  o.v = m[k]; break;
+        case 'refId':  o.r = m[k]; break;
+        case 'code':   o.c = m[k]; break;
+        case 'url':    o.u = m[k]; break;
+        case 'name':   o.n = m[k]; break;
+        default:       o[k] = m[k]; break;   /* 未知字段原样留着，别丢 */
+      }
+    }
+    return o;
+  }
+  function practiceApisPayload(rec){
     var apis = [];
-    var apiById = {};
     practiceApiIds(rec).forEach(function(id){
       var it = apiItem(id);
-      if(it){
-        apis.push({id:it.id, code:it.code, desc:it.desc || '', params:it.params});
-        apiById[it.id] = it.code;
-      }
+      if(it) apis.push({id:it.id, code:it.code, desc:it.desc || '', params:it.params});
     });
+    return apis;
+  }
+  /* 可读版（导出的文件用）：字段名照旧，只是去掉冗余 */
+  function practicePayload(rec){
+    var apis = practiceApisPayload(rec);
     return {
       app: 'gml-practice-log',
       qrMark: QR_MARK,
-      version: 2,
+      version: PAYLOAD_VERSION,
       kind: 'practice',
       exportedAt: new Date().toISOString(),
-      record: JSON.parse(JSON.stringify(rec)),
-      apis: apis,
-      apiById: apiById
+      record: {
+        id: rec.id,
+        ts: rec.ts,
+        name: rec.name || '',
+        requirement: rec.requirement || '',
+        hint: rec.hint || '',
+        modules: (rec.modules || []).map(slimModuleReadable)
+      },
+      apis: apis
     };
+  }
+  /* 紧凑版 v4（二维码 / 分享链接用）：键名压到最短 + 数组代替对象
+     —— 同样的内容，JSON 更小 ⇒ 压得更小 ⇒ 二维码版本更低 */
+  function compactModule2(m){
+    var t = m.type || '';
+    if(t === '脚本'){
+      var boxes = (m.boxes || []).map(function(b){
+        return b.name ? [b.code || '', b.name] : [b.code || ''];
+      });
+      if(boxes.length) return [t, boxes];
+      return [t, m.value || ''];
+    }
+    if(t === '对象'){
+      return [t, m.value || '',
+        (m.fields || []).map(function(f){ return [f.name || '', f.param || '', f.desc || '']; }),
+        (m.events || []).map(function(e){ return [e.name || '', e.code || '']; })];
+    }
+    if(t === 'api'){
+      return [t, m.refId || '', m.code || ''];
+    }
+    if(t === '着色器'){
+      /* ★ 两段代码（顶点 / 片元）⇒ 打包成 [vertex, fragment]（第 2 个元素是数组 ⇒ 和普通文本区分得开） */
+      var shd = normShader(m);
+      return [t, [shd.vertex, shd.fragment]];
+    }
+    return [t, m.value || ''];
+  }
+  function expandModule2(a){
+    var t = (a && a[0]) || '';
+    var m = { type: t };
+    if(t === '脚本'){
+      if(Array.isArray(a[1])){
+        m.boxes = a[1].map(function(b){
+          var ob = { code: (b && b[0]) || '' };
+          if(b && b[1]) ob.name = b[1];
+          return ob;
+        });
+        m.value = m.boxes.length ? (m.boxes[0].code || '') : '';
+      }else{
+        m.value = a[1] || '';
+      }
+    }else if(t === '对象'){
+      m.value = a[1] || '';
+      m.fields = (a[2] || []).map(function(f){ return {name:(f&&f[0])||'', param:(f&&f[1])||'', desc:(f&&f[2])||''}; });
+      m.events = (a[3] || []).map(function(e){ return {name:(e&&e[0])||'', code:(e&&e[1])||''}; });
+    }else if(t === 'api'){
+      m.refId = a[1] || '';
+      m.code = a[2] || '';
+    }else if(t === '着色器'){
+      if(Array.isArray(a[1])){
+        m.shader = { vertex:(a[1][0]||''), fragment:(a[1][1]||'') };
+      }else{
+        m.shader = { vertex:'', fragment:'' };
+      }
+      m.value = m.shader.fragment || '';
+    }else{
+      m.value = a[1] || '';
+    }
+    return m;
+  }
+  /* ★ 二维码内容**不再分「精简 / 完整」**（用户拍板：两种版式的二维码必须是同一个）
+     ⇒ 这里永远打包**完整内容**（题面 + 提示 + 全部载体 + API）；
+        「精简」只是**截图排版**变小（图里只留标题 + 练习题要求 + 二维码），
+        二维码本身一字节不差 ⇒ 扫码导进来一定是完整的一条练习 ✓ */
+  function practicePayloadCompact(rec){
+    var mods = [];
+    (rec.modules || []).forEach(function(m){
+      mods.push(compactModule2(m));
+    });
+    var apis = [];
+    practiceApisPayload(rec).forEach(function(a){
+      apis.push([a.id, a.code, a.desc || '',
+        (a.params || []).map(function(x){ return [x.no, x.desc]; })]);
+    });
+    return {
+      v: COMPACT_VERSION,
+      k: 'practice',
+      z: QR_MARK,
+      m: 'full',
+      r: [
+        rec.id,
+        rec.ts,
+        rec.name || '',
+        rec.requirement || '',
+        rec.hint || '',
+        mods
+      ],
+      a: apis
+    };
+  }
+  /* ---- 读：v2 / v3 可读版 / v3q 紧凑版 ⇒ 统一成 {record, apis, apiById} ---- */
+  function expandReadablePayload(obj){
+    var rec = JSON.parse(JSON.stringify(obj.record || {}));
+    if(!Array.isArray(rec.modules)) rec.modules = [];
+    /* v3：多代码框的载体没存 value ⇒ 从 boxes[0].code 还原 */
+    rec.modules.forEach(function(m){
+      if(m && m.boxes && m.boxes.length && (m.value == null || m.value === '')){
+        m.value = m.boxes[0].code || '';
+      }
+    });
+    var apis = [];
+    (obj.apis || []).forEach(function(a){
+      if(a && a.code) apis.push({id:a.id, code:a.code, desc:a.desc || '', params:a.params || []});
+    });
+    /* v3：record.apis 没存 ⇒ 按 apis[].id 重建（模块里的 api 载体也在 apis[] 里） */
+    if(!Array.isArray(rec.apis) || !rec.apis.length){
+      rec.apis = apis.map(function(a){ return a.id; }).filter(function(x){ return !!x; });
+    }
+    var byId = {};
+    if(obj.apiById && typeof obj.apiById === 'object'){
+      for(var k in obj.apiById){ byId[k] = obj.apiById[k]; }
+    }
+    apis.forEach(function(a){ if(a.id && !byId[a.id]) byId[a.id] = a.code; });
+    return { record:rec, apis:apis, apiById:byId };
+  }
+  function expandCompactPayload(obj){
+    var r = obj.r || {};
+    var rec = { id:'', ts:0, name:'', requirement:'', hint:'', apis:[], modules:[] };
+    var apis = [];
+    var byId = {};
+    if(Array.isArray(r)){
+      /* v4：数组式 */
+      rec.id = r[0]; rec.ts = r[1]; rec.name = r[2] || '';
+      rec.requirement = r[3] || ''; rec.hint = r[4] || '';
+      (r[5] || []).forEach(function(a){ rec.modules.push(expandModule2(a)); });
+      (obj.a || []).forEach(function(a){
+        if(!a || !a[1]) return;
+        var params = (a[3] || []).map(function(x){ return {no:(x&&x[0])||'', desc:(x&&x[1])||''}; });
+        apis.push({id:a[0], code:a[1], desc:a[2] || '', params:params});
+      });
+    }else{
+      /* v3：对象式（键名短） */
+      rec.id = r.i; rec.ts = r.t;
+      rec.name = r.n || ''; rec.requirement = r.q || ''; rec.hint = r.h || '';
+      (r.m || []).forEach(function(m){
+        var o = {};
+        for(var k in m){
+          switch(k){
+            case 't': o.type = m[k]; break;
+            case 'v': o.value = m[k]; break;
+            case 'b':
+              o.boxes = (m[k] || []).map(function(b){
+                var ob = { code: (b && b.c) || '' };
+                if(b && b.n) ob.name = b.n;
+                return ob;
+              });
+              break;
+            case 'f': o.fields = m[k]; break;
+            case 'e': o.events = m[k]; break;
+            case 'r': o.refId = m[k]; break;
+            case 'c': o.code = m[k]; break;
+            case 'u': o.url = m[k]; break;
+            case 'n': o.name = m[k]; break;
+            default:  o[k] = m[k]; break;
+          }
+        }
+        o.value = (o.value == null || o.value === '') && o.boxes && o.boxes.length ? (o.boxes[0].code || '') : (o.value || '');
+        rec.modules.push(o);
+      });
+      (obj.a || []).forEach(function(a){
+        if(a && a.c) apis.push({id:a.i, code:a.c, desc:a.d || '', params:a.p || []});
+      });
+    }
+    rec.apis = apis.map(function(a){ return a.id; }).filter(function(x){ return !!x; });
+    apis.forEach(function(a){ if(a.id) byId[a.id] = a.code; });
+    return { record:rec, apis:apis, apiById:byId, slim:(obj.m === 'slim') };
+  }
+  /* 认版本：紧凑版有 r 且没有 record；可读版有 record */
+  function expandPracticePayload(obj){
+    if(!obj || typeof obj !== 'object') return null;
+    if(obj.record && typeof obj.record === 'object') return expandReadablePayload(obj);
+    if(obj.r && typeof obj.r === 'object') return expandCompactPayload(obj);
+    return null;
   }
   function exportPractice(){
     var rec = currentPracticeRec();
     if(!rec){ toast(T('先选一条记录，再存读档')); return; }
     var payload = practicePayload(rec);
     try{
-      var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+      /* ★ 不缩进 ⇒ 文件更小（还是标准 JSON，导入器照样认） */
+      var blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
@@ -6413,19 +6998,57 @@ __lang = detectLang();
     for(var i=0;i<bin.length;i++) out[i] = bin.charCodeAt(i);
     return out;
   }
-  /* deflate 压缩 + base64url：二维码能塞下的长度会多出一大截 */
+  /* ============================================================
+     分享链接 / 二维码的压缩与编码
+       压缩：LZMA（7-Zip 的算法，页面自带一份 lzma-js）—— 比 deflate 更省，
+             记录越大省得越多（实测 1.3KB 省 2%，13KB 省 9%）
+       编码：base64url
+       标记位（编码串第一个字符，base64url 里不会出现）：
+         '~' = LZMA + base64url   ← 现在生成的都是这个
+         '.' = deflate + base64url
+         （没有标记）= 最早的版本（deflate），照样能读
+     ============================================================ */
+  var SHARE_TAG_LZMA = '~';
+  var SHARE_TAG_DEFLATE = '.';
   function shareEncode(payload){
     var bytes = new TextEncoder().encode(JSON.stringify(payload));
+    /* LZMA：页面自带的编解码器（同步）；大载荷用快速档，免得卡住界面 */
+    try{
+      if(window.LZMA && typeof window.LZMA.compress === 'function'){
+        var packed = new Uint8Array(window.LZMA.compress(bytes, bytes.length > 30000 ? 1 : 2));
+        if(packed && packed.length && packed.length < bytes.length){
+          return Promise.resolve(SHARE_TAG_LZMA + b64urlFromBytes(packed));
+        }
+      }
+    }catch(e){ /* LZMA 不可用 ⇒ 走 deflate */ }
     if(typeof CompressionStream === 'undefined'){
-      return Promise.resolve(b64urlFromBytes(bytes));
+      return Promise.resolve(SHARE_TAG_DEFLATE + b64urlFromBytes(bytes));
     }
     var stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
     return new Response(stream).arrayBuffer().then(function(buf){
-      return b64urlFromBytes(new Uint8Array(buf));
+      return SHARE_TAG_DEFLATE + b64urlFromBytes(new Uint8Array(buf));
     });
   }
   function shareDecode(code){
-    var bytes = bytesFromB64url(code);
+    var body = String(code || '');
+    var tag = '';
+    if(body.charAt(0) === SHARE_TAG_LZMA || body.charAt(0) === SHARE_TAG_DEFLATE){
+      tag = body.charAt(0);
+      body = body.slice(1);
+    }
+    var bytes = bytesFromB64url(body);
+    if(tag === SHARE_TAG_LZMA){
+      return new Promise(function(resolve, reject){
+        try{
+          var out = window.LZMA.decompress(bytes);
+          /* 解码器在浏览器里返回的是**已解码的字符串**，在 Node 里是字节数组 ⇒ 两种都认 */
+          var text = (typeof out === 'string') ? out
+                   : new TextDecoder().decode(new Uint8Array(out));
+          resolve(JSON.parse(text));
+        }catch(e){ reject(e); }
+      });
+    }
+    /* deflate（新的带标记 / 最早的不带标记） */
     if(typeof DecompressionStream === 'undefined'){
       return Promise.resolve(JSON.parse(new TextDecoder().decode(bytes)));
     }
@@ -6483,12 +7106,17 @@ __lang = detectLang();
       var n = qr.getModuleCount();
       var unit = Math.floor(width / (n + 8));     /* 含 4 格静区 */
       if(unit < QR_UNIT_MIN) return { n:n, size:0, unit:unit, ok:false, version:v };
-      if(qrDecodes(qr, width)) return { n:n, size:width, unit:unit, ok:true, version:v };
+      if(qrDecodes(qr, width)){
+        /* 同样的模块大小（unit）能画下的最小画布 = unit × (模块数 + 静区) */
+        return { n:n, size:width, unit:unit, ok:true, version:v, minSize: unit * (n + 8) };
+      }
     }
-    return { n:0, size:0, unit:0, ok:false, version:0 };
+    return { n:0, size:0, unit:0, ok:false, version:0, minSize:0 };
   }
   function buildShareLink(rec){
-    return shareEncode(practicePayload(rec)).then(function(code){
+    /* ★ 二维码里放的是**紧凑版**（键名压短、数组代替对象、去掉冗余）⇒ 同样的内容，二维码更小
+       ⚠ 内容恒定 = 完整的一条（提示、操作描述都在）⇒ 「精简」只影响截图排版，不影响二维码 ✓ */
+    return shareEncode(practicePayloadCompact(rec)).then(function(code){
       /* 二维码内容 = 在线网站网址 + 这条练习的压缩包（别的扫码软件会提示是否打开这个网址） */
       var url = SHARE_URL + QR_FLAG + code;
       /* 先按「图片宽度的三分之一」试；内容太长放不下就逐级放大，
@@ -6496,7 +7124,17 @@ __lang = detectLang();
       var sizes = [QR_WIDTH, 560, 640, 720, 800, 900];
       for(var i=0;i<sizes.length;i++){
         var info = qrInfo(url, sizes[i]);
-        if(info.ok) return { url:url, code:code, tooLong:false, size:info.size, version:info.version };
+        if(info.ok){
+          /* ★ 画布收到「同样的模块大小」能用的最小尺寸 ⇒ 二维码图形更小（版面更省，扫起来一样清楚） */
+          var drawSize = info.minSize || info.size;
+          if(drawSize < info.size){
+            var qr2 = null;
+            try{ qr2 = qrMatrix(url, info.version); }catch(e){ qr2 = null; }
+            /* 尺寸变小 ⇒ 像素变少 ⇒ 一定要再自检一遍还扫不扫得出来 */
+            if(!qr2 || !qrDecodes(qr2, drawSize)) drawSize = info.size;
+          }
+          return { url:url, code:code, tooLong:false, size:drawSize, version:info.version };
+        }
       }
       return { url:'', code:code, tooLong:true, size:0, version:0 };
     });
@@ -6570,12 +7208,19 @@ __lang = detectLang();
     }
     var code = t.slice(i + QR_FLAG.length).split('&')[0];
     shareDecode(code).then(function(payload){
-      if(!payload || !payload.record || payload.qrMark !== QR_MARK){
+      /* ★ 新旧两种格式都认：紧凑版（v3q）/ 可读版（v2、v3） */
+      var data = expandPracticePayload(payload);
+      if(!data || !data.record || !data.record.modules){
+        toast(T('这个二维码不是练习存档'));
+        return;
+      }
+      if((payload.qrMark && payload.qrMark !== QR_MARK) || (payload.z && payload.z !== QR_MARK)){
         toast(T('这个二维码不是练习存档'));
         return;
       }
       closePracticeBackup();
-      openPracticeImport(payload);
+      if(data.slim) toast(T('这是一条精简版练习（不含提示与操作描述）'));
+      openPracticeImport(data);
     }).catch(function(){
       toast(T('这个二维码里的内容读不出来'));
     });
@@ -6589,9 +7234,10 @@ __lang = detectLang();
     if(fi < 0) return;
     var code = h.slice(fi + QR_FLAG.length);
     shareDecode(code).then(function(payload){
-      if(!payload || !payload.record || !payload.record.modules){ throw new Error('bad'); }
+      var data = expandPracticePayload(payload);
+      if(!data || !data.record || !data.record.modules){ throw new Error('bad'); }
       try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
-      openPracticeImport(payload);
+      openPracticeImport(data);
     }).catch(function(){
       toast(T('这个分享链接里的内容读不出来'));
     });
@@ -6599,16 +7245,13 @@ __lang = detectLang();
   function parsePracticeFile(text){
     var obj = JSON.parse(text);
     if(!obj || typeof obj !== 'object') throw new Error('bad');
-    if(obj.record && typeof obj.record === 'object'){
-      var rec = obj.record;
-      if(!Array.isArray(rec.apis)) rec.apis = [];
-      if(!Array.isArray(rec.modules)) rec.modules = [];
-      return {
-        record: rec,
-        apis: Array.isArray(obj.apis) ? obj.apis.filter(function(x){ return x && x.code; }) : [],
-        apiById: (obj.apiById && typeof obj.apiById === 'object') ? obj.apiById : {},
-        exportedAt: obj.exportedAt || ''
-      };
+    /* ★ 文件可能是旧的可读版，也可能是紧凑版 ⇒ 统一展开 */
+    var data = expandPracticePayload(obj);
+    if(data && data.record){
+      if(!Array.isArray(data.record.apis)) data.record.apis = [];
+      if(!Array.isArray(data.record.modules)) data.record.modules = [];
+      data.exportedAt = obj.exportedAt || '';
+      return data;
     }
     if(obj.data && Array.isArray(obj.data.records)) return {fullBackup:true};
     throw new Error('bad');
@@ -6636,6 +7279,8 @@ __lang = detectLang();
     var p = pendingPractice;
     if(!p) return;
     $('#pbRecInfo').textContent = TF('practice_rec_info', {name:p.record.name || T('未命名练习')});
+    var noteEl = $('#pbNewNote');
+    if(noteEl) noteEl.textContent = T('practice_new_note');
     var total = p.adds.length + p.conflicts.length;
     $('#pbApiInfo').textContent = total ? TF('practice_apis_count', {n:total}) : T('它没有引用任何 API。');
 
@@ -6711,6 +7356,13 @@ __lang = detectLang();
 
     var rec = JSON.parse(JSON.stringify(p.record));
     rec = normalizeRec(rec, rec && rec.id) || rec;
+    /* ★ 导入 = **新建一条练习记录**（永远不覆盖本地已有的那条）
+       存档里的原 id 只是「来源」，不当本地 id ⇒
+       同一个存档导入两次 = 两条记录；本机已有的那条也不会被顶掉 ✓ */
+    rec.id = uid();
+    /* 既然是「新建」，**创建时间就是现在**（不是存档里的旧时间）⇒
+       列表里显示今天、日期索引归到今天 ✓ */
+    rec.ts = Date.now();
     /* 存档里的 id 在这边找不到时 ⇒ 用代码在本地库找回（防止「已从 API 库删除」） */
     var hint = p.apiById || {};
     function remapByCode(id){
@@ -7513,7 +8165,7 @@ __lang = detectLang();
     }
     box.appendChild(fSec);
 
-    var eSec = el('div');
+    var eSec = el('div', 'obj-events');        /* ★ 演示模式靠这个类找到「事件代码框」那一块 */
     eSec.appendChild(el('div', 'sub-label', T('事件代码框')));
     var events = normEvents(m.events);
     if(events.length){
@@ -7744,6 +8396,163 @@ __lang = detectLang();
   var CODE_CARRIERS = ['脚本'];
   function isCodeCarrier(type){
     return CODE_CARRIERS.indexOf(type) >= 0;
+  }
+
+  /* ============================================================
+     ★ 代码载体（脚本）可以自定义「代码框数量」，默认 1 个
+     —— 数据：m.boxes = [{code, name}]；老记录只有 m.value ⇒ 当成 1 个框；
+     —— m.value 始终同步成第 1 个框的代码 ⇒ 老路径（导出 / 二维码 / 查找）照旧能读。
+     ============================================================ */
+  var MAX_CODE_BOXES = 20;
+  function moduleCodeBoxes(m){
+    var out = [];
+    if(m && Array.isArray(m.boxes) && m.boxes.length){
+      m.boxes.forEach(function(b){
+        out.push({
+          code: (b && b.code != null) ? String(b.code) : '',
+          name: (b && b.name) ? String(b.name) : ''
+        });
+      });
+    }else if(m && m.value != null && String(m.value).length){
+      out.push({ code:String(m.value), name:'' });
+    }
+    if(!out.length) out.push({ code:'', name:'' });
+    return out;
+  }
+  function setModuleCodeBoxes(m, boxes){
+    if(!m) return;
+    var arr = (boxes || []).map(function(b){
+      return { code:(b && b.code != null) ? String(b.code) : '', name:(b && b.name) ? String(b.name) : '' };
+    });
+    if(!arr.length) arr = [{ code:'', name:'' }];
+    m.boxes = arr;
+    m.value = arr[0].code;          /* 老路径照旧能读到第一个框 */
+  }
+  /* ============================================================
+     ★ 代码框的名字：第 1 个框 = 脚本名（如 class_gun），
+        后面每个框 = 方法名（如 shoot）⇒ 显示成「class_gun.shoot」
+     —— 名字没填就退回旧标题（脚本 / 脚本 1 / 脚本 2 …）
+     ============================================================ */
+  function moduleBoxRootName(m){
+    var b = moduleCodeBoxes(m)[0] || {};
+    return String(b.name || '').trim();
+  }
+  function moduleBoxFullName(m, i){
+    var b = moduleCodeBoxes(m)[i] || {};
+    var own = String(b.name || '').trim();
+    if(i === 0) return own;
+    var root = moduleBoxRootName(m);
+    if(root && own) return root + '.' + own;
+    return own;
+  }
+  function moduleBoxTitle(m, i, total){
+    var full = moduleBoxFullName(m, i);
+    if(full) return full;
+    if(total > 1) return typeLabel(m.type) + ' ' + (i + 1);
+    return typeLabel(m.type);
+  }
+  /* 编辑器里的代码框控件：只重画自己，不动整个表单（不丢输入焦点）
+     —— 「添加代码框」按钮加一个框；每个框自己带一个「×」删掉它 */
+  function buildCodeBoxesField(m){
+    var wrap = el('div', 'codeboxes-field');
+    draw();
+    return wrap;
+
+    function draw(){
+      wrap.innerHTML = '';
+      var boxes = moduleCodeBoxes(m);
+
+      var ctl = el('div', 'codeboxes-ctl');
+      ctl.appendChild(el('span', 'codeboxes-label', T('代码框数量')));
+      ctl.appendChild(el('span', 'codeboxes-num', String(boxes.length)));
+      var add = el('button', 'codeboxes-add', T('添加代码框'));
+      add.type = 'button';
+      if(boxes.length >= MAX_CODE_BOXES) add.disabled = true;
+      add.addEventListener('click', function(){ changeCount(boxes.length + 1); });
+      ctl.appendChild(add);
+      wrap.appendChild(ctl);
+
+      boxes.forEach(function(b, i){
+        var item = el('div', 'codebox-item');
+        var head = el('div', 'codebox-item-head');
+        /* ★ 名字：第 1 个框填脚本名（class_gun），后面的框填方法名（shoot）
+           —— 后面的框前面自动带出「class_gun.」这个前缀 */
+        if(i > 0){
+          var pfx = el('span', 'codebox-prefix', rootName() ? (rootName() + '.') : '');
+          pfx.style.display = rootName() ? '' : 'none';
+          head.appendChild(pfx);
+        }
+        var nameIn = el('input', 'codebox-namein');
+        nameIn.type = 'text';
+        nameIn.placeholder = (i === 0) ? T('脚本名，例如 class_gun（整体展示）')
+                                        : T('方法名，例如 shoot（完整实现）');
+        nameIn.value = b.name || '';
+        nameIn.addEventListener('input', function(){
+          var arr = moduleCodeBoxes(m);
+          if(!arr[i]) arr[i] = { code:'', name:'' };
+          arr[i].name = nameIn.value;
+          setModuleCodeBoxes(m, arr);
+          saveSoon();
+          if(i === 0) refreshPrefixes();     /* 根名变了 ⇒ 后面的前缀跟着变（不重画，焦点不丢） */
+        });
+        head.appendChild(nameIn);
+        /* ★ 每个代码框都配一个「×」：删掉这一个框（只剩一个时禁用，代码框至少留一个） */
+        var rm = el('button', 'codeboxes-del', '×');
+        rm.type = 'button';
+        rm.setAttribute('aria-label', T('删掉这个代码框'));
+        if(boxes.length <= 1) rm.disabled = true;
+        rm.addEventListener('click', function(){
+          var arr = moduleCodeBoxes(m);
+          if(arr.length <= 1) return;          /* 至少留一个 */
+          arr.splice(i, 1);
+          setModuleCodeBoxes(m, arr);
+          saveSoon();
+          draw();
+        });
+        head.appendChild(rm);
+        item.appendChild(head);
+        var ta = el('textarea', 'field');
+        ta.rows = 4;
+        ta.dataset.role = 'moduleValue';
+        ta.dataset.boxIndex = String(i);
+        ta.placeholder = placeholderFor(m.type);
+        ta.value = b.code;
+        ta.addEventListener('input', function(){
+          var arr = moduleCodeBoxes(m);
+          if(!arr[i]) arr[i] = { code:'', name:'' };
+          arr[i].code = ta.value;
+          setModuleCodeBoxes(m, arr);
+          saveSoon();
+        });
+        item.appendChild(ta);
+        wrap.appendChild(item);
+      });
+    }
+
+    function changeCount(n){
+      n = Math.max(1, Math.min(MAX_CODE_BOXES, n));
+      var arr = moduleCodeBoxes(m);
+      while(arr.length < n) arr.push({ code:'', name:'' });
+      while(arr.length > n) arr.pop();
+      setModuleCodeBoxes(m, arr);
+      saveSoon();
+      draw();
+    }
+
+    /* 第一个框的名字 = 根名（如 class_gun） */
+    function rootName(){
+      var bs = moduleCodeBoxes(m);
+      return String((bs[0] && bs[0].name) || '').trim();
+    }
+    /* 根名改了 ⇒ 后面几个框的前缀跟着改（只改文字，不重画） */
+    function refreshPrefixes(){
+      var r = rootName();
+      var ps = wrap.querySelectorAll('.codebox-prefix');
+      for(var i=0;i<ps.length;i++){
+        ps[i].textContent = r ? (r + '.') : '';
+        ps[i].style.display = r ? '' : 'none';
+      }
+    }
   }
 
   
@@ -8250,6 +9059,8 @@ __lang = detectLang();
       box.appendChild(buildShaderField(m, refresh));
     }else if(m.type === '对象'){
       box.appendChild(buildObjectField(m, refresh));
+    }else if(isCodeCarrier(m.type)){
+      box.appendChild(buildCodeBoxesField(m));   /* ★ 代码框数量可自定义（默认 1） */
     }else{
       var val = el('textarea', 'field');
       val.rows = 2;
@@ -8812,10 +9623,15 @@ __lang = detectLang();
             
             body.appendChild(buildObjectDetail(m));
           }else if(isCodeCarrier(m.type)){
-            
-            if((m.value || '').trim()){
-              body.appendChild(buildCodeBox(m.value, m.type));
-            }else{
+            /* ★ 代码载体：代码框数量可自定义 ⇒ 这里按顺序把每个框都画出来 */
+            var cbs = moduleCodeBoxes(m);
+            var shown = 0;
+            cbs.forEach(function(b, i){
+              if(!(b.code || '').trim()) return;      /* 空框不画 */
+              shown++;
+              body.appendChild(buildCodeBox(b.code, moduleBoxTitle(m, i, cbs.length)));
+            });
+            if(!shown){
               var emptyItem = el('div', 'carrier-item', T('（未填写）'));
               emptyItem.style.setProperty('--c', color);
               body.appendChild(emptyItem);
@@ -9602,7 +10418,8 @@ __lang = detectLang();
       var mctx = mcv.getContext('2d');
 
       /* 二维码固定在图片「开头」：分享链接要提前算好，头部块才知道留多大位置 */
-      var share = await buildShareLink(rec);
+      var slim = !!(window.__gml && window.__gml.qrSlim);
+      var share = await buildShareLink(rec);      /* ★ 二维码内容恒定（完整版），slim 只管排版 */
       var QR_SIZE = share.url ? (share.size || QR_WIDTH) : 0;
       var LEFT_W = QR_SIZE ? (CW - QR_SIZE - 24) : CW;   /* 左边文字区宽度（右边留给二维码） */
       if(window.__gml) window.__gml.lastShotQr = null;
@@ -9612,28 +10429,35 @@ __lang = detectLang();
       var reqLines = rec.requirement ? wrapText(mctx, rec.requirement, LEFT_W - 36, 20) : [];
       var reqStep = 26 + 14;
       var reqBlockH = reqLines.length ? (26 + 30 + (reqLines.length - 1) * reqStep + 12) : 0;
-      var leftH = 134 + reqBlockH;
+      /* ★ 精简模式：头部只留「标题 + 练习题要求 + 二维码」⇒ 整张图缩成一张小卡片 */
+      var reqLabelY = slim ? 140 : 160;
+      var reqFirstY = slim ? 170 : 190;
+      var leftH = (slim ? 112 : 134) + reqBlockH;
       /* 区域高度：最小 = 二维码高度，最大 = 左边文字高度 */
       var HEAD_H = Math.max(leftH, QR_SIZE) + 80;
 
       
       blocks.push({ h:HEAD_H, draw:function(ctx, y){
         var top = y + 40;                       /* 文字和二维码都从这一行开始 */
-        ctx.fillStyle = '#8f8f8f'; ctx.font = '400 24px ' + FF;
-        var head = SITE_NAME + ' · ' + longDate();
-        ctx.fillText(head, X, top+24); texts.push(head);
+        if(!slim){
+          ctx.fillStyle = '#8f8f8f'; ctx.font = '400 24px ' + FF;
+          var head = SITE_NAME + ' · ' + longDate();
+          ctx.fillText(head, X, top+24); texts.push(head);
+        }
         ctx.fillStyle = '#f0f0f0'; ctx.font = '700 46px ' + FF;
         var nm = truncate(ctx, rec.name || T('未命名练习'), LEFT_W);
         ctx.fillText(nm, X, top+86); texts.push(nm);
-        ctx.fillStyle = '#a0a0a0'; ctx.font = '400 24px ' + FF;
-        var tm = (dateKey(new Date(rec.ts)) === todayKey() ? T('今天 ') : dateKey(new Date(rec.ts)) + ' ') + timeText(rec.ts);
-        ctx.fillText(tm, X, top+124); texts.push(tm);
+        if(!slim){
+          ctx.fillStyle = '#a0a0a0'; ctx.font = '400 24px ' + FF;
+          var tm = (dateKey(new Date(rec.ts)) === todayKey() ? T('今天 ') : dateKey(new Date(rec.ts)) + ' ') + timeText(rec.ts);
+          ctx.fillText(tm, X, top+124); texts.push(tm);
+        }
         if(reqLines.length){
           ctx.fillStyle = '#8f8f8f'; ctx.font = '600 23px ' + FF;
-          ctx.fillText(T('练习题要求'), X, top+160); texts.push(T('练习题要求'));
+          ctx.fillText(T('练习题要求'), X, top+reqLabelY); texts.push(T('练习题要求'));
           ctx.fillStyle = '#c0c0c0'; ctx.font = '500 26px ' + FF;
           reqLines.forEach(function(line, i){
-            ctx.fillText(line, X, top+190+i*reqStep);
+            ctx.fillText(line, X, top+reqFirstY+i*reqStep);
             texts.push(line);
           });
         }
@@ -9641,7 +10465,8 @@ __lang = detectLang();
         if(QR_SIZE){
           /* 码在右上角，说明文字放在二维码上方（不占内容区） */
           var qx = X + CW - QR_SIZE, qy = top;
-          if(window.__gml) window.__gml.lastShotQr = { x:qx, y:qy, size:QR_SIZE, version:share.version, url:share.url };
+          if(window.__gml) window.__gml.lastShotQr = { x:qx, y:qy, size:QR_SIZE, version:share.version, url:share.url,
+                                                    codeLen:(share.code||'').length, slim:slim, tooLong:!!share.tooLong };
           ctx.fillStyle = '#8f8f8f'; ctx.font = '600 18px ' + FF;
           ctx.textAlign = 'right';
           ctx.fillText(T('GML 练习存档 · 扫码导入'), qx + QR_SIZE, y+24);
@@ -9661,9 +10486,9 @@ __lang = detectLang();
       }});
 
       
-      [
+      (slim ? [] : [
         { title:T('练习题提示'), body:rec.hint, size:24, lines:12, color:'#909090', weight:'400' }
-      ].forEach(function(sec){
+      ]).forEach(function(sec){
         mctx.font = sec.weight + ' ' + sec.size + 'px ' + FF;
         var lines = sec.body ? wrapText(mctx, sec.body, CW-36, sec.lines) : [];
         var step = sec.size + 14;
@@ -9683,7 +10508,7 @@ __lang = detectLang();
 
       
       var apiChips = (rec.apis || []).map(function(r){ return apiCode(r) || T('（已从 API 库删除）'); });
-      if(apiChips.length){
+      if(!slim && apiChips.length){
         mctx.font = '500 22px ' + MF;
         var apiRows = [], cur = [], curW = 0;
         apiChips.forEach(function(a){
@@ -9715,6 +10540,7 @@ __lang = detectLang();
       var stpNo = 0;
       mods.forEach(function(m){
         if(!m || !m.type) return;
+        if(slim) return;        /* ★ 精简模式：整张图只要「标题 + 练习题要求 + 二维码」 */
         stpNo++;
         
         var stepNo = stpNo;
@@ -9737,8 +10563,15 @@ __lang = detectLang();
           }else if(m.type === '对象'){
             inner.push({ kind:'object', m:m, fields: normFields(m.fields), events: normEvents(m.events) });
           }else if(isCodeCarrier(m.type)){
-            inner.push({ kind:'code', m:m, rows: gmlLineTokens(m.value || ''),
-                         lines: splitCodeLines(m.value) });
+            /* ★ 一个载体里可能有多个代码框 ⇒ 逐个收进来（画的时候逐个画） */
+            var cbs2 = moduleCodeBoxes(m);
+            var blocks2 = [];
+            cbs2.forEach(function(b, i){
+              if(!(b.code || '').trim()) return;
+              blocks2.push({ code:b.code, title:moduleBoxTitle(m, i, cbs2.length),
+                             rows:gmlLineTokens(b.code), lines:splitCodeLines(b.code) });
+            });
+            inner.push({ kind:'code', m:m, blocks:blocks2 });
           }else{
             inner.push({ kind:'text', m:m });
           }
@@ -9772,10 +10605,14 @@ __lang = detectLang();
             it.rowH = shH;
           }
           else if(it.kind === 'code'){
-            
-            if((it.m.value || '').trim()){
-              it.meta = measureCodeBlock(mctx, CW-36, it.m.value || '', 22);
-              it.rowH = it.meta.h;
+            /* ★ 多个代码框 ⇒ 高度加起来 */
+            if(it.blocks && it.blocks.length){
+              var cbh = 0;
+              it.blocks.forEach(function(b){
+                b.meta = measureCodeBlock(mctx, CW-36, b.code, 22);
+                cbh += 26 + b.meta.h + 12;
+              });
+              it.rowH = cbh;
             }else{
               it.empty = true;
               it.rowH = 38;
@@ -9888,15 +10725,24 @@ __lang = detectLang();
                 }
               });
             }else if(it.kind === 'code'){
-              
               if(it.empty){
                 ctx.font = '400 21px ' + FF;
                 ctx.fillStyle = '#8f8f8f';
                 ctx.fillText(T('（未填写）'), X+26, iy+26);
                 texts.push(T('（未填写）'));
               }else{
-                it.lines.forEach(function(ln){ texts.push(ln); });
-                drawCodeBlock(ctx, X+18, iy, CW-36, it.m.value || '', 22);
+                /* ★ 逐个代码框画出来（框上面写标题：脚本 1 / 脚本 2 …） */
+                var cby = iy;
+                it.blocks.forEach(function(b){
+                  ctx.font = '600 18px ' + FF;
+                  ctx.fillStyle = '#8f8f8f';
+                  ctx.fillText(b.title, X+18, cby+14);
+                  texts.push(b.title);
+                  cby += 26;
+                  b.lines.forEach(function(ln){ texts.push(ln); });
+                  drawCodeBlock(ctx, X+18, cby, CW-36, b.code, 22);
+                  cby += b.meta.h + 12;
+                });
               }
             }else if(it.kind === 'object'){
               
@@ -10054,16 +10900,36 @@ __lang = detectLang();
       shotCanvas.getContext('2d').drawImage(cv, 0, 0);
       $('#shotPreview').src = shotCanvas.toDataURL('image/png');
       if(window.__gml) window.__gml.lastShotTexts = cv.texts || [];
+      var q = window.__gml && window.__gml.lastShotQr;
+      var info = $('#shotQrInfo');
+      if(info){
+        if(q && q.version){
+          info.textContent = TF('二维码：版本 {v} · {n} 个模块 · 内容 {b} 字节',
+            { v:q.version, n:(17 + 4*q.version), b:q.codeLen });
+        }else{
+          info.textContent = q && q.tooLong ? T('这条练习太长，二维码放不下') : '';
+        }
+      }
       return true;
     });
   }
 
   $('#shotBtn').addEventListener('click', function(){
     $('#shotModal').classList.add('open');
+    var slimBox = $('#shotQrSlim');
+    if(slimBox){
+      slimBox.checked = !!(window.__gml && window.__gml.qrSlim);
+      var slimTxt = $('#shotQrSlimText');
+      if(slimTxt) slimTxt.textContent = T('精简排版（只显示标题与练习题要求）');
+    }
     document.body.style.overflow = 'hidden';
     refreshShot();
   });
   $('#shotRebuild').addEventListener('click', function(){ refreshShot(); });
+  $('#shotQrSlim').addEventListener('change', function(){
+    if(window.__gml) window.__gml.qrSlim = this.checked;
+    refreshShot();
+  });
   $('#shotClose').addEventListener('click', function(){
     $('#shotModal').classList.remove('open');
     syncBodyLock();
@@ -10745,10 +11611,19 @@ __lang = detectLang();
       }),
       modules: (r.modules||[]).map(function(m){
         var o = { type:m.type, value: m.value == null ? '' : m.value };
+        if(isCodeCarrier(m.type)){
+          /* ★ 代码载体可能有多个代码框 ⇒ 全部带出来（不然读回时只剩第 1 个） */
+          o.boxes = moduleCodeBoxes(m).map(function(b){ return { code:b.code, name:b.name }; });
+        }
         if(m.type === '对象'){
           o.name = m.value;
           o.fields = m.fields || [];
           o.events = (m.events||[]).map(function(e){ return { name:e.name, code:e.code }; });
+        }
+        if(m.type === '着色器'){
+          /* ★ 着色器载体有两段代码（顶点 / 片元）⇒ 读档必须一起带出来，否则读回就空了 */
+          var shd = normShader(m);
+          o.shader = { vertex: shd.vertex, fragment: shd.fragment };
         }
         return o;
       })
@@ -10800,6 +11675,13 @@ __lang = detectLang();
         if(m.type === '对象'){
           (m.events || []).forEach(function(e){
             scanCodeLines(hits, (m.value || '对象') + ' > ' + (e.name || ''), '', e.code || '', ql, q);
+          });
+        } else if(isCodeCarrier(m.type)){
+          /* ★ 代码载体可能有多个代码框 ⇒ 每个框都搜 */
+          moduleCodeBoxes(m).forEach(function(b){
+            var bv = b.code == null ? '' : String(b.code);
+            var bfirst = (bv.split('\n')[0] || '').replace(/^\/\/\s*/, '').trim();
+            scanCodeLines(hits, bfirst || '脚本', bfirst, bv, ql, q);
           });
         } else {
           var v = m.value == null ? '' : String(m.value);
@@ -10905,7 +11787,7 @@ __lang = detectLang();
         { name:'restore',      desc:'回滚上一次整站导入（用导入前自动留的快照）' },
         { name:'checkin',      desc:'打卡并打开练习过程，参数 {name, requirement, hint}' },
         { name:'set',          desc:'改当前练习的字段，参数 {field:"name|requirement|hint", value}' },
-        { name:'addModule',    desc:'加一个代码载体，参数 {type:"脚本|对象|操作描述|SVG绘图|超链接|着色器", value}' },
+        { name:'addModule',    desc:'加一个代码载体，参数 {type:"脚本|对象|操作描述|SVG绘图|超链接|着色器", value}；脚本载体还可以给 {boxes:[{code,name}]} 或 {codes:["…","…"]} 一次放多个代码框' },
         { name:'addObject',    desc:'加一个对象载体，参数 {name, fields:[[变量名,参数,说明]], events:[{name,code}]}' },
         { name:'addApi',       desc:'往 API 库加一条，参数 {code:"函数名", params:[{no,desc}]}' },
         { name:'refApi',       desc:'让当前练习引用库里的 API，参数 {code}' },
@@ -10922,7 +11804,7 @@ __lang = detectLang();
         { name:'close',        desc:'关掉练习过程弹层' },
         { name:'lang',         desc:'切语言，参数 {lang:"zh|en"}' },
         { name:'select',       desc:'选中一条记录并打开详情（演示前要先选），参数 {id} 或 {name}' },
-        { name:'demo',         desc:'演示模式开关，参数 {open:true} / {close:true} / {ratio:"default|zoom150|zoom200"} / {speed:30}' },
+        { name:'demo',         desc:'演示模式开关，参数 {open:true} / {close:true} / {ratio:"default|zoom150|zoom200"} / {speed:帧数} / {speedMin:帧数, speedMax:帧数}' },
         { name:'demoReveal',   desc:'放出一个代码载体（演示里默认全藏着），参数 {index:n}，不给就放下一个' },
         { name:'demoBlocks',   desc:'列出演示里可触发打字机的块（序号 / 预览文字 / 状态）' },
         { name:'demoType',     desc:'触发某一块的打字机，参数 {index:n} 或 {match:"文字片段"}；默认等到打完再返回' },
@@ -11024,7 +11906,29 @@ __lang = detectLang();
       var type = String(a.type || '脚本');
       if(CARRIER_TYPES.indexOf(type) < 0) return cmdFail('不认识的载体类型：' + type + '（可选：' + CARRIER_TYPES.join(' / ') + '）');
       r.modules = r.modules || [];
-      r.modules.push({ type:type, value: a.value == null ? '' : String(a.value) });
+      /* ★ 代码载体可以一次给多个代码框：
+           {type:'脚本', boxes:[{code:'…', name:'class_a.gml'}, …]}  或  {type:'脚本', codes:['…','…']} */
+      var mod = { type:type, value: a.value == null ? '' : String(a.value) };
+      var bs = null;
+      if(Array.isArray(a.boxes)) bs = a.boxes;
+      else if(Array.isArray(a.codes)) bs = a.codes.map(function(c){ return { code:(c == null ? '' : String(c)), name:'' }; });
+      if(bs && bs.length){
+        var arr = bs.map(function(b){
+          if(typeof b === 'string') return { code:b, name:'' };
+          return { code:(b && b.code != null) ? String(b.code) : '', name:(b && b.name) ? String(b.name) : '' };
+        });
+        mod.boxes = arr;
+        mod.value = arr[0].code;          /* 第 1 个框同步到 value（老路径照旧能读） */
+      }
+      /* 着色器载体：两段代码（顶点 / 片元）分别放 */
+      if(type === '着色器' && a.shader && typeof a.shader === 'object'){
+        mod.shader = {
+          vertex: typeof a.shader.vertex === 'string' ? a.shader.vertex : '',
+          fragment: typeof a.shader.fragment === 'string' ? a.shader.fragment : ''
+        };
+        mod.value = mod.shader.fragment || mod.shader.vertex || '';
+      }
+      r.modules.push(mod);
       save('records'); renderProcess();
       return { ok:true, count:r.modules.length, types:r.modules.map(function(m){ return m.type; }) };
     },
@@ -11103,6 +12007,7 @@ __lang = detectLang();
       var bad = cmdNeedRec(); if(bad) return bad;
       var r = cmdCurrentRec();
       return buildPracticeShot(r).then(function(cv){
+        if(window.__gml) window.__gml.lastShotTexts = cv.texts || [];
         return { ok:true, dataUrl: cv.toDataURL('image/png'), width: cv.width, height: cv.height };
       });
     },
@@ -11147,11 +12052,19 @@ __lang = detectLang();
       }
       return { ok:true, record: cmdRecordDetail(r) };
     },
-    shareLink: function(){
-      var bad = cmdNeedRec(); if(bad) return bad;
-      var r = cmdCurrentRec();
+    shareLink: function(a){
+      a = a || {};
+      var r = null;
+      if(a.id != null && String(a.id) !== ''){
+        r = findRec(String(a.id));
+        if(!r) return cmdFail('找不到 id=' + a.id + ' 这条记录');
+      }else{
+        var bad = cmdNeedRec(); if(bad) return bad;
+        r = cmdCurrentRec();
+      }
       return buildShareLink(r).then(function(s){
-        return { ok:true, url:s.url, version:s.version, size:s.size, tooLong:s.tooLong };
+        return { ok:true, url:s.url, version:s.version, size:s.size, tooLong:s.tooLong,
+                 codeLen:(s.code || '').length };
       });
     },
     finish: function(){ closeProcess(); return { ok:true, editing:false }; },
@@ -11175,11 +12088,30 @@ __lang = detectLang();
     demo: function(a){
       a = a || {};
       try{
+        if(a.speedMin != null || a.speedMax != null){
+          if(a.speedMin != null){
+            var lo2 = parseInt(a.speedMin, 10);
+            if(!lo2 || lo2 < 1) lo2 = DEMO_SPEED_MIN;
+            if(lo2 > 6000) lo2 = 6000;
+            $('#demoSpeedMin').value = String(lo2);
+          }
+          if(a.speedMax != null){
+            var hi2 = parseInt(a.speedMax, 10);
+            if(!hi2 || hi2 < 1) hi2 = DEMO_SPEED_MAX;
+            if(hi2 > 6000) hi2 = 6000;
+            $('#demoSpeedMax').value = String(hi2);
+          }
+          demoApplySpeedRange();
+        }
         if(a.speed != null){
           var sp = parseInt(a.speed, 10);
-          if(!sp || sp < 1) sp = 30;
-          if(sp > 1000) sp = 1000;
+          if(!sp || sp < 1) sp = DEMO_SPEED_MIN;
+          if(sp > 6000) sp = 6000;
+          var bb = demoSpeedBounds();
+          if(sp < bb.lo) sp = bb.lo;
+          if(sp > bb.hi) sp = bb.hi;
           $('#demoSpeed').value = String(sp);
+          demoUpdateSpeedLabel();
         }
         if(a.ratio != null){
           var map = {'default':'default','1':'default','1x':'default','1倍':'default',
@@ -11202,10 +12134,13 @@ __lang = detectLang();
           }else{
             openDemoMode();
           }
-          return { ok:true, open:true, ratio:demoState.ratio, speed:demoSpeedMs(),
-                   blocks:demoState.blocks.length };
+          var si = demoSpeedInfo();
+          return { ok:true, open:true, ratio:demoState.ratio, speed:si.speed, speedMs:si.speedMs,
+                   speedMin:si.speedMin, speedMax:si.speedMax, blocks:demoState.blocks.length };
         }
-        return { ok:true, open:demoState.open, ratio:demoState.ratio, speed:demoSpeedMs() };
+        var si2 = demoSpeedInfo();
+        return { ok:true, open:demoState.open, ratio:demoState.ratio, speed:si2.speed, speedMs:si2.speedMs,
+                 speedMin:si2.speedMin, speedMax:si2.speedMax };
       }catch(e){
         return cmdFail('演示模式出错：' + String((e && e.message) || e));
       }
@@ -11352,10 +12287,10 @@ __lang = detectLang();
     ['.carrier-item.plain', null],    /* 操作描述 */
     ['.codebox-body', '.ln'],         /* 脚本 / 事件代码（行号不藏） */
     ['.obj-detail-name', null],       /* 对象名 */
-    ['.obj-detail-table td', null],   /* 预定义变量表 */
+    ['.obj-detail-table tbody tr', null, 'obj-detail-row'],  /* 预定义变量表：一次交互 = 一整行 */
     ['.api-param .txt', null],        /* API 参数说明 */
   ];
-  var demoState = { open:false, blocks:[], typing:null, ratio:'default' };
+  var demoState = { open:false, blocks:[], typing:null, ratio:'default', playIdx:0 };
   var demoRatioPending = false;
   function demoIsPhonePortrait(){
     return !!(window.matchMedia && window.matchMedia('(max-width:640px) and (orientation:portrait)').matches);
@@ -11452,11 +12387,52 @@ __lang = detectLang();
              state:b.el.getAttribute('data-demo-state'),
              carrier:carrier, carrierHidden:hidden };
   }
-  function demoSpeedMs(){
-    var v = parseInt(($('#demoSpeed') || {}).value, 10);
-    if(!v || v < 1) v = 30;
-    if(v > 1000) v = 1000;
+  /* ★ 打字速度：单位 = **帧/字**（页面默认 60fps ⇒ 1 帧 ≈ 16.7ms）
+     —— 下限/上限自己定，滑动条在两者之间拖；默认最快 20 帧/字、最慢 300 帧/字。 */
+  var DEMO_FPS = 60;                 /* 页面默认刷新率 */
+  var DEMO_SPEED_MIN = 1;            /* 默认最快：1 帧/字 */
+  var DEMO_SPEED_MAX = 300;          /* 默认最慢：300 帧/字 */
+  function demoSpeedFrames(){
+    var sl = $('#demoSpeed');
+    var v = parseInt(sl ? sl.value : '', 10);
+    if(!v || v < 1) v = DEMO_SPEED_MIN;
+    if(v > 6000) v = 6000;
     return v;
+  }
+  function demoSpeedMs(){
+    return Math.max(16, Math.round(demoSpeedFrames() * 1000 / DEMO_FPS));
+  }
+  function demoSpeedBounds(){
+    var lo = parseInt(($('#demoSpeedMin') || {}).value, 10);
+    var hi = parseInt(($('#demoSpeedMax') || {}).value, 10);
+    if(!lo || lo < 1) lo = DEMO_SPEED_MIN;
+    if(!hi || hi < 1) hi = DEMO_SPEED_MAX;
+    if(lo > 6000) lo = 6000;
+    if(hi > 6000) hi = 6000;
+    if(lo > hi) hi = lo;              /* 下限不许大于上限 ⇒ 上限跟着抬 */
+    return { lo:lo, hi:hi };
+  }
+  function demoApplySpeedRange(){
+    var b = demoSpeedBounds();
+    var mn = $('#demoSpeedMin'), mx = $('#demoSpeedMax'), sl = $('#demoSpeed');
+    if(mn) mn.value = String(b.lo);
+    if(mx) mx.value = String(b.hi);
+    if(sl){
+      sl.min = String(b.lo); sl.max = String(b.hi);
+      var v = parseInt(sl.value, 10);
+      if(!v || v < b.lo) v = b.lo;
+      if(v > b.hi) v = b.hi;
+      sl.value = String(v);
+    }
+    demoUpdateSpeedLabel();
+  }
+  function demoUpdateSpeedLabel(){
+    var el = $('#demoSpeedVal');
+    if(el) el.textContent = String(demoSpeedFrames());
+  }
+  function demoSpeedInfo(){
+    var b = demoSpeedBounds();
+    return { speed:demoSpeedFrames(), speedMs:demoSpeedMs(), speedMin:b.lo, speedMax:b.hi };
   }
   function demoTextNodes(el, skipSel){
     var out = [], walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null), n;
@@ -11470,7 +12446,7 @@ __lang = detectLang();
     }
     return out;
   }
-  function demoMaskBlock(el, skipSel){
+  function demoMaskBlock(el, skipSel, extraClass){
     var nodes = demoTextNodes(el, skipSel);
     if(!nodes.length) return null;
     var saved = nodes.map(function(n){ return n.nodeValue; });
@@ -11484,6 +12460,7 @@ __lang = detectLang();
     }
     nodes.forEach(function(n){ n.nodeValue = ''; });
     el.classList.add('demo-mask');
+    if(extraClass) el.classList.add(extraClass);
     el.setAttribute('data-demo-hint', T('点击逐字显示'));
     el.setAttribute('data-demo-state', 'hidden');
     el.setAttribute('data-demo-len', String(saved.join('').length));
@@ -11521,7 +12498,7 @@ __lang = detectLang();
     });
     DEMO_TARGETS.forEach(function(pair){
       var nodes = root.querySelectorAll(pair[0]);
-      for(var i=0;i<nodes.length;i++) targets.push({ el:nodes[i], skip:pair[1] });
+      for(var i=0;i<nodes.length;i++) targets.push({ el:nodes[i], skip:pair[1], cls:pair[2] });
     });
     /* ★ 按页面顺序（DOM 顺序 = 从上到下）排好再打码
        ⇒ 块序号 = 视觉顺序，demoBlocks 列出来的顺序跟观众看到的一致 */
@@ -11530,7 +12507,7 @@ __lang = detectLang();
       var r = a.el.compareDocumentPosition(b.el);
       return (r & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
     });
-    targets.forEach(function(t){ demoMaskBlock(t.el, t.skip); });
+    targets.forEach(function(t){ demoMaskBlock(t.el, t.skip, t.cls); });
   }
   function demoStopTyping(block){
     if(!block || !block.timer) return;
@@ -11656,6 +12633,7 @@ __lang = detectLang();
   }
   function demoBlockClick(block){
     if(block.done) return;
+    var pi = demoPlayItemIndex(block);
     if(demoState.typing === block){ demoFinish(block); return; }   /* 再点一下 → 立刻显示全部 */
     if(demoState.typing && demoState.typing !== block){
       /* ★ 同一时刻只有一个打字机：在别处触发 ⇒ 前一个直接结束，把完整内容显示出来 */
@@ -11666,8 +12644,78 @@ __lang = detectLang();
       block.el.setAttribute('data-demo-state', 'typing');
     }
     demoState.typing = block;
+    /* ★ 播放位置跟着当前块走（手动点了哪块，空格就从哪块往后播） */
+    if(pi >= 0) demoState.playIdx = pi;
     demoKeepInView(block.el, 'center', false);  /* ★ 触发时把这一块移到画面中央（立刻，别跟打字抢滚动） */
     demoRun(block);
+  }
+
+  /* ============================================================
+     ★ 播放快捷键：连按空格 = 按顺序「交互」一次
+     —— 一次空格 = 界面的一次点击：
+        · 正在打字   ⇒ 立刻显示全部（相当于再点一下那一块）
+        · 还没开始   ⇒ 放载体 / 开始打字（页面上还藏着的下一个东西）
+        · 全讲完了   ⇒ 把还藏着的载体依次放出来；再没有就提示「演示已播完」
+     顺序 = 页面顺序（= 观众看到的顺序），载体本身也算一个动作。
+     ============================================================ */
+  function demoPlayItems(){
+    /* 载体 + 可打字的块 + 「查看事件」按钮，按 DOM 顺序排成一条播放线 */
+    var items = [];
+    var gs = (demoState.carriers && demoState.carriers.groups) || [];
+    gs.forEach(function(g, i){ items.push({ type:'carrier', el:g, gi:i }); });
+    (demoState.blocks || []).forEach(function(b, i){ items.push({ type:'block', el:b.el, block:b, bi:i }); });
+    /* ★ 「查看事件」按钮：它是「事件代码框」的前置开关 ⇒ 排在它要放出来的块前面 */
+    var gates = Array.prototype.slice.call(document.querySelectorAll('#demoInner [data-demo-gate]'));
+    gates.forEach(function(btn){ items.push({ type:'gate', el:btn, btn:btn }); });
+    items.sort(function(a, b){
+      if(a.el === b.el) return 0;
+      var r = a.el.compareDocumentPosition(b.el);
+      return (r & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
+    });
+    return items;
+  }
+  function demoPlayItemIndex(block){
+    var items = demoPlayItems();
+    for(var i=0;i<items.length;i++){
+      if(items[i].type === 'block' && items[i].block === block) return i;
+    }
+    return -1;
+  }
+  function demoPlayStep(){
+    if(!demoState.open) return false;
+    /* ① 正在打字 ⇒ 再点一下 = 立刻显示全部（并把播放位置推到下一块） */
+    if(demoState.typing){
+      demoBlockClick(demoState.typing);
+      return true;
+    }
+    /* ② 沿着播放线往前走：先放藏着的载体，再讲下一个块 */
+    var items = demoPlayItems();
+    for(var i=demoState.playIdx; i<items.length; i++){
+      var it = items[i];
+      if(it.type === 'carrier'){
+        if(demoState.carriers.hidden(it.gi)){
+          demoState.playIdx = i;
+          demoState.carriers.revealGroup(it.gi);      /* 放出来（并把「显示载体」按钮挪到位） */
+          return true;
+        }
+        demoState.playIdx = i + 1;
+        continue;
+      }
+      if(it.type === 'gate'){
+        /* ★ 「查看事件」按钮：点它 ⇒ 事件代码框出来（之后块才能逐字打） */
+        if(it.btn.style.display === 'none'){ demoState.playIdx = i + 1; continue; }
+        demoState.playIdx = i;
+        it.btn.click();
+        return true;
+      }
+      if(it.block.done){ demoState.playIdx = i + 1; continue; }
+      demoState.playIdx = i;
+      demoBlockClick(it.block);                        /* 开始打字 */
+      return true;
+    }
+    /* ③ 真的播完了 */
+    toast(T('演示已播完'));
+    return false;
   }
   function demoSetupCarriers(root){
     /* 模块载体默认全藏着，点一次「显示载体」放出来一个 */
@@ -11720,7 +12768,12 @@ __lang = detectLang();
     /* 暴露给命令接口：AI 要按稿子逐个放载体 */
     demoState.carriers = {
       total: groups.length,
+      groups: groups,                    /* ★ 播放快捷键要用：按顺序找「还藏着的载体」 */
       shown: function(){ return shown; },
+      hidden: function(i){
+        var g = groups[i];
+        return !!(g && g.style.display === 'none');
+      },
       reveal: function(i){
         if(i == null) return revealOne() ? shown : shown;
         while(shown < i){ if(!revealOne()) break; }
@@ -11736,6 +12789,30 @@ __lang = detectLang();
       }
     };
   }
+  /* ============================================================
+     ★ 演示模式：对象事件的代码框先藏着，给一个「查看事件」按钮
+     —— 事件代码框整块不显示（连框都不显示），点一下按钮才出来；
+        出来之后代码框还是「只藏字」的（和其它代码框一样，要点一下才逐字打出来）。
+     ============================================================ */
+  function demoSetupObjectEvents(root){
+    var boxes = Array.prototype.slice.call(root.querySelectorAll('.obj-detail'));
+    boxes.forEach(function(box){
+      var eSec = box.querySelector('.obj-events');
+      if(!eSec) return;
+      if(!eSec.querySelector('.codebox-body')) return;    /* 没有事件代码 ⇒ 不给按钮 */
+      eSec.style.display = 'none';                        /* ★ 先把事件代码框藏起来 */
+      var btn = el('button', 'demo-carrier-btn demo-gate-btn', T('查看事件'));
+      btn.type = 'button';
+      btn.setAttribute('data-demo-gate', '1');
+      box.insertBefore(btn, eSec);
+      btn.addEventListener('click', function(){
+        eSec.style.display = '';                           /* 放出来 */
+        btn.style.display = 'none';                        /* 按钮用完就收起来 */
+        demoScheduleRatio();
+        demoKeepCtlVisible(true);
+      });
+    });
+  }
   function openDemoMode(){
     var rec = selectedId ? findRec(selectedId) : null;
     if(!rec && editingId) rec = findRec(editingId);
@@ -11747,6 +12824,7 @@ __lang = detectLang();
     if(acts && acts.parentNode) acts.parentNode.removeChild(acts);   /* 演示里不让「编辑这条记录」 */
     inner.appendChild(box);
     demoSetupCarriers(inner);
+    demoSetupObjectEvents(inner);      /* ★ 对象事件的代码框先藏着，给一个「查看事件」按钮 */
     demoMaskAll(inner);
     demoState.open = true;
     $('#demoModal').classList.add('open');
@@ -11759,6 +12837,7 @@ __lang = detectLang();
     demoState.appliedRatio = '';
     demoState.natW = 0;
     demoState.natWFor = -1;
+    demoState.playIdx = 0;             /* ★ 播放位置从头开始（连按空格 ⇒ 从上往下播） */
     demoState.ratio = demoDefaultRatio();    /* 手机竖屏 1 倍，其它 2 倍 */
     demoApplyRatio();
     document.body.style.overflow = 'hidden';
@@ -11783,14 +12862,95 @@ __lang = detectLang();
     if(e.target === $('#demoModal')) closeDemoMode();
   });
   $('#demoSpeed').addEventListener('input', function(){
-    if(demoState.typing) demoRun(demoState.typing);   /* 正在打字时改速度立刻生效 */
+    demoUpdateSpeedLabel();      /* 打字循环每次都重读速度 ⇒ 下一字就按新速度走 */
+  });
+  /* ★ 按住 ←/→ 连续调滑动条（越按越快），演示模式下随时可用，不用先点滑动条 */
+  var demoSpeedKey = { dir:0, t0:0 };
+  function demoSpeedStepBy(heldMs){
+    if(heldMs < 250) return 1;      /* 刚按下：一步一格 */
+    if(heldMs < 900) return 4;      /* 按住一会儿：加速 */
+    if(heldMs < 1800) return 15;
+    return 45;                      /* 按久了：横扫整条 */
+  }
+  function demoSpeedNudge(dir, step){
+    var sl = $('#demoSpeed');
+    if(!sl) return;
+    var b = demoSpeedBounds();
+    var v = demoSpeedFrames() + dir * step;
+    if(v < b.lo) v = b.lo;
+    if(v > b.hi) v = b.hi;
+    sl.value = String(v);
+    demoUpdateSpeedLabel();
+  }
+  document.addEventListener('keydown', function(e){
+    if(!demoState.open) return;
+    if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    var tg = e.target;
+    if(tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' ||
+              tg.tagName === 'SELECT' || tg.isContentEditable)) return;   /* 输入框里用原生行为 */
+    var dir = (e.key === 'ArrowRight') ? 1 : -1;   /* ← 帧数变小＝更快；→ 帧数变大＝更慢 */
+    var now = e.timeStamp || performance.now();
+    if(demoSpeedKey.dir !== dir){
+      demoSpeedKey.dir = dir;
+      demoSpeedKey.t0 = now;
+      demoSpeedNudge(dir, 1);
+    }else{
+      demoSpeedNudge(dir, demoSpeedStepBy(now - demoSpeedKey.t0));
+    }
+    e.preventDefault();               /* 别让页面跟着横向滚动 */
+  });
+  document.addEventListener('keyup', function(e){
+    if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') demoSpeedKey.dir = 0;
+  });
+  /* 上下限：改了立刻套到滑动条上（正在打字时同样立刻生效） */
+  $('#demoSpeedMin').addEventListener('change', function(){
+    var lo = parseInt(this.value, 10);
+    if(!lo || lo < 1) lo = DEMO_SPEED_MIN;
+    if(lo > 6000) lo = 6000;
+    var hi = parseInt($('#demoSpeedMax').value, 10);
+    if(!hi || hi < 1) hi = DEMO_SPEED_MAX;
+    if(lo > hi){ $('#demoSpeedMax').value = String(lo); hi = lo; }   /* 上限跟着抬 */
+    demoApplySpeedRange();
+  });
+  $('#demoSpeedMax').addEventListener('change', function(){
+    var hi = parseInt(this.value, 10);
+    if(!hi || hi < 1) hi = DEMO_SPEED_MAX;
+    if(hi > 6000) hi = 6000;
+    var lo = parseInt($('#demoSpeedMin').value, 10);
+    if(!lo || lo < 1) lo = DEMO_SPEED_MIN;
+    if(hi < lo){ $('#demoSpeedMin').value = String(hi); lo = hi; }   /* 下限跟着降 */
+    demoApplySpeedRange();
+  });
+  demoApplySpeedRange();   /* 初始：滑动条范围 = 上下限，当前值取下限（最快） */
+  /* ============================================================
+     ★ 播放快捷键：连按空格 = 按顺序交互一次
+     —— 打开演示模式后，直接连着按空格就能把藏起来的内容一段一段放出来。
+     —— 一次空格 = 一次点击：
+          正在打字 ⇒ 立刻显示全部；没开始 ⇒ 放载体 / 开始打字；全讲完 ⇒ 提示播完了。
+     ============================================================ */
+  document.addEventListener('keydown', function(e){
+    if(!demoState.open) return;
+    if(e.key !== ' ' && e.code !== 'Space' && e.key !== 'Spacebar') return;
+    /* 正在输入框里打字时，空格是「输入空格」⇒ 不抢 */
+    var t = e.target;
+    if(t){
+      var tag = (t.tagName || '').toUpperCase();
+      if(tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable) return;
+      if(tag === 'INPUT'){
+        var ty = (t.type || 'text').toLowerCase();
+        if(ty !== 'number' && ty !== 'range' && ty !== 'checkbox' && ty !== 'radio' && ty !== 'button') return;
+      }
+    }
+    e.preventDefault();          /* 别让空格把画面滚下去 */
+    demoPlayStep();
   });
 
   initAvatar();
   renderAll();
   applyLang();
   handleShareHash();
-  window.__gml = { state: state, render: renderAll, shareLink: buildShareLink, shareDecode: shareDecode };
+  window.__gml = { state: state, render: renderAll, shareLink: buildShareLink, shareDecode: shareDecode,
+                  compactPayload: practicePayloadCompact, shareEncode: shareEncode, qrInfo: qrInfo };
 })();
 </script>
 
