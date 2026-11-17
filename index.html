@@ -846,6 +846,9 @@ tr.demo-mask[data-demo-state="hidden"] td{color:transparent}
 .demo-carrier-count{font-size:12px;color:var(--ink-3)}
 .carrier-group.demo-carrier-show{animation:demoFade .28s ease both}
 @keyframes demoFade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+/* ★ 代码框 / 事件框「逐个展开」的动画（脚本载体的方法框、对象载体的事件框共用） */
+@keyframes demoBoxIn{from{opacity:0;transform:translateY(-10px) scale(.985)}to{opacity:1;transform:none}}
+.demo-box-reveal{animation:demoBoxIn .3s ease both}
 .demo-mask[data-demo-state="hidden"]{color:transparent}
 
 .save-row .btn{flex:1;padding:13px 0;font-size:15px}
@@ -1359,6 +1362,7 @@ const one = await window.gml.cmd('get', { id: rec.id })
    顺序 = 页面顺序（练习题提示 → 操作描述 → 脚本/事件代码 → 对象名 → 预定义变量表 → API 参数说明）；
    正在打字时按空格 = 立刻显示全部；全都讲完了会提示「演示已播完」✓。
 2. **对象载体的「事件代码框」整块藏着**，要先点「**查看事件**」按钮（`[data-demo-gate]`）才放出来 ⇒
+   点开之后**事件框逐个展开**（一个一个带动画出来，间隔约 220ms）⇒
    **稿子要分两步**：先讲对象名 + 变量表，再讲事件代码。
 3. **预定义变量表按「行」遮罩** —— **一次交互出一整行**（变量名 / 参数 / 说明 三个格子一起出来），
    表头一直可见 ⇒ **稿子里一行算一段**，别按格子写；
@@ -1883,6 +1887,9 @@ trail.update(x, y)
   （变量名 / 参数 / 说明 三个格子一起出来），不是一格一格点 ⇒
   表格行的遮罩类是 `.demo-mask.obj-detail-row`（行级），表头一直可见 ✓。
 - **对象载体的「事件代码框」在演示里整块藏着**，只给一个 **「查看事件」** 按钮 ✓
+  ⇒ 点开之后**事件框逐个展开**（带动画，一个一个出来）；
+- **脚本载体的第 2 个代码框起也先藏着**（第 1 框=脚本整体始终可见），
+  给一个 **「查看方法」** 按钮 ⇒ 点开之后**方法框逐个展开**（带动画）✓
   （点一下才把 Create / Step 这些事件的代码框放出来；放出来后代码框仍然是「只藏字」的状态，
   要再点一下（或按空格）才逐字打出来 ⇒ 演示时能分两步讲：先讲对象名和变量表，再讲事件代码）。
 - **「显示载体」按钮不会被顶出屏幕**：放载体后、打字机打字过程中，都会检查按钮是不是被上面
@@ -4968,6 +4975,7 @@ var I18N = {
     "点击逐字显示": "点击逐字显示",
     "显示载体": "显示载体",
     "查看事件": "查看事件",
+    "查看方法": "查看方法",
     "默认": "默认",
     "1倍": "1倍",
     "1.5倍": "1.5倍",
@@ -5365,6 +5373,7 @@ var I18N = {
     "点击逐字显示": "Click to type it out",
     "显示载体": "Show carrier",
     "查看事件": "Show events",
+    "查看方法": "Show methods",
     "默认": "Default",
     "1倍": "1×",
     "1.5倍": "1.5×",
@@ -12790,6 +12799,24 @@ __lang = detectLang();
     };
   }
   /* ============================================================
+     ★ 演示模式：代码框 / 事件框「逐个展开」
+     —— 点开按钮后不是一下子全出来，而是一个一个带动画地出来
+        （每个框间隔 DEMO_BOX_STEP_MS 毫秒，画幅跟着一个个长高）。
+     ============================================================ */
+  var DEMO_BOX_STEP_MS = 220;
+  function demoRevealBoxesStep(boxes, idx, done){
+    if(!boxes || idx >= boxes.length){ if(done) done(); return; }
+    var b = boxes[idx];
+    b.style.display = '';
+    try{
+      requestAnimationFrame(function(){ b.classList.add('demo-box-reveal'); });
+    }catch(e){ b.classList.add('demo-box-reveal'); }
+    demoScheduleRatio();                 /* 画幅跟着长高 */
+    demoKeepCtlVisible(true);
+    setTimeout(function(){ demoRevealBoxesStep(boxes, idx + 1, done); }, DEMO_BOX_STEP_MS);
+  }
+
+  /* ============================================================
      ★ 演示模式：对象事件的代码框先藏着，给一个「查看事件」按钮
      —— 事件代码框整块不显示（连框都不显示），点一下按钮才出来；
         出来之后代码框还是「只藏字」的（和其它代码框一样，要点一下才逐字打出来）。
@@ -12806,10 +12833,41 @@ __lang = detectLang();
       btn.setAttribute('data-demo-gate', '1');
       box.insertBefore(btn, eSec);
       btn.addEventListener('click', function(){
-        eSec.style.display = '';                           /* 放出来 */
         btn.style.display = 'none';                        /* 按钮用完就收起来 */
-        demoScheduleRatio();
-        demoKeepCtlVisible(true);
+        eSec.style.display = '';                           /* 放出来 */
+        /* ★ 事件框**逐个**展开（一个一个带动画出来），不是一下子全亮 */
+        var evBoxes = Array.prototype.slice.call(eSec.querySelectorAll('.codebox'));
+        evBoxes.forEach(function(b){ b.style.display = 'none'; });
+        demoRevealBoxesStep(evBoxes, 0);
+      });
+    });
+  }
+  /* ============================================================
+     ★ 演示模式：代码载体的**第 2 框起先藏着**，给一个「查看方法」按钮
+     —— 和对象事件的「查看事件」同一套机制（data-demo-gate）：
+        点一下按钮，后面的代码框才出来；
+        出来之后代码框还是「只藏字」的（和其它代码框一样，要点一下才逐字打出来）。
+        第 1 框（脚本整体）始终可见 ⇒ 载体放出来时先看到「整体 + 方法名」。
+     ============================================================ */
+  function demoSetupCodeBoxes(root){
+    var groups = Array.prototype.slice.call(root.querySelectorAll('.carrier-group'));
+    groups.forEach(function(g){
+      var body = g.querySelector('.carrier-group-body');
+      if(!body) return;
+      var boxes = Array.prototype.slice.call(body.children).filter(function(c){
+        return c.classList && c.classList.contains('codebox');
+      });
+      if(boxes.length < 2) return;            /* 只有 1 个框 ⇒ 不用藏 */
+      var hidden = boxes.slice(1);             /* 第 2 框起先藏着 */
+      hidden.forEach(function(b){ b.style.display = 'none'; });
+      var btn = el('button', 'demo-carrier-btn demo-gate-btn', T('查看方法'));
+      btn.type = 'button';
+      btn.setAttribute('data-demo-gate', '1');
+      body.insertBefore(btn, hidden[0]);       /* 按钮放在被藏的框前面 */
+      btn.addEventListener('click', function(){
+        btn.style.display = 'none';            /* 按钮用完就收起来 */
+        /* ★ 方法框**逐个**展开（一个一个带动画出来），不是一下子全亮 */
+        demoRevealBoxesStep(hidden, 0);
       });
     });
   }
@@ -12825,6 +12883,7 @@ __lang = detectLang();
     inner.appendChild(box);
     demoSetupCarriers(inner);
     demoSetupObjectEvents(inner);      /* ★ 对象事件的代码框先藏着，给一个「查看事件」按钮 */
+    demoSetupCodeBoxes(inner);         /* ★ 代码载体第 2 框起先藏着，给一个「查看方法」按钮 */
     demoMaskAll(inner);
     demoState.open = true;
     $('#demoModal').classList.add('open');
