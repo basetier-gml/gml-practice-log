@@ -190,6 +190,30 @@ button{font-family:inherit}
 }
 .hist-search input::-webkit-search-cancel-button{cursor:pointer}
 .hist-search .btn{flex:0 0 auto;padding:7px 14px;font-size:13px;border-radius:9px}
+/* ---------- 补录：往过去某一天补一条打卡 ---------- */
+.hist-backfill{
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:11px;
+}
+.backfill-btn{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;
+  border:1px solid var(--gm);background:var(--gm-soft);color:var(--gm-deep);
+  font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:999px;cursor:pointer;
+  line-height:1.5;transition:background .15s ease,border-color .15s ease;
+}
+.backfill-btn:hover{background:rgba(74,144,226,.24);border-color:#5f88c0}
+.backfill-btn:active{background:rgba(74,144,226,.30)}
+.backfill-tip{font-size:11.5px;color:var(--ink-3)}
+.bf-label{display:block;font-size:14px;color:var(--ink);font-weight:700;margin-bottom:7px}
+.bf-grid{display:flex;gap:10px;margin-bottom:12px}
+.bf-cell{flex:1 1 0;min-width:0}
+.bf-field{
+  width:100%;border:1px solid #4a4a4a;border-radius:8px;padding:10px 12px;
+  font-family:inherit;font-size:16px;color:var(--ink);background:#2f2f2f;outline:none;
+  color-scheme:dark;                 /* 原生日期控件也跟着深色，不然是白底 */
+}
+.bf-field:focus{border-color:var(--gm);box-shadow:0 0 0 3px rgba(74,144,226,.22)}
+.bf-field::-webkit-calendar-picker-indicator{filter:invert(.78);cursor:pointer}
+.bf-info{text-align:left;margin:0 0 4px}
 .lh-tip{font-size:11px;color:var(--ink-3);margin-left:8px}
 .hist-sub{font-size:12.5px;color:var(--ink-3);margin:-2px 0 12px}
 .hist-day{margin-bottom:16px}
@@ -1136,6 +1160,7 @@ const all = await window.gml.cmd('state')        // 全部记录的 id / 名字
 | 功能 | 在哪 |
 |---|---|
 | 打卡一次 = 建一条练习记录 | 主界面「打卡一次」`#checkinBtn` |
+| **补录**：往过去某一天补一条打卡（先选日期和时间 → 确认 → 那一天多一条记录；**不能补未来**） | 历史记录视图顶部「补录一次」`#backfillBtn`；命令 `cmd('backfill',{date:'YYYY-MM-DD', time:'HH:MM'})` |
 | 练习过程弹层：题面 / 提示 / API 引用 / 代码载体 | `#processCard`（编辑态→详情态） |
 | 代码载体 6 种：脚本、对象、操作描述、SVG绘图、超链接、着色器 | 弹层里「＋ 类型」按钮 |
 | 对象载体：对象名 + 预定义变量表 + 多个事件代码框 | 载体类型「对象」 |
@@ -1207,6 +1232,7 @@ const r = await page.evaluate(() => window.gml.cmd('screenshot'))   // {ok,dataU
 | `restore` | – | 回滚上一次整站导入（用导入前自动留的快照 `gml-practice-log-v2:preImport`）；没有快照就报错，不动现有数据 |
 | `export` / `import` | `{json}` | 整站存档导出 / 导入并覆盖 |
 | `checkin` | `{name, requirement, hint}` | 打卡并打开练习过程 |
+| `backfill` | `{date:'YYYY-MM-DD', time:'HH:MM', name, requirement, hint}` | **往指定的过去某一天补一条打卡**（记录落在那一天、那个时刻；不能补未来；界面入口 = 历史记录视图顶部「补录一次」） |
 | `set` | `{field:'name'\|'requirement'\|'hint', value}` | 改当前练习字段 |
 | `addModule` | `{type, value}` 或 `{type:'脚本', boxes:[{code,name}]}` / `{codes:['…','…']}` 或 `{type:'着色器', shader:{vertex,fragment}}` | 加一个代码载体（**脚本载体可以一次给多个代码框**；`name` = 第 1 框的**脚本名**、后面框的**方法名**，显示成 `根名.方法名`，见 §2.2） |
 | `addObject` | `{name, fields:[[变量名,参数,说明]], events:[{name,code}]}` | 加对象载体 |
@@ -2341,6 +2367,13 @@ python3 <skill:gml-tutorial-manual>/scripts/build_manual_site.py \
 
     <!-- 历史记录视图 -->
     <div id="historyPane" style="display:none">
+      <div class="hist-backfill">
+        <button class="backfill-btn" id="backfillBtn" type="button">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span id="backfillBtnText">补录一次</span>
+        </button>
+        <span class="backfill-tip" id="backfillTip">补录到过去漏掉的那一天</span>
+      </div>
       <div class="hist-dates" id="histDates" aria-label="按日期浏览"></div>
       <div class="hist-search">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink-3);flex:0 0 auto"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -2560,6 +2593,32 @@ python3 <skill:gml-tutorial-manual>/scripts/build_manual_site.py \
       <button class="btn btn-primary" id="clearConfirmBtn" type="button">清空全部数据</button>
     </div>
     <p class="note">清空后网页回到初始状态，自带的使用说明也会一起清掉。</p>
+  </div>
+</div>
+
+<!-- ============ 补录打卡弹层 ============ -->
+<div class="modal" id="backfillModal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3>补录打卡</h3>
+      <button class="btn btn-ghost close" id="backfillClose" type="button" style="flex:0 0 auto;padding:6px 14px;font-size:13px">关闭</button>
+    </div>
+    <p class="import-line" id="backfillIntro">选一个日子和打卡时间，把这次的练习补到那一天。</p>
+    <div class="bf-grid">
+      <div class="bf-cell">
+        <label class="bf-label" for="backfillDate">补录到哪一天</label>
+        <input class="bf-field" id="backfillDate" type="date" autocomplete="off" aria-label="补录到哪一天">
+      </div>
+      <div class="bf-cell">
+        <label class="bf-label" for="backfillTime">打卡时间</label>
+        <input class="bf-field" id="backfillTime" type="time" autocomplete="off" aria-label="打卡时间">
+      </div>
+    </div>
+    <p class="note bf-info" id="backfillInfo"></p>
+    <div class="import-ops">
+      <button class="btn btn-primary" id="backfillConfirm" type="button">确认补录</button>
+    </div>
+    <p class="note">补录完这条记录就落在那一天、那个时间，历史记录里能看到。</p>
   </div>
 </div>
 
@@ -5360,6 +5419,24 @@ var I18N = {
     week_prefix: "周",
     img_tag: "（图片）",
     vid_tag: "（视频）",
+    "补录一次": "补录一次",
+    "补录到过去漏掉的那一天": "补录到过去漏掉的那一天",
+    "补录打卡": "补录打卡",
+    "选一个日子，把这次的练习补到那一天。": "选一个日子，把这次的练习补到那一天。",
+    "选一个日子和打卡时间，把这次的练习补到那一天。": "选一个日子和打卡时间，把这次的练习补到那一天。",
+    "补录到哪一天": "补录到哪一天",
+    "打卡时间": "打卡时间",
+    "确认补录": "确认补录",
+    "补录完这条记录会落在那一天，历史记录里就能看到它。": "补录完这条记录会落在那一天，历史记录里就能看到它。",
+    "补录完这条记录就落在那一天、那个时间，历史记录里能看到。": "补录完这条记录就落在那一天、那个时间，历史记录里能看到。",
+    "不能补录未来的日期": "不能补录未来的日期",
+    "日期格式不对": "日期格式不对",
+    "这个日期不存在": "这个日期不存在",
+    "日期不对": "日期不对",
+    "时间格式不对": "时间格式不对",
+    "时间不对": "时间不对",
+    backfill_info: "补录到 {d} {w} {t}，这一天已有 {n} 次打卡，补完会变成 {m} 次。",
+    backfill_done: "已补录到 {d} {w} {t}。",
   },
   en: {
     "新手教程": "Getting started",
@@ -5759,6 +5836,24 @@ var I18N = {
     week_prefix: "Sun",
     img_tag: "(image)",
     vid_tag: "(video)",
+    "补录一次": "Backfill",
+    "补录到过去漏掉的那一天": "Add a check-in to a day you missed",
+    "补录打卡": "Backfill a check-in",
+    "选一个日子，把这次的练习补到那一天。": "Pick a day to put this practice on.",
+    "选一个日子和打卡时间，把这次的练习补到那一天。": "Pick a day and a time to put this practice on.",
+    "补录到哪一天": "Which day?",
+    "打卡时间": "Check-in time",
+    "确认补录": "Confirm",
+    "补录完这条记录会落在那一天，历史记录里就能看到它。": "The record lands on that day and shows up in its history.",
+    "补录完这条记录就落在那一天、那个时间，历史记录里能看到。": "The record lands on that day at that time, and shows up in its history.",
+    "不能补录未来的日期": "Can't backfill a future day.",
+    "日期格式不对": "Wrong date format.",
+    "这个日期不存在": "That date doesn't exist.",
+    "日期不对": "Invalid date.",
+    "时间格式不对": "Wrong time format.",
+    "时间不对": "Invalid time.",
+    backfill_info: "Backfilling to {d} {w} {t}. That day already has {n} check-in(s); it will become {m}.",
+    backfill_done: "Backfilled to {d} {w} {t}.",
   }
 };
 var TYPE_LABELS = {"脚本": "Script", "对象": "Object", "操作描述": "Action Note", "SVG绘图": "SVG Drawing", "超链接": "Hyperlink", "着色器": "Shader"};
@@ -5877,6 +5972,11 @@ function applyStaticI18n(){
   else{
     set('#pbRecInfo', TF('practice_rec_info', { name:'' }));
     set('#pbApiInfo', TF('practice_apis_count', { n:0 }));
+  }
+  /* 补录弹层开着的时候切语言 ⇒ 那句「这一天已有 N 次打卡」要跟着换 */
+  var bfModal = $('#backfillModal');
+  if(bfModal && bfModal.classList.contains('open')){
+    try{ refreshBackfillInfo(); }catch(e){}
   }
 }
 function applyLang(){
@@ -9730,10 +9830,12 @@ __lang = detectLang();
   }
 
   
-  function doCheckin(){
+  function doCheckin(ts){
+    /* ts 只接受数字（补录用）；别的事件对象一律按「现在」处理 */
+    if(typeof ts !== 'number' || !isFinite(ts)) ts = Date.now();
     var rec = {
       id: uid(),
-      ts: Date.now(),
+      ts: ts,
       name: '',
       requirement: '',
       hint: '',
@@ -9748,6 +9850,112 @@ __lang = detectLang();
     openProcess();
     var nameIn = $('[data-field="name"]');
     if(nameIn) setTimeout(function(){ nameIn.focus(); }, 320);
+    return rec;
+  }
+
+  /* ============================================================
+     补录：往过去某一天补一条打卡记录
+     —— 流程：先选日期 → 确认 → 在那一天新建一条记录（并打开练习过程）
+     ============================================================ */
+  var backfillKey = null;          /* 弹层里正在补录的日期（YYYY-MM-DD） */
+  var backfillTime = null;         /* 弹层里正在补录的打卡时间（HH:MM） */
+
+  /* 校验一个时间（HH:MM 或 HH:MM:SS）能不能用 */
+  function backfillTimeInfo(t){
+    var s = String(t == null ? '' : t).trim();
+    if(!s) return { ok:false, error:'时间格式不对' };
+    var m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(s);
+    if(!m) return { ok:false, error:'时间格式不对' };
+    var hh = +m[1], mi = +m[2], ss = m[3] ? +m[3] : 0;
+    if(hh > 23 || mi > 59 || ss > 59) return { ok:false, error:'时间不对' };
+    return { ok:true, h:hh, m:mi, s:ss };
+  }
+  /* 校验一个日期能不能补录，并算出这条记录该用的时间戳（那一天 + 那个时刻） */
+  function backfillDateInfo(key, timeStr){
+    var k = String(key == null ? '' : key).trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(k)) return { ok:false, error:'日期格式不对' };
+    var ti = backfillTimeInfo(timeStr);
+    if(!ti.ok) return ti;
+    var p = k.split('-');
+    var y = +p[0], m = +p[1], d = +p[2];
+    var t = new Date(y, m-1, d, ti.h, ti.m, ti.s, 0);
+    if(isNaN(t.getTime())) return { ok:false, error:'日期不对' };
+    /* 2026-02-31 这种会被 JS 悄悄进位到 3 月 ⇒ 对不上就说明这日期不存在 */
+    if(dateKey(t) !== k) return { ok:false, error:'这个日期不存在' };
+    if(k > todayKey()) return { ok:false, error:'不能补录未来的日期' };
+    return { ok:true, key:k, ts:t.getTime(), time:ti };
+  }
+  /* 补录日期的默认值：昨天（最常见的「昨天忘了打卡」） */
+  function backfillDefaultKey(){
+    var t = new Date();
+    t.setDate(t.getDate()-1);
+    return dateKey(t);
+  }
+  /* 补录时间的默认值：现在的时刻 */
+  function backfillDefaultTime(){
+    var n = new Date();
+    return pad(n.getHours()) + ':' + pad(n.getMinutes());
+  }
+  function refreshBackfillInfo(){
+    var box = $('#backfillInfo');
+    if(!box) return;
+    var info = backfillDateInfo(backfillKey, backfillTime);
+    if(!info.ok){ box.textContent = T(info.error); return; }
+    var n = dayRecs(info.key).length;
+    box.textContent = TF('backfill_info', {
+      d: monthDay(info.key), w: weekName(info.key),
+      t: pad(info.time.h) + ':' + pad(info.time.m),
+      n: n, m: n+1
+    });
+  }
+  function openBackfillModal(){
+    var inp = $('#backfillDate'), tinp = $('#backfillTime');
+    if(!inp || !tinp) return;
+    var k = backfillDefaultKey();
+    inp.max = todayKey();          /* 只能补到今天为止 */
+    inp.value = k;
+    tinp.value = backfillDefaultTime();
+    backfillKey = k;
+    backfillTime = tinp.value;
+    refreshBackfillInfo();
+    $('#backfillModal').classList.add('open');
+    if(!isWide()) document.body.style.overflow = 'hidden';
+  }
+  function closeBackfillModal(){
+    var m = $('#backfillModal');
+    if(m) m.classList.remove('open');
+    syncBodyLock();
+  }
+  /* 把视图挪到「看得见这条记录」的地方：补到今天 ⇒ 回打卡明细；补到过去 ⇒ 历史定位到那天 */
+  function focusBackfillDay(key){
+    if(key === todayKey()){
+      switchRecView('today');
+    }else{
+      histDate = key;
+      histPage = 0;
+      switchRecView('history');
+    }
+  }
+  /* 确认补录：在那一天新建一条记录，并把视图挪到看得见它的地方 */
+  function confirmBackfill(){
+    var inp = $('#backfillDate'), tinp = $('#backfillTime');
+    var info = backfillDateInfo(inp ? inp.value : backfillKey, tinp ? tinp.value : backfillTime);
+    if(!info.ok){ toast(T(info.error)); return false; }
+    backfillKey = info.key;
+    backfillTime = tinp ? tinp.value : backfillTime;
+    closeBackfillModal();
+    focusBackfillDay(info.key);
+    doCheckin(info.ts);
+    toast(TF('backfill_done', {
+      d: monthDay(info.key), w: weekName(info.key),
+      t: pad(info.time.h) + ':' + pad(info.time.m)
+    }));
+    return true;
+  }
+  /* 命令接口用：建一条落在指定日期的记录（不弹层） */
+  function doBackfill(key, ts){
+    focusBackfillDay(key);
+    return doCheckin(ts);
   }
 
   
@@ -10085,6 +10293,36 @@ __lang = detectLang();
     renderHistory();
   });
 
+  /* ---------- 补录：选日期 → 确认 → 在那一天补一条打卡 ---------- */
+  $('#backfillBtn').addEventListener('click', function(){
+    openBackfillModal();
+  });
+  $('#backfillClose').addEventListener('click', function(){
+    closeBackfillModal();
+  });
+  $('#backfillModal').addEventListener('click', function(e){
+    if(e.target === this) closeBackfillModal();
+  });
+  $('#backfillConfirm').addEventListener('click', function(){
+    confirmBackfill();
+  });
+  $('#backfillDate').addEventListener('change', function(){
+    backfillKey = this.value;
+    refreshBackfillInfo();
+  });
+  $('#backfillDate').addEventListener('input', function(){
+    backfillKey = this.value;
+    refreshBackfillInfo();
+  });
+  $('#backfillTime').addEventListener('change', function(){
+    backfillTime = this.value;
+    refreshBackfillInfo();
+  });
+  $('#backfillTime').addEventListener('input', function(){
+    backfillTime = this.value;
+    refreshBackfillInfo();
+  });
+
   $('#histList').addEventListener('click', function(e){
     var dayEl = e.target.closest ? e.target.closest('[data-hday]') : null;
     if(dayEl){
@@ -10172,7 +10410,7 @@ __lang = detectLang();
     if(e.target === this) closeApiPicker();
   });
 
-  $('#checkinBtn').addEventListener('click', doCheckin);
+  $('#checkinBtn').addEventListener('click', function(){ doCheckin(); });
 
   document.addEventListener('click', function(e){
     var t = e.target;
@@ -11436,6 +11674,7 @@ __lang = detectLang();
       if(demoState.open){ closeDemoMode(); return; }
       if($('#svgModal').classList.contains('open')){ closeSvgBoard(); return; }
       if($('#shotModal').classList.contains('open')) return;
+      if($('#backfillModal').classList.contains('open')){ closeBackfillModal(); return; }
       if($('#importModal').classList.contains('open')){ closeImportModal(); return; }
       if(!isWide() && $('#processCard').classList.contains('open')) closeProcess();
     }
@@ -11795,6 +12034,7 @@ __lang = detectLang();
         { name:'import',       desc:'导入整站存档并覆盖，参数 {json: 存档对象或 JSON 字符串}' },
         { name:'restore',      desc:'回滚上一次整站导入（用导入前自动留的快照）' },
         { name:'checkin',      desc:'打卡并打开练习过程，参数 {name, requirement, hint}' },
+        { name:'backfill',     desc:'往指定的过去某一天补一条打卡（不能补未来），参数 {date:"YYYY-MM-DD", time:"HH:MM", name, requirement, hint}' },
         { name:'set',          desc:'改当前练习的字段，参数 {field:"name|requirement|hint", value}' },
         { name:'addModule',    desc:'加一个代码载体，参数 {type:"脚本|对象|操作描述|SVG绘图|超链接|着色器", value}；脚本载体还可以给 {boxes:[{code,name}]} 或 {codes:["…","…"]} 一次放多个代码框' },
         { name:'addObject',    desc:'加一个对象载体，参数 {name, fields:[[变量名,参数,说明]], events:[{name,code}]}' },
@@ -11897,6 +12137,27 @@ __lang = detectLang();
         renderAll();
       }
       return { ok:true, id: r ? r.id : null };
+    },
+    /* 往过去某一天补一条打卡（界面上是「历史记录 → 补录一次」） */
+    backfill: function(a){
+      a = a || {};
+      var key = String(a.date || a.day || '').trim();
+      if(!key) return cmdFail('要补录到哪一天？参数 {date:"YYYY-MM-DD"}');
+      var tm = (a.time == null || a.time === '') ? backfillDefaultTime() : String(a.time);
+      var info = backfillDateInfo(key, tm);
+      if(!info.ok) return cmdFail(T(info.error));
+      var rec = doBackfill(info.key, info.ts);
+      var r = cmdCurrentRec();
+      if(r){
+        if(a.name != null) r.name = String(a.name);
+        if(a.requirement != null) r.requirement = String(a.requirement);
+        if(a.hint != null) r.hint = String(a.hint);
+        cmdFillForm(r);
+        save('records'); save('days');
+        renderAll();
+      }
+      return { ok:true, id: rec ? rec.id : null, date: info.key, ts: info.ts,
+               time: pad(info.time.h) + ':' + pad(info.time.m) };
     },
     set: function(a){
       var bad = cmdNeedRec(); if(bad) return bad;
